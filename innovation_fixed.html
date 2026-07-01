@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Innovation in Neonatal Neuro-Critical Care Education Lab — University of Calgary</title>
+<meta name="description" content="The NNCC Innovation in Education Lab builds locally developed simulators and teaching modules — cranial ultrasound, Doppler, PHVD, neurological examination, EEG and AI tools — used worldwide.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+</head>
+<body>
+
+<!-- ===== Top bar ===== -->
+<header class="topbar">
+  <div class="container">
+    <a class="brand" href="index.html">
+      <span class="mark">NNCC</span>
+      <span class="brand-text">
+        <b>Harvey Sarnat NNCC Fellowship</b>
+        <span>University of Calgary</span>
+      </span>
+    </a>
+    <button class="nav-toggle" aria-label="Menu" onclick="document.getElementById('nav').classList.toggle('open')">
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="nav" id="nav">
+      <a href="index.html">Home</a>
+      <a href="fellowship.html">Program</a>
+      <a href="competencies.html">Competencies</a>
+      <a href="assessment.html">Assessment</a>
+      <a href="governance.html">Governance &amp; People</a>
+      <a href="innovation.html" class="active">Innovation Lab</a>
+      <a href="modules.html">Modules</a>
+      <a href="governance.html#apply" class="btn">Apply</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ===== Hero ===== -->
+<section class="hero">
+  <div class="container">
+    <span class="eyebrow">Innovation in Education · Alberta Children's Hospital</span>
+    <h1>Neonatal Neuro-Critical Care Innovation in Education Lab</h1>
+    <p class="sub">Democratizing access to innovative, affordable brain-health education for trainees worldwide — combining clinical expertise with the latest technology and cross-disciplinary collaboration.</p>
+    <div class="actions">
+      <a href="governance.html#apply" class="btn light">Apply to Train With Us</a>
+      <a href="https://scaneducation.thinkific.com/" target="_blank" rel="noopener" class="btn ghost-light">Learn about the SCAN Program</a>
+    </div>
+    <div class="hero-badges">
+      <div class="stat"><b>1,000+</b><span>Workshop participants worldwide</span></div>
+      <div class="stat"><b>9 countries</b><span>India, China, US, UK, Kuwait, Oman, Colombia &amp; Quito</span></div>
+      <div class="stat"><b>28% → 7%</b><span>Reduction in missed HIE cases</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Vision / Mission ===== -->
+<section class="block" style="padding:48px 0">
+  <div class="container">
+    <div class="grid cols-3">
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/></svg></div>
+        <h3>Our Vision</h3>
+        <p>Democratizing access to innovative, affordable brain-health education for trainees worldwide.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <h3>Our Mission</h3>
+        <p>To create state-of-the-art teaching modules by combining clinical expertise with the latest technology and cross-disciplinary collaboration.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <h3>Through Collaboration</h3>
+        <p>We bridge medicine and engineering with students and professionals from Computer Science &amp; Software Engineering, Bioengineering &amp; Mechanical Engineering, and 3D Design.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== About the lab ===== -->
+<section class="block soft" id="about">
+  <div class="container">
+    <div class="section-head">
+      <div class="kicker">About the Lab</div>
+      <h2>Locally built, globally used</h2>
+    </div>
+    <div class="prose">
+      <p>The Neonatal Neuro-Critical Care Program, under the umbrella of the ACH Neuro-Critical Care Program, has developed an Innovation in Neonatal Neuro-Critical Care Education Lab. The lab has produced cutting-edge, innovative simulators and models — all developed locally — that have been used across the globe for clinical-care application, quality improvement and research.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Cranial Ultrasound Simulation ===== -->
+<section class="block" id="cranial-us">
+  <div class="container">
+    <div class="section-head left">
+      <div class="kicker">Flagship Model</div>
+      <h2>Cranial Ultrasound Simulation Model</h2>
+      <p>Computer-based simulators and ultrasound-able 3D-printed brain phantoms — developed in partnership with the Sonographic Clinical Assessment of the Newborn (SCAN) Program.</p>
+    </div>
+
+    <div class="prose wide">
+      <p>The cranial ultrasound simulators let learners practise ultrasonography using a bank of images from patients with normal cranial structures and multiple pathologies, plus ultrasound-able 3D-printed heads with landmark brain structures. Preloaded images are selected via the computer program, while a mannequin with sensors embedded under the scalp lets the probe select corresponding image sequences to simulate real-life scanning. Components include a laptop connected to a sensor within the probe. The tools familiarize trainees with probe orientation, image-optimization skills, and ultrasound-machine knobology.</p>
+    </div>
+
+    <div class="feature" style="margin-top:36px">
+      <div class="prose" style="margin:0">
+        <h3>Brain Phantoms</h3>
+        <p>Ultrasound-able 3D-printed heads with simplified key internal brain structures — the lateral ventricles, caudo-thalamic notch, and choroid plexus.</p>
+        <div class="media-links">
+          <a class="chip" href="https://platform.thinkific.com/videoproxy/v1/play/cbkk2hmtov91j64inj3g" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Watch brain phantom demo</a>
+        </div>
+      </div>
+      <div class="feature-media">
+        <div class="frame"><img src="https://s3.amazonaws.com/thinkific/file_uploads/278624/images/7ae/ff5/b1b/1.jpg" alt="3D-printed cranial ultrasound brain phantom"></div>
+      </div>
+    </div>
+
+    <div class="feature reverse" style="margin-top:48px">
+      <div class="prose" style="margin:0">
+        <h3>Computer-Based Cranial Ultrasound Simulators</h3>
+        <ul>
+          <li>3D-printed heads with pressure sensors at the anterior and mastoid fontanels.</li>
+          <li>3D-printed probes with Arduino sensors that interact with the sensors in the printed heads.</li>
+          <li>Cranial ultrasonography software translates probe movements into images, simulating a real cranial ultrasound study.</li>
+        </ul>
+        <div class="media-links">
+          <a class="chip" href="https://platform.thinkific.com/videoproxy/v1/play/cbkk90utov91j64injqg" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Watch simulator demo</a>
+        </div>
+      </div>
+      <div class="feature-media">
+        <div class="frame"><img src="https://s3.amazonaws.com/thinkific/file_uploads/278624/images/200/a54/7b4/2.jpg" alt="Computer-based cranial ultrasound simulator"></div>
+      </div>
+    </div>
+
+    <!-- impact sub-cards -->
+    <div class="grid cols-2" style="margin-top:52px">
+      <div class="card">
+        <h4>Global implementation</h4>
+        <p>Used in conferences and hands-on workshops across India, China, the US, UK, Kuwait, Oman, Colombia and Quito — with more than 1,000 participants in total. We follow up with centres afterward to help them build their programs and sustain learned skills.</p>
+      </div>
+      <div class="card">
+        <h4>Clinical skills &amp; education</h4>
+        <p>Integrated into our neonatology fellowship program. All of our neonatology fellows now train in neonatal cranial ultrasonography — compared with no formal training before the models were developed.</p>
+      </div>
+      <div class="card">
+        <h4>Quality improvement</h4>
+        <p>Used to standardize the preterm brain-injury definition among radiologists and neonatologists. Two workshops in Calgary and Toronto brought together representatives from every Level III centre in the country; the resulting taskforce created a consensus practice guideline to standardize diagnosis and imaging in preterm infants nationwide.</p>
+      </div>
+      <div class="card">
+        <h4>Research &amp; what's next</h4>
+        <p>We tested the efficacy of simulation-based learning in gaining and sustaining ultrasonography skills and published the results in a peer-reviewed journal. In development: smart tracing of lateral-ventricle borders for surface-area measurement, side-by-side MRI/US slicing, interactive self-learning quizzes, user-contributed case libraries, expanded phantoms (corpus callosum, cerebellum, third ventricle), and cerebral-artery Doppler functionality.</p>
+      </div>
+    </div>
+    <div class="prose" style="margin-top:26px">
+      <p style="text-align:center"><a class="chip" href="https://pubmed.ncbi.nlm.nih.gov/31876319/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15Z"/></svg>Publication: Simulation-Based Structured Education Supports Focused Neonatal Cranial Ultrasound Training (PubMed)</a></p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Doppler & MCA ===== -->
+<section class="block soft" id="doppler">
+  <div class="container">
+    <div class="section-head left">
+      <div class="kicker">Vascular Imaging</div>
+      <h2>Cerebral Arteries Doppler Model</h2>
+    </div>
+    <div class="feature">
+      <div class="prose" style="margin:0">
+        <p>The <strong>anterior and middle cerebral artery simulator</strong> features the anterior and middle cerebral arteries embedded in a realistic, ultrasound-compatible brain phantom.</p>
+        <h4>Anatomy included</h4>
+        <p>Anterior Cerebral Artery, Middle Cerebral Arteries, and Cerebral Peduncle.</p>
+        <h4>Simulation mechanism</h4>
+        <p>A peristaltic pump generates flow, while a 20 cc syringe allows manual control of pulsation.</p>
+        <h4>Learning objectives</h4>
+        <ul>
+          <li>Generating 2D images</li>
+          <li>Mastering Doppler acquisition (Color and Pulse Wave)</li>
+          <li>Measuring Resistive (RI) and Pulsatility (PI) indices</li>
+        </ul>
+        <p><strong>Implementation:</strong> used in training at international workshops.</p>
+      </div>
+      <div class="feature-media">
+        <div class="frame"><img src="https://s3.amazonaws.com/thinkific/file_uploads/278624/images/345/0e0/6a4/4.jpg" alt="Cerebral arteries Doppler model"></div>
+      </div>
+    </div>
+
+    <div class="feature reverse" style="margin-top:48px">
+      <div class="prose" style="margin:0">
+        <h3>MCA Model</h3>
+        <p>A dedicated middle-cerebral-artery model for Doppler training and demonstration.</p>
+        <div class="media-links">
+          <a class="chip" href="https://player.vimeo.com/video/739079495" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Watch MCA model video</a>
+        </div>
+      </div>
+      <div class="feature-media">
+        <div class="frame"><img src="https://files.cdn.thinkific.com/file_uploads/278624/images/e91/569/e27/Slide1.PNG" alt="MCA model slide"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== PHVD model ===== -->
+<section class="block" id="phvd">
+  <div class="container">
+    <div class="section-head left">
+      <div class="kicker">Procedural Skill Maintenance</div>
+      <h2>PHVD Measurement &amp; Reservoir Tapping Model</h2>
+    </div>
+    <div class="prose wide">
+      <p>As surgical intervention for post-hemorrhagic ventricular dilatation (PHVD) becomes rare, maintaining competency in tapping the ventricular reservoir is a challenge. We developed a <strong>"just-in-time"</strong> teaching model that includes:</p>
+      <ul>
+        <li>A teaching video</li>
+        <li>A reservoir simulator — a reservoir connected to an IV fluid bag hidden inside a mannequin body, with a surgical incision and suture that resemble the real reservoir surgical site</li>
+      </ul>
+      <div class="media-links">
+        <a class="chip" href="https://platform.thinkific.com/videoproxy/v1/play/bv01fveje35bt9cjfv30" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Teaching video</a>
+        <a class="chip" href="https://platform.thinkific.com/videoproxy/v1/play/c05kaikerl5cdoao0akg" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Reservoir simulator</a>
+        <a class="chip" href="https://platform.thinkific.com/videoproxy/v1/play/cbkk31mtov91j64inj7g" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>All-in-one walkthrough</a>
+      </div>
+      <h4>Implementation</h4>
+      <p>Used as a "just-in-time" teaching tool each time we face a case of reservoir insertion, and at international workshops such as the Pediatric Academic Societies meeting and the American Academy of Pediatrics District VIII Section of Neonatal-Perinatal Medicine.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Smartphone app ===== -->
+<section class="block soft" id="apps">
+  <div class="container">
+    <div class="section-head left">
+      <div class="kicker">Digital Tools</div>
+      <h2>Smartphone App for Preterm Brain-Injury Diagnosis</h2>
+    </div>
+    <div class="prose wide">
+      <p>We converted the consensus viewpoint developed between Neonatology and Radiology into a smartphone application — made free on Google Play and the App Store — to improve compliance and decrease variability. Using AI, we then developed an all-in-one tool for GMH-IVH prevention, management and diagnosis.</p>
+    </div>
+    <div class="tool-grid" style="margin-top:24px">
+      <a class="tool" href="https://apps.apple.com/ca/app/hus-diagnostic/id1527886689" target="_blank" rel="noopener">
+        <span class="ti"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 12.04c-.02-2.05 1.68-3.03 1.75-3.08-.95-1.4-2.43-1.59-2.96-1.61-1.26-.13-2.46.74-3.1.74-.64 0-1.62-.72-2.67-.7-1.37.02-2.64.8-3.35 2.03-1.43 2.48-.37 6.15 1.03 8.16.68.98 1.49 2.08 2.55 2.04 1.02-.04 1.41-.66 2.65-.66 1.23 0 1.58.66 2.66.64 1.1-.02 1.79-1 2.46-1.98.78-1.14 1.1-2.24 1.12-2.3-.02-.01-2.15-.83-2.17-3.27ZM15.1 6.13c.56-.68.94-1.62.83-2.56-.81.03-1.79.54-2.37 1.21-.52.6-.98 1.56-.86 2.48.9.07 1.83-.46 2.4-1.13Z"/></svg></span>
+        <span><b>HUS Diagnostic — App Store</b><span>Preterm brain-injury diagnostic tool</span></span>
+      </a>
+      <a class="tool" href="https://play.google.com/store/apps/details?id=com.husdiagnostic" target="_blank" rel="noopener">
+        <span class="ti"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.6 2.3 13 11.7l-9.4 9.4c-.3-.2-.5-.5-.5-1V3.3c0-.4.2-.8.5-1ZM14.4 12.6l2.5 2.5-3 1.7-2.1-2.1 2.6-2.1Zm0-1.8L11.8 8.7l2.1-2.1 3 1.7-2.5 2.5ZM17.7 9.6l2.6 1.5c.6.4.6 1.4 0 1.8l-2.6 1.5-2.7-2.4 2.7-2.4Z"/></svg></span>
+        <span><b>HUS Diagnostic — Google Play</b><span>Preterm brain-injury diagnostic tool</span></span>
+      </a>
+      <a class="tool" href="https://drive-ivh-2-0-915899500738.us-west1.run.app/" target="_blank" rel="noopener">
+        <span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2a7 7 0 0 0-7 7c0 2.4 1.2 3.9 2.3 5 .8.8 1.2 1.3 1.2 2.5V18h7v-1.5c0-1.2.4-1.7 1.2-2.5C17.8 12.9 19 11.4 19 9a7 7 0 0 0-7-7ZM9 22h6"/></svg></span>
+        <span><b>NeuroSono</b><span>AI · Preterm brain-injury consensus tool</span></span>
+      </a>
+    </div>
+    <div class="prose" style="margin-top:22px">
+      <p><a class="chip" href="https://pubmed.ncbi.nlm.nih.gov/31876319/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15Z"/></svg>Related publication on PubMed</a></p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Neurological examination ===== -->
+<section class="block" id="neuro-exam">
+  <div class="container">
+    <div class="section-head left">
+      <div class="kicker">HIE Identification</div>
+      <h2>Neonatal Neurological Examination Simulators &amp; Modules</h2>
+      <p>Built to improve identification of infants who suffered perinatal asphyxia and are eligible for therapeutic hypothermia — where the window of opportunity to start treatment is short.</p>
+    </div>
+
+    <div class="feature">
+      <div class="prose" style="margin:0">
+        <h3>Targeted Neurological Examination Teaching Videos</h3>
+        <p>With formal family consent, full neurological-examination videos were recorded for normal and abnormal newborns, then edited and integrated into one targeted neurological examination to improve HIE identification.</p>
+        <div class="media-links">
+          <a class="chip" href="https://platform.thinkific.com/videoproxy/v1/play/brtn1rekg7cnqndqtfug" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Watch teaching video</a>
+        </div>
+      </div>
+      <div class="feature-media">
+        <div class="frame"><img src="https://s3.amazonaws.com/thinkific/file_uploads/278624/images/038/3c7/eba/5.jpg" alt="Neonatal neurological examination simulator"></div>
+      </div>
+    </div>
+
+    <div class="grid cols-2" style="margin-top:48px">
+      <div class="card">
+        <h4>Therapeutic Hypothermia Eligibility Tool</h4>
+        <p>A free smartphone application that serves as a checklist and decision-making tool for cooling eligibility.</p>
+        <div class="media-links">
+          <a class="chip" href="https://apps.apple.com/ca/app/hie-calculator/id1275901770" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>Cooling calculator (Apple)</a>
+          <a class="chip" href="https://hie-cooling-calculator-915899500738.us-west1.run.app/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Cooling calculator (Web)</a>
+        </div>
+      </div>
+      <div class="card">
+        <h4>Targeted Neuro-Exam Virtual Reality Module</h4>
+        <p>Recorded videos were converted into animation scenarios used to create a virtual-reality module in which trainees can observe and perform the targeted neurological examination.</p>
+        <div class="media-links">
+          <a class="chip" href="https://platform.thinkific.com/videoproxy/v1/play/c0u71u4erl5cdoapt0j0" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Watch VR module</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature reverse" style="margin-top:48px">
+      <div class="prose" style="margin:0">
+        <h3>Neurological Examination Mannequins</h3>
+        <p>In collaboration with computer scientists, mechanical engineers and bioengineers, a neurological-examination model was developed to simulate tone assessment and posture. The project won <strong>Best in Clinical Category at the 2019 Health Hack competition</strong>.</p>
+        <div class="media-links">
+          <a class="chip" href="https://platform.thinkific.com/videoproxy/v1/play/c05kpkkerl5cdoao0bug" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Watch mannequin demo</a>
+        </div>
+      </div>
+      <div class="feature-media">
+        <div class="frame"><img src="https://s3.amazonaws.com/thinkific/file_uploads/278624/images/331/ccf/fc2/6.jpg" alt="Neurological examination mannequin"></div>
+      </div>
+    </div>
+
+    <!-- impact band -->
+    <div class="card" style="margin-top:48px;background:var(--navy-50);border-color:#d7e2ef">
+      <div class="stat-band">
+        <div class="s"><b>28% → 7%</b><span>Missed HIE cases after implementation — without increasing annual volume</span></div>
+        <div class="s"><b>2 + 1</b><span>Workshops in Kuwait, plus a nursing NNCC workshop in Calgary</span></div>
+        <div class="s"><b>RCT</b><span>Randomized controlled pilot trial published (PubMed)</span></div>
+      </div>
+    </div>
+    <div class="prose" style="margin-top:22px">
+      <p style="text-align:center"><a class="chip" href="https://pubmed.ncbi.nlm.nih.gov/36543025/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15Z"/></svg>Utility of Simulation-Based Training in Teaching the Modified Sarnat Examination — RCT (PubMed)</a></p>
+    </div>
+
+    <div class="prose wide" style="margin-top:8px">
+      <p>The combined package of teaching modules and simulators was used in the Southern Alberta Neonatal Outreach Program, where we visited all Level I and II referring centres and conducted sessions on improving HIE identification.</p>
+    </div>
+
+    <div class="tool-grid" style="margin-top:8px">
+      <a class="tool" href="https://polar-protocol-navigator-915899500738.us-west1.run.app/" target="_blank" rel="noopener">
+        <span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="m15 9-6 6M9 9l6 6"/></svg></span>
+        <span><b>POLAR Protocol Navigator</b><span>AI · cooling protocol navigator</span></span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== EEG ===== -->
+<section class="block soft" id="eeg">
+  <div class="container">
+    <div class="section-head left">
+      <div class="kicker">Neuro-Monitoring</div>
+      <h2>Neonatal EEG Teaching Modules &amp; Simulator</h2>
+    </div>
+    <div class="feature">
+      <div class="prose" style="margin:0">
+        <p>Teaching videos demonstrate how to place EEG electrodes and generate a good-quality signal, with step-by-step "how-to" tutorials on starting an EEG study and troubleshooting. In collaboration with computer scientists, software engineers and mechanical engineers, an EEG simulator was developed to simulate EEG set-up.</p>
+        <div class="media-links">
+          <a class="chip" href="https://platform.thinkific.com/videoproxy/v1/play/c05kvsrjj09frru6ephg" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Watch EEG simulator demo</a>
+        </div>
+        <h4>Clinical impact</h4>
+        <p>Using these modules — videos, documents, small-group training, workshops and the simulator — we trained NICU nurses to set up EEG studies, helping establish neuro-monitoring in the NICU. Nurse-initiated EEG significantly decreased time to study initiation, which in turn led to a significant reduction in anti-seizure medication use and improved seizure diagnosis.</p>
+      </div>
+      <div class="feature-media">
+        <div class="frame"><img src="https://s3.amazonaws.com/thinkific/file_uploads/278624/images/854/7e7/ee0/7.jpg" alt="Neonatal EEG simulator"></div>
+      </div>
+    </div>
+
+    <div class="feature reverse" style="margin-top:48px">
+      <div class="prose" style="margin:0">
+        <h3>Teaching EEG Set-up with Simulation &amp; Live Children</h3>
+        <p>The EEG and neuro-exam simulators were used at our local, national and international workshops — with our own children volunteering as simulation models.</p>
+      </div>
+      <div class="feature-media">
+        <div class="frame"><img src="https://s3.amazonaws.com/thinkific/file_uploads/278624/images/b40/1cb/44d/8.png" alt="Teaching EEG setup with simulation"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== AI tools ===== -->
+<section class="block" id="ai-tools">
+  <div class="container">
+    <div class="section-head">
+      <div class="kicker">Artificial Intelligence</div>
+      <h2>AI NNCC Tools</h2>
+      <p>Open-access decision-support tools developed by the NNCC Innovation &amp; Research group.</p>
+    </div>
+    <div class="tool-grid">
+      <a class="tool" href="https://drive-ivh-2-0-915899500738.us-west1.run.app/" target="_blank" rel="noopener">
+        <span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2a7 7 0 0 0-7 7c0 2.4 1.2 3.9 2.3 5 .8.8 1.2 1.3 1.2 2.5V18h7v-1.5c0-1.2.4-1.7 1.2-2.5C17.8 12.9 19 11.4 19 9a7 7 0 0 0-7-7ZM9 22h6"/></svg></span>
+        <span><b>NeuroSono</b><span>Preterm brain-injury consensus</span></span>
+      </a>
+      <a class="tool" href="https://hie-cooling-calculator-915899500738.us-west1.run.app/" target="_blank" rel="noopener">
+        <span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M5 8l7-4 7 4M5 16l7 4 7-4"/></svg></span>
+        <span><b>HIE Cooling Calculator</b><span>Therapeutic hypothermia eligibility</span></span>
+      </a>
+      <a class="tool" href="https://polar-protocol-navigator-915899500738.us-west1.run.app/" target="_blank" rel="noopener">
+        <span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="m15 9-6 6M9 9l6 6"/></svg></span>
+        <span><b>POLAR Protocol Navigator</b><span>Cooling protocol navigator</span></span>
+      </a>
+      <a class="tool" href="https://n-smart-neonatal-seizure-management-915899500738.us-west1.run.app/" target="_blank" rel="noopener">
+        <span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg></span>
+        <span><b>N-SMART</b><span>Neonatal seizure management</span></span>
+      </a>
+      <a class="tool" href="https://neoconvulse-neonatal-seizure-guide-915899500738.us-west1.run.app/" target="_blank" rel="noopener">
+        <span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h4l2 6 4-14 2 8h6"/></svg></span>
+        <span><b>NeoConvulse</b><span>Neonatal seizure guide</span></span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CTA ===== -->
+<section class="block soft">
+  <div class="container">
+    <div class="cta">
+      <h2>Bring brain-health innovation to your centre</h2>
+      <p>Train with us, collaborate on a model, or bring our simulators and modules to your workshop. We help centres worldwide build and sustain neonatal neuro-critical care skills.</p>
+      <a href="governance.html#apply" class="btn light">Apply to Train With Us</a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Footer ===== -->
+<footer class="footer">
+  <div class="container">
+    <div class="cols">
+      <div class="foot-brand">
+        <b>The Harvey Sarnat NNCC Fellowship</b>
+        <p>Innovation in Neonatal Neuro-Critical Care Education Lab — under the ACH Neuro-Critical Care Program, University of Calgary. Calgary Newborn Neuro-Intensive Care Program.</p>
+      </div>
+      <div>
+        <h4>Program</h4>
+        <ul>
+          <li><a href="fellowship.html">Program &amp; Curriculum</a></li>
+          <li><a href="competencies.html">Competencies</a></li>
+          <li><a href="assessment.html">Assessment &amp; Portfolio</a></li>
+          <li><a href="governance.html">Governance &amp; People</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="innovation.html">Innovation Lab</a></li><li><a href="https://www.youtube.com/@SarnatNNCC" target="_blank" rel="noopener">YouTube channel</a></li>
+          <li><a href="https://scaneducation.thinkific.com/" target="_blank" rel="noopener">SCAN Program</a></li>
+          <li><a href="https://nncceducation.thinkific.com/" target="_blank" rel="noopener">Education Modules</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Information</h4>
+        <ul>
+          <li><a href="https://nncceducation.thinkific.com/pages/innovation-in-education" target="_blank" rel="noopener">Disclaimer &amp; privacy</a></li>
+          <li><a href="https://nncceducation.thinkific.com/pages/acknowledgement" target="_blank" rel="noopener">Acknowledgement &amp; COI</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="bottom">
+      <span>© 2026 Calgary Newborn Neuro-Intensive Care Program Â· University of Calgary</span>
+      <span>Section of Neonatology, Department of Pediatrics</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
