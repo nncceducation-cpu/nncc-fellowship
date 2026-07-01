@@ -1,0 +1,4 @@
+# OS / editor junk — not part of the website
+.DS_Store
+Thumbs.db
+*.bak
