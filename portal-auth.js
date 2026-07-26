@@ -99,8 +99,10 @@
       return client.auth.updateUser({ password });
     },
 
-    /* ---- admin: invite a member via the Edge Function ---- */
-    async inviteMember(full_name, email) {
+    /* ---- admin: add a member via the Edge Function ----
+       extra can carry { mode:'create', password } to create the account
+       directly (email pre-confirmed) instead of emailing an invite. */
+    async inviteMember(full_name, email, extra = {}) {
       const { data: s } = await client.auth.getSession();
       const token = s?.session?.access_token;
       const res = await fetch(
@@ -112,12 +114,16 @@
             Authorization: `Bearer ${token}`,
             apikey: cfg.SUPABASE_ANON_KEY,
           },
-          body: JSON.stringify({ full_name, email }),
+          body: JSON.stringify({ full_name, email, ...extra }),
         }
       );
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.error || "Invite failed");
+      if (!res.ok) throw new Error(body.error || "Request failed");
       return body;
+    },
+    /* create the account now with a password (blank = auto-generate) */
+    addMember(full_name, email, password) {
+      return this.inviteMember(full_name, email, { mode: "create", password: password || undefined });
     },
 
     /* ---- data helpers ---- */

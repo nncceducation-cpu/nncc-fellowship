@@ -6,6 +6,55 @@
 .portal-wrap { background: var(--bg-soft); min-height: 70vh; }
 .portal-wrap .container { padding-top: 40px; padding-bottom: 64px; }
 
+/* ---------- Left sidebar (portal-shell.js) ---------- */
+.side-rail {
+  position: fixed; top: 0; left: 0; height: 100vh; width: 232px; z-index: 70;
+  background: #fff; border-right: 1px solid var(--line);
+  display: flex; flex-direction: column; padding: 14px 12px; overflow-y: auto;
+}
+.side-rail .rail-brand { display: flex; align-items: center; gap: 10px; padding: 6px 10px 16px; }
+.side-rail .rail-brand .mark {
+  width: 34px; height: 34px; border-radius: 9px; flex: none;
+  background: linear-gradient(135deg, var(--navy), var(--teal)); color: #fff;
+  display: grid; place-items: center; font-weight: 700; font-size: 11px; letter-spacing: .5px;
+}
+.side-rail .rail-brand b { color: var(--navy); font-family: var(--font-serif); font-size: 15px; }
+.side-rail nav { display: flex; flex-direction: column; gap: 2px; }
+.side-rail nav a {
+  display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 10px;
+  color: var(--ink); font-weight: 500; font-size: 14.5px;
+}
+.side-rail nav a .ri { width: 20px; text-align: center; font-size: 15px; }
+.side-rail nav a:hover { background: var(--navy-50); text-decoration: none; }
+.side-rail nav a.active { background: var(--teal-50); color: var(--navy); font-weight: 600; }
+.side-rail .rail-foot { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); }
+.side-rail .rail-user { font-size: 13px; color: var(--muted); padding: 4px 12px 8px; font-weight: 600; }
+.side-rail .rail-foot a { display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: 10px; color: var(--ink); font-size: 14px; }
+.side-rail .rail-foot a:hover { background: var(--navy-50); text-decoration: none; }
+
+.rail-toggle {
+  display: none; position: fixed; top: 16px; left: 14px; z-index: 80;
+  width: 40px; height: 40px; border: 1px solid var(--line); background: #fff;
+  border-radius: 9px; font-size: 18px; cursor: pointer; box-shadow: var(--shadow);
+}
+
+/* push all page content (topbar + main) to the right of the rail */
+body.has-rail { padding-left: 232px; }
+/* the rail replaces the top-bar's own nav links; keep only brand + user chip */
+body.has-rail .topbar .nav > a { display: none; }
+
+@media (max-width: 900px) {
+  body.has-rail { padding-left: 0; }
+  .side-rail { transform: translateX(-100%); transition: transform .2s ease; box-shadow: var(--shadow-lg); }
+  .side-rail.open { transform: none; }
+  .rail-toggle { display: block; }
+  body.has-rail .topbar .brand { margin-left: 46px; }
+}
+@media print {
+  .side-rail, .rail-toggle { display: none !important; }
+  body.has-rail { padding-left: 0 !important; }
+}
+
 /* --- Auth card (login / set password / reset) --- */
 .auth-shell {
   min-height: calc(100vh - 72px);
