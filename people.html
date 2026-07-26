@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>People & Enrollments — Harvey Sarnat NNCC Fellowship</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="portal.css">
+<link rel="icon" href="favicon.ico" sizes="any">
+<style>
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:22px}
+  .tabs button{background:none;border:0;padding:12px 16px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+  .tabs button.active{color:var(--navy);border-bottom-color:var(--teal)}
+  .chip-btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:4px 9px;cursor:pointer;font-size:12.5px}
+  .chip-btn:hover{border-color:var(--teal);color:var(--teal-600)}
+  .checklist{max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:8px}
+  .checklist label{display:flex;gap:8px;align-items:center;padding:5px 6px;border-radius:6px;font-size:14px}
+  .checklist label:hover{background:var(--bg-soft)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:620px){.row2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container">
+    <a class="brand" href="portal.html">
+      <span class="mark">NNCC</span>
+      <span class="brand-text"><b>Harvey Sarnat NNCC Fellowship</b><span>People &amp; Enrollments</span></span>
+    </a>
+    <nav class="nav">
+      <a href="portal.html">Portal</a>
+      <a href="authoring.html">Builder</a>
+      <a href="people.html" class="active">People</a>
+      <span class="user-chip" id="user-chip"></span>
+    </nav>
+  </div>
+</header>
+
+<main class="portal-wrap">
+  <div class="container">
+    <div class="p-head" style="margin-bottom:16px"><h1>People &amp; Enrollments</h1>
+      <p>Manage members, enrollments (with expiry), groups and email — the admin control centre.</p></div>
+    <div id="msg"></div>
+    <div class="tabs">
+      <button data-tab="members" class="active">Members</button>
+      <button data-tab="enroll">Enrollments</button>
+      <button data-tab="groups">Groups</button>
+      <button data-tab="email">Email</button>
+    </div>
+    <div id="tab-members"></div>
+    <div id="tab-enroll" style="display:none"></div>
+    <div id="tab-groups" style="display:none"></div>
+    <div id="tab-email" style="display:none"></div>
+  </div>
+</main>
+
+<script src="portal-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="portal-auth.js"></script>
+<script>
+(async function () {
+  const me = await NNCC.requireAdmin(); if(!me) return;
+  NNCC.mountUserChip(document.getElementById("user-chip"));
+  const sb = NNCC.client;
+  const $=(s)=>document.querySelector(s);
+  const esc=(s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const flash=(t,k)=>{ $("#msg").innerHTML=t?`<div class="msg ${k||'ok'}">${t}</div>`:""; if(t) setTimeout(()=>$("#msg").innerHTML="",4000); };
+  const fmtDate=(d)=> d? new Date(d).toLocaleDateString() : "—";
+  const toIso=(v)=> v? new Date(v+"T23:59:59").toISOString() : null;
+
+  let S={ members:[], courses:[], groups:[] };
+  async function loadCore(){
+    const [{data:m},{data:c},{data:g}] = await Promise.all([
+      sb.from("members_overview").select("*").order("created_at"),
+      sb.from("courses").select("*").order("sort_order"),
+      sb.from("groups").select("*").order("name"),
+    ]);
+    S.members=m||[]; S.courses=c||[]; S.groups=g||[];
+  }
+
+  // ---------- tabs ----------
+  document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{
+    document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("active",x===b));
+    ["members","enroll","groups","email"].forEach(t=>$("#tab-"+t).style.display = t===b.dataset.tab?"block":"none");
+    render(b.dataset.tab);
+  }));
+  async function render(tab){
+    await loadCore();
+    if(tab==="members") renderMembers();
+    if(tab==="enroll") renderEnroll();
+    if(tab==="groups") renderGroups();
+    if(tab==="email") renderEmail();
+  }
+
+  // ================= MEMBERS =================
+  function renderMembers(){
+    const rows=S.members.map(m=>`<tr>
+      <td>${esc(m.full_name||'—')}</td><td>${esc(m.email||'')}</td>
+      <td><span class="badge ${m.role}">${m.role}</span> ${m.status==='suspended'?'<span class="badge" style="background:#fdecec;color:#8a1f1f">suspended</span>':''}</td>
+      <td>${m.enrollments}</td><td>${m.lessons_done}</td>
+      <td class="row-actions">
+        ${m.role==='admin'?`<button data-demote="${m.id}" ${m.id===me.id?'disabled':''}>Make member</button>`:`<button data-promote="${m.id}">Make admin</button>`}
+        ${m.status==='active'?`<button data-suspend="${m.id}" ${m.id===me.id?'disabled':''}>Suspend</button>`:`<button data-activate="${m.id}">Reactivate</button>`}
+        <button data-detail="${m.id}">Enrollments</button>
+        ${m.id===me.id?'':`<button data-del="${m.id}">Remove</button>`}
+      </td></tr>`).join("");
+    $("#tab-members").innerHTML=`
+      <section class="panel"><h2>Bulk invite members</h2>
+        <p class="sub">One per line as <b>Full Name, email</b>. They each get an email to set a password.</p>
+        <div id="inv-msg"></div>
+        <textarea id="bulk" rows="4" class="" style="width:100%;padding:10px;border:1.5px solid var(--line);border-radius:10px" placeholder="Dr. Jane Smith, jane@example.com&#10;Dr. Omar Ali, omar@example.com"></textarea>
+        <button class="btn" id="bulk-go" style="margin-top:10px">Send invites</button>
+      </section>
+      <section class="panel"><h2>Members (${S.members.length})</h2>
+        <table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Enrollments</th><th>Lessons done</th><th>Actions</th></tr></thead>
+        <tbody>${rows}</tbody></table></section>`;
+    $("#bulk-go").addEventListener("click", bulkInvite);
+    $("#tab-members").addEventListener("click", membersActions);
+  }
+  async function bulkInvite(){
+    const lines=$("#bulk").value.split("\n").map(s=>s.trim()).filter(Boolean);
+    if(!lines.length) return;
+    $("#inv-msg").innerHTML='<span class="small-link">Inviting…</span>';
+    let ok=0, fail=[];
+    for(const line of lines){
+      const idx=line.lastIndexOf(","); const name=idx>=0?line.slice(0,idx).trim():""; const email=(idx>=0?line.slice(idx+1):line).trim();
+      try{ await NNCC.inviteMember(name,email); ok++; }catch(e){ fail.push(email+": "+e.message); }
+    }
+    $("#inv-msg").innerHTML=`<div class="msg ${fail.length?'info':'ok'}">Invited ${ok}. ${fail.length?('Failed: '+esc(fail.join("; "))):''}</div>`;
+    $("#bulk").value=""; await loadCore(); renderMembers();
+  }
+  async function membersActions(e){
+    const b=e.target.closest("button"); if(!b) return; const id=b.dataset;
+    if(id.promote){ await NNCC.setRole(id.promote,"admin"); }
+    else if(id.demote){ await NNCC.setRole(id.demote,"member"); }
+    else if(id.suspend){ await sb.from("profiles").update({status:"suspended"}).eq("id",id.suspend); }
+    else if(id.activate){ await sb.from("profiles").update({status:"active"}).eq("id",id.activate); }
+    else if(id.del){ if(!confirm("Remove this member's profile? (Their login still exists in Supabase Auth.)"))return; await sb.from("profiles").delete().eq("id",id.del); }
+    else if(id.detail){ return memberDetail(id.detail); }
+    else return;
+    await loadCore(); renderMembers();
+  }
+  async function memberDetail(uid){
+    const m=S.members.find(x=>x.id===uid)||{};
+    const { data:enr } = await sb.from("course_enrollments").select("*").eq("user_id",uid);
+    const emap={}; (enr||[]).forEach(e=>emap[e.course_id]=e);
+    const rows=S.courses.map(c=>{ const e=emap[c.id];
+      return `<tr><td>${esc(c.title)}</td>
+        <td>${e?(e.expires_at?('until '+fmtDate(e.expires_at)):'no expiry'):'—'}</td>
+        <td class="row-actions">${e?`<button data-unenroll="${c.id}">Unenroll</button>`:`<button data-enroll="${c.id}">Enroll</button>`}</td></tr>`;}).join("");
+    openModal(`Enrollments — ${esc(m.full_name||m.email)}`, `
+      <table class="tbl"><thead><tr><th>Course</th><th>Access</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="field" style="margin-top:12px"><label>Expiry for new enrollments (optional)</label><input type="date" id="md-exp"></div>`,
+      (root)=>{ root.addEventListener("click", async (e)=>{ const b=e.target.closest("button"); if(!b)return;
+        if(b.dataset.enroll){ await sb.from("course_enrollments").upsert({course_id:b.dataset.enroll,user_id:uid,expires_at:toIso(root.querySelector("#md-exp").value),enrolled_by:me.id},{onConflict:"course_id,user_id"}); memberDetail(uid); }
+        if(b.dataset.unenroll){ await sb.from("course_enrollments").delete().eq("course_id",b.dataset.unenroll).eq("user_id",uid); memberDetail(uid); }
+      }); });
+  }
+
+  // ================= ENROLLMENTS =================
+  function renderEnroll(){
+    const opts=S.courses.map(c=>`<option value="${c.id}">${esc(c.title)}${c.enrollment_required?' · [enrollment required]':' · [open]'}</option>`).join("");
+    $("#tab-enroll").innerHTML=`
+      <section class="panel">
+        <div class="row2"><div class="field"><label>Course</label><select id="en-course">${opts}</select></div>
+          <div class="field"><label>Access mode</label><select id="en-mode">
+            <option value="false">Open to all members</option><option value="true">Enrollment required</option></select></div></div>
+        <div id="en-enrolled"></div>
+      </section>
+      <section class="panel"><h2>Add enrollments</h2>
+        <div class="row2">
+          <div class="field"><label>Who</label><select id="en-who">
+            <option value="all">All members</option><option value="group">A group</option><option value="selected">Selected members</option></select></div>
+          <div class="field"><label>Expiry date (optional)</label><input type="date" id="en-exp"></div>
+        </div>
+        <div class="field" id="en-groupwrap" style="display:none"><label>Group</label><select id="en-group">${S.groups.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join("")}</select></div>
+        <div id="en-select" style="display:none"><label class="muted-note">Select members</label>
+          <div class="checklist">${S.members.map(m=>`<label><input type="checkbox" class="en-chk" value="${m.id}"> ${esc(m.full_name||m.email)} <span class="small-link">${esc(m.email)}</span></label>`).join("")}</div></div>
+        <button class="btn" id="en-go" style="margin-top:12px">Enroll</button>
+      </section>`;
+    const course=()=>$("#en-course").value;
+    const syncMode=async()=>{ const c=S.courses.find(x=>x.id===course()); if(c) $("#en-mode").value=String(!!c.enrollment_required); await loadEnrolled(); };
+    $("#en-course").addEventListener("change", syncMode);
+    $("#en-mode").addEventListener("change", async()=>{ await sb.from("courses").update({enrollment_required:$("#en-mode").value==='true'}).eq("id",course()); await loadCore(); flash("Access mode updated."); });
+    $("#en-who").addEventListener("change",()=>{ const v=$("#en-who").value; $("#en-groupwrap").style.display=v==='group'?'block':'none'; $("#en-select").style.display=v==='selected'?'block':'none'; });
+    $("#en-go").addEventListener("click", doEnroll);
+    async function loadEnrolled(){
+      const { data } = await sb.from("course_enrollments").select("*").eq("course_id",course());
+      const byId={}; S.members.forEach(m=>byId[m.id]=m);
+      const rows=(data||[]).map(e=>{ const m=byId[e.user_id]||{};
+        return `<tr><td>${esc(m.full_name||m.email||e.user_id)}</td><td>${esc(m.email||'')}</td>
+          <td>${e.expires_at?fmtDate(e.expires_at):'no expiry'}</td>
+          <td class="row-actions"><button data-editexp="${e.user_id}">Set expiry</button><button data-unen="${e.user_id}">Unenroll</button></td></tr>`;}).join("");
+      $("#en-enrolled").innerHTML=`<h3 style="margin:14px 0 6px">Enrolled (${(data||[]).length})</h3>`+
+        ((data||[]).length?`<table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>Expires</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<p class="muted-note">Nobody enrolled yet.</p>');
+      $("#en-enrolled").querySelectorAll("button").forEach(btn=>btn.addEventListener("click", async ()=>{
+        if(btn.dataset.unen){ await sb.from("course_enrollments").delete().eq("course_id",course()).eq("user_id",btn.dataset.unen); loadEnrolled(); }
+        if(btn.dataset.editexp){ const d=prompt("Expiry date (YYYY-MM-DD), blank = never:"); if(d===null)return; await sb.from("course_enrollments").update({expires_at:d?toIso(d):null}).eq("course_id",course()).eq("user_id",btn.dataset.editexp); loadEnrolled(); }
+      }));
+    }
+    async function doEnroll(){
+      const who=$("#en-who").value; let ids=[];
+      if(who==='all') ids=S.members.map(m=>m.id);
+      else if(who==='selected') ids=[...document.querySelectorAll(".en-chk:checked")].map(c=>c.value);
+      else if(who==='group'){ const { data } = await sb.from("group_members").select("user_id").eq("group_id",$("#en-group").value); ids=(data||[]).map(x=>x.user_id); }
+      if(!ids.length) return flash("No members selected.","err");
+      const exp=toIso($("#en-exp").value);
+      const rows=ids.map(uid=>({course_id:course(),user_id:uid,expires_at:exp,enrolled_by:me.id}));
+      const { error }=await sb.from("course_enrollments").upsert(rows,{onConflict:"course_id,user_id"});
+      if(error) return flash(esc(error.message),"err");
+      flash(`Enrolled ${ids.length} member(s).`); loadEnrolled();
+    }
+    syncMode();
+  }
+
+  // ================= GROUPS =================
+  function renderGroups(){
+    $("#tab-groups").innerHTML=`
+      <section class="panel"><div style="display:flex;justify-content:space-between;align-items:center"><h2>Groups</h2>
+        <button class="btn" id="g-new">+ New group</button></div>
+        <div id="g-list" style="margin-top:10px"></div></section>
+      <section class="panel" id="g-detail" style="display:none"></section>`;
+    $("#g-new").addEventListener("click", async ()=>{ const n=prompt("Group name:"); if(!n)return; await sb.from("groups").insert({name:n.trim()}); await loadCore(); renderGroups(); });
+    (async()=>{
+      const counts={};
+      const { data:gm } = await sb.from("group_members").select("group_id");
+      (gm||[]).forEach(x=>counts[x.group_id]=(counts[x.group_id]||0)+1);
+      $("#g-list").innerHTML = S.groups.length? `<table class="tbl"><thead><tr><th>Group</th><th>Members</th><th></th></tr></thead><tbody>`+
+        S.groups.map(g=>`<tr><td><b>${esc(g.name)}</b>${g.description?`<br><span class="small-link">${esc(g.description)}</span>`:''}</td><td>${counts[g.id]||0}</td>
+          <td class="row-actions"><button data-manage="${g.id}">Manage</button><button data-grename="${g.id}">Rename</button><button data-gdel="${g.id}">Delete</button></td></tr>`).join("")+
+        `</tbody></table>` : '<p class="muted-note">No groups yet.</p>';
+      $("#g-list").querySelectorAll("button").forEach(b=>b.addEventListener("click", async ()=>{
+        if(b.dataset.manage) return manageGroup(b.dataset.manage);
+        if(b.dataset.grename){ const g=S.groups.find(x=>x.id===b.dataset.grename); const n=prompt("Group name:",g.name); if(n===null)return; await sb.from("groups").update({name:n.trim()}).eq("id",g.id); await loadCore(); renderGroups(); }
+        if(b.dataset.gdel){ if(!confirm("Delete this group?"))return; await sb.from("groups").delete().eq("id",b.dataset.gdel); await loadCore(); renderGroups(); }
+      }));
+    })();
+  }
+  async function manageGroup(gid){
+    const g=S.groups.find(x=>x.id===gid)||{};
+    const { data:gm } = await sb.from("group_members").select("user_id").eq("group_id",gid);
+    const inSet=new Set((gm||[]).map(x=>x.user_id));
+    const box=$("#g-detail"); box.style.display="block";
+    box.innerHTML=`<h2>${esc(g.name)} — members</h2>
+      <div class="checklist" style="margin:8px 0">${S.members.map(m=>`<label><input type="checkbox" class="gm-chk" value="${m.id}" ${inSet.has(m.id)?'checked':''}> ${esc(m.full_name||m.email)} <span class="small-link">${esc(m.email)}</span></label>`).join("")}</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn" id="gm-save">Save members</button>
+        <select id="gm-course" style="padding:9px;border:1.5px solid var(--line);border-radius:10px">${S.courses.map(c=>`<option value="${c.id}">${esc(c.title)}</option>`).join("")}</select>
+        <input type="date" id="gm-exp" style="padding:9px;border:1.5px solid var(--line);border-radius:10px">
+        <button class="btn outline" id="gm-enroll">Enroll group into course</button>
+      </div>`;
+    $("#gm-save").addEventListener("click", async ()=>{
+      const want=new Set([...box.querySelectorAll(".gm-chk:checked")].map(c=>c.value));
+      const toAdd=[...want].filter(id=>!inSet.has(id)).map(id=>({group_id:gid,user_id:id}));
+      const toDel=[...inSet].filter(id=>!want.has(id));
+      if(toAdd.length) await sb.from("group_members").insert(toAdd);
+      for(const id of toDel) await sb.from("group_members").delete().eq("group_id",gid).eq("user_id",id);
+      flash("Group members saved."); renderGroups(); manageGroup(gid);
+    });
+    $("#gm-enroll").addEventListener("click", async ()=>{
+      const ids=[...box.querySelectorAll(".gm-chk:checked")].map(c=>c.value);
+      if(!ids.length) return flash("No members in group.","err");
+      const exp=toIso($("#gm-exp").value);
+      const rows=ids.map(uid=>({course_id:$("#gm-course").value,user_id:uid,expires_at:exp,enrolled_by:me.id}));
+      const { error }=await sb.from("course_enrollments").upsert(rows,{onConflict:"course_id,user_id"});
+      flash(error?esc(error.message):`Enrolled ${ids.length} group member(s).`, error?"err":"ok");
+    });
+  }
+
+  // ================= EMAIL =================
+  function renderEmail(){
+    $("#tab-email").innerHTML=`
+      <section class="panel"><h2>Compose email</h2>
+        <div id="em-msg"></div>
+        <div class="row2">
+          <div class="field"><label>Recipients</label><select id="em-who">
+            <option value="all">All members</option><option value="group">A group</option><option value="selected">Selected members</option></select></div>
+          <div class="field" id="em-groupwrap" style="display:none"><label>Group</label><select id="em-group">${S.groups.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join("")}</select></div>
+        </div>
+        <div id="em-select" style="display:none"><label class="muted-note">Select members</label>
+          <div class="checklist">${S.members.map(m=>`<label><input type="checkbox" class="em-chk" value="${esc(m.email)}"> ${esc(m.full_name||m.email)} <span class="small-link">${esc(m.email)}</span></label>`).join("")}</div></div>
+        <div class="field"><label>Subject</label><input id="em-subj"></div>
+        <div class="field"><label>Message (basic HTML allowed)</label><textarea id="em-body" rows="8"></textarea></div>
+        <button class="btn" id="em-send">Send email</button>
+      </section>
+      <section class="panel"><h2>Recent emails</h2><div id="em-log"></div></section>`;
+    $("#em-who").addEventListener("change",()=>{ const v=$("#em-who").value; $("#em-groupwrap").style.display=v==='group'?'block':'none'; $("#em-select").style.display=v==='selected'?'block':'none'; });
+    $("#em-send").addEventListener("click", sendEmail);
+    loadEmailLog();
+  }
+  async function recipientEmails(){
+    const who=$("#em-who").value;
+    if(who==='all') return S.members.filter(m=>m.email).map(m=>({email:m.email,user_id:m.id}));
+    if(who==='selected') return [...document.querySelectorAll(".em-chk:checked")].map(c=>({email:c.value}));
+    if(who==='group'){ const { data } = await sb.from("group_members").select("user_id").eq("group_id",$("#em-group").value);
+      const set=new Set((data||[]).map(x=>x.user_id)); return S.members.filter(m=>set.has(m.id)&&m.email).map(m=>({email:m.email,user_id:m.id})); }
+    return [];
+  }
+  async function sendEmail(){
+    const subject=$("#em-subj").value.trim(), body=$("#em-body").value.trim();
+    if(!subject||!body) return $("#em-msg").innerHTML='<div class="msg err">Subject and message are required.</div>';
+    const recipients=await recipientEmails();
+    if(!recipients.length) return $("#em-msg").innerHTML='<div class="msg err">No recipients.</div>';
+    $("#em-msg").innerHTML='<span class="small-link">Sending…</span>';
+    try{
+      const { data:s } = await sb.auth.getSession(); const token=s?.session?.access_token;
+      const res=await fetch(`${window.PORTAL_CONFIG.SUPABASE_URL}/functions/v1/send-email`,{
+        method:"POST", headers:{ "Content-Type":"application/json", Authorization:`Bearer ${token}`, apikey:window.PORTAL_CONFIG.SUPABASE_ANON_KEY },
+        body: JSON.stringify({ subject, body, recipients })});
+      const b=await res.json();
+      if(b.error && !b.ok){ $("#em-msg").innerHTML=`<div class="msg info">${esc(b.error)}</div>`; }
+      else { $("#em-msg").innerHTML=`<div class="msg ok">Sent to ${b.sent}/${b.total} recipient(s).</div>`; $("#em-subj").value="";$("#em-body").value=""; }
+      loadEmailLog();
+    }catch(e){ $("#em-msg").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; }
+  }
+  async function loadEmailLog(){
+    const { data } = await sb.from("email_messages").select("*").order("created_at",{ascending:false}).limit(10);
+    $("#em-log").innerHTML=(data||[]).length? `<table class="tbl"><thead><tr><th>Date</th><th>Subject</th><th>Recipients</th></tr></thead><tbody>`+
+      data.map(m=>`<tr><td>${new Date(m.created_at).toLocaleString()}</td><td>${esc(m.subject)}</td><td>${m.recipient_count}</td></tr>`).join("")+`</tbody></table>`
+      : '<p class="muted-note">No emails sent yet.</p>';
+  }
+
+  // ---------- modal helper ----------
+  function openModal(title, html, onMount){
+    let bg=document.getElementById("pm-modal");
+    if(!bg){ bg=document.createElement("div"); bg.id="pm-modal";
+      bg.style.cssText="position:fixed;inset:0;background:rgba(12,42,77,.5);display:grid;place-items:center;z-index:80;padding:20px";
+      document.body.appendChild(bg); bg.addEventListener("click",(e)=>{ if(e.target===bg) bg.remove(); }); }
+    bg.innerHTML=`<div style="background:#fff;border-radius:16px;max-width:640px;width:100%;max-height:88vh;overflow:auto;box-shadow:var(--shadow-lg)">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line)"><h2 style="margin:0;font-size:1.15rem">${title}</h2><button class="chip-btn" id="pm-close">✕</button></div>
+      <div style="padding:20px" id="pm-body">${html}</div></div>`;
+    bg.querySelector("#pm-close").addEventListener("click",()=>bg.remove());
+    if(onMount) onMount(bg.querySelector("#pm-body"));
+  }
+
+  render("members");
+})();
+</script>
+</body>
+</html>

@@ -62,6 +62,10 @@
         <div class="ic">🏗</div><h3>Course Builder</h3>
         <p>Create courses, chapters and lessons; upload videos, PDFs and images or link YouTube/Dropbox.</p>
       </a>
+      <a class="p-card" id="people-card" href="people.html" style="display:none">
+        <div class="ic">👤</div><h3>People &amp; Enrollments</h3>
+        <p>Members, enrollment (individual/bulk + expiry), groups, and email.</p>
+      </a>
       <a class="p-card" id="admin-card" href="admin.html" style="display:none">
         <div class="ic">⚙</div><h3>Admin</h3>
         <p>Invite members by name and email, and manage roles.</p>
@@ -95,7 +99,7 @@
 
   document.getElementById("greeting").textContent =
     "Welcome, " + (prof.full_name ? prof.full_name.split(" ")[0] : "member");
-  if (prof.role === "admin") { document.getElementById("admin-card").style.display = "flex"; document.getElementById("builder-card").style.display = "flex"; }
+  if (prof.role === "admin") { ["admin-card","builder-card","people-card"].forEach(id=>document.getElementById(id).style.display="flex"); }
   NNCC.mountUserChip(document.getElementById("user-chip"));
 
   // Resources

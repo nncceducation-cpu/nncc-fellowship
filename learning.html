@@ -81,7 +81,7 @@
           <p>${esc(c.description||'')}</p>
           <div class="prog"><i style="width:${pct}%"></i></div>
           <span class="small-link">${s.dn}/${s.total} lessons · ${pct}%</span></a>`;}).join('')
-        || '<div class="empty">No courses yet.'+(isAdmin?' <a href="authoring.html">Create one →</a>':'')+'</div>'}</div>`;
+        || '<div class="empty">'+(isAdmin?'No courses yet. <a href="authoring.html">Create one →</a>':'You are not enrolled in any courses yet. Your program administrator can enroll you.')+'</div>'}</div>`;
   }
 
   // ---------- Course detail ----------

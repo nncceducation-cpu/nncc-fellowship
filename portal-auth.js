@@ -64,6 +64,12 @@
         location.replace("login.html?next=" + back);
         return null;
       }
+      const p = await this.profile();
+      if (p && p.status === "suspended") {
+        await this.signOut();
+        location.replace("login.html?suspended=1");
+        return null;
+      }
       return u;
     },
     async requireAdmin() {

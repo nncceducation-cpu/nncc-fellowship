@@ -85,6 +85,8 @@
   }
   const sb = NNCC.client;
 
+  if (params.get("suspended")) say("#signin-msg", "Your account has been suspended. Please contact the program administrator.", "err");
+
   // Detect invite / recovery links (Supabase puts type=invite|recovery in the URL hash)
   const hash = location.hash || "";
   const isRecovery = hash.includes("type=recovery") || hash.includes("type=invite") || params.get("mode")==="reset";
