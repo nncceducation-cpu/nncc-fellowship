@@ -54,34 +54,88 @@
   const $=(s)=>document.querySelector(s), esc=PM.esc, root=$("#root");
   const isAdmin = prof.role==="admin";
   const qs=new URLSearchParams(location.search);
-  const courseId=qs.get("course"), lessonId=qs.get("lesson");
+  const courseId=qs.get("course"), lessonId=qs.get("lesson"), bundleId=qs.get("bundle");
 
   if(lessonId) showLesson(lessonId);
   else if(courseId) showCourse(courseId);
+  else if(bundleId) showBundle(bundleId);
   else showCourses();
 
   async function myDone(){ const { data } = await sb.from("lesson_progress").select("lesson_id").eq("user_id",me.id); return new Set((data||[]).map(p=>p.lesson_id)); }
 
   // ---------- Course catalog ----------
+  const active=(e)=> !e.expires_at || new Date(e.expires_at) > new Date();
   async function showCourses(){
-    const { data:courses } = await sb.from("courses").select("*").order("sort_order").order("created_at");
-    const list=(courses||[]).filter(c=>c.published || isAdmin);
-    const { data:mods } = await sb.from("modules").select("id,course_id");
-    const { data:les } = await sb.from("lessons").select("id,module_id");
+    const [{data:courses},{data:mods},{data:les},{data:enr},{data:bundles},{data:bcs},{data:benr}] = await Promise.all([
+      sb.from("courses").select("*").order("sort_order").order("created_at"),
+      sb.from("modules").select("id,course_id"),
+      sb.from("lessons").select("id,module_id"),
+      sb.from("course_enrollments").select("course_id,expires_at").eq("user_id",me.id),
+      sb.from("bundles").select("*").order("sort_order").order("created_at"),
+      sb.from("bundle_courses").select("*"),
+      sb.from("bundle_enrollments").select("bundle_id,expires_at").eq("user_id",me.id),
+    ]);
     const done=await myDone();
     const modByCourse={}, lesByMod={};
     (mods||[]).forEach(m=>{(modByCourse[m.course_id]=modByCourse[m.course_id]||[]).push(m.id);});
     (les||[]).forEach(l=>{(lesByMod[l.module_id]=lesByMod[l.module_id]||[]).push(l.id);});
-    function courseStats(cid){ const mids=modByCourse[cid]||[]; let total=0,dn=0; mids.forEach(mid=>{(lesByMod[mid]||[]).forEach(lid=>{total++; if(done.has(lid))dn++;});}); return {total,dn}; }
+    const stats=(cid)=>{ let t=0,d=0; (modByCourse[cid]||[]).forEach(mid=>(lesByMod[mid]||[]).forEach(lid=>{t++; if(done.has(lid))d++;})); return {t,d}; };
+    const enrolled=new Set((enr||[]).filter(active).map(e=>e.course_id));
+    const benrolled=new Set((benr||[]).filter(active).map(e=>e.bundle_id));
+    const bmap={}; (bcs||[]).forEach(x=>{(bmap[x.bundle_id]=bmap[x.bundle_id]||[]).push(x.course_id);});
+    const granted=new Set(); benrolled.forEach(bid=>(bmap[bid]||[]).forEach(cid=>granted.add(cid)));
+    const stateOf=(c)=> isAdmin||!c.enrollment_required ? 'open'
+      : (enrolled.has(c.id)||granted.has(c.id)) ? 'enrolled'
+      : c.self_enroll ? 'signup' : 'locked';
+
+    const listC = isAdmin ? (courses||[]) : (courses||[]).filter(c=>c.visibility==='published');
+    const listB = isAdmin ? (bundles||[]) : (bundles||[]).filter(b=>b.visibility==='published');
+
+    const courseCard=(c)=>{ const s=stats(c.id); const pct=s.t?Math.round(s.d/s.t*100):0; const st=stateOf(c);
+      const cover=c.cover_url?`<img src="${esc(c.cover_url)}" alt="" style="width:100%;height:120px;object-fit:cover;border-radius:10px;margin-bottom:10px">`:'';
+      const badges=`${c.visibility!=='published'&&isAdmin?`<span class="badge admin">${esc(c.visibility)}</span> `:''}`;
+      const clickable = (st==='open'||st==='enrolled');
+      const action = st==='signup'
+        ? `<button class="btn" data-signup="${c.id}" style="margin-top:10px">Sign up</button>`
+        : st==='locked' ? `<span class="small-link">🔒 Enrollment by administrator</span>`
+        : `<div class="prog"><i style="width:${pct}%"></i></div><span class="small-link">${s.d}/${s.t} lessons · ${pct}%</span>`;
+      const inner=`${cover}<h3>${esc(c.title)} ${badges}</h3><p>${esc(c.description||'')}</p>${action}`;
+      return clickable ? `<a class="p-card" href="learning.html?course=${c.id}">${inner}</a>`
+        : `<div class="p-card" style="cursor:default">${inner}</div>`;
+    };
+    const bundleCard=(b)=>{ const enrolledB=benrolled.has(b.id); const cover=b.cover_url?`<img src="${esc(b.cover_url)}" alt="" style="width:100%;height:120px;object-fit:cover;border-radius:10px;margin-bottom:10px">`:'';
+      const action = enrolledB||isAdmin ? '' : (b.self_enroll?`<button class="btn" data-bsignup="${b.id}" style="margin-top:10px">Sign up</button>`:`<span class="small-link">🔒 Enrollment by administrator</span>`);
+      return `<a class="p-card" href="learning.html?bundle=${b.id}">${cover}<h3>📦 ${esc(b.title)} ${b.visibility!=='published'&&isAdmin?`<span class="badge admin">${esc(b.visibility)}</span>`:''}</h3><p>${esc(b.description||'')}</p><span class="small-link">${(bmap[b.id]||[]).length} course(s)</span>${action?'<div>'+action+'</div>':''}</a>`;
+    };
 
     root.innerHTML=`<div class="p-head"><h1>Courses</h1><p>Your NNCC education library.${isAdmin?' <a href="authoring.html">Open the course builder →</a>':''}</p></div>
-      <div class="card-grid">${list.map(c=>{ const s=courseStats(c.id); const pct=s.total?Math.round(s.dn/s.total*100):0;
-        return `<a class="p-card" href="learning.html?course=${c.id}">
-          <h3>${esc(c.title)}${c.published?'':' <span class="badge admin">draft</span>'}</h3>
-          <p>${esc(c.description||'')}</p>
-          <div class="prog"><i style="width:${pct}%"></i></div>
-          <span class="small-link">${s.dn}/${s.total} lessons · ${pct}%</span></a>`;}).join('')
-        || '<div class="empty">'+(isAdmin?'No courses yet. <a href="authoring.html">Create one →</a>':'You are not enrolled in any courses yet. Your program administrator can enroll you.')+'</div>'}</div>`;
+      ${listB.length?`<h2 style="margin:6px 0 12px">Bundles</h2><div class="card-grid" style="margin-bottom:26px">${listB.map(bundleCard).join('')}</div>`:''}
+      ${listB.length?'<h2 style="margin:6px 0 12px">Courses</h2>':''}
+      <div class="card-grid">${listC.map(courseCard).join('')
+        || '<div class="empty">'+(isAdmin?'No courses yet. <a href="authoring.html">Create one →</a>':'You are not enrolled in any courses yet.')+'</div>'}</div>`;
+
+    root.querySelectorAll("[data-signup]").forEach(b=>b.addEventListener("click", async (e)=>{ e.preventDefault();
+      const { error }=await sb.rpc("self_enroll",{ p_course:b.dataset.signup }); if(error) return alert(error.message); showCourses(); }));
+    root.querySelectorAll("[data-bsignup]").forEach(b=>b.addEventListener("click", async (e)=>{ e.preventDefault(); e.stopPropagation();
+      const { error }=await sb.rpc("self_enroll_bundle",{ p_bundle:b.dataset.bsignup }); if(error) return alert(error.message); showCourses(); }));
+  }
+
+  async function showBundle(bid){
+    const { data:b } = await sb.from("bundles").select("*").eq("id",bid).single();
+    if(!b){ root.innerHTML='<div class="empty">Bundle not found. <a href="learning.html">All courses</a></div>'; return; }
+    const { data:bcs } = await sb.from("bundle_courses").select("course_id").eq("bundle_id",bid);
+    const ids=(bcs||[]).map(x=>x.course_id);
+    let courses=[]; if(ids.length){ const { data } = await sb.from("courses").select("*").in("id",ids); courses=data||[]; }
+    const { data:benr } = await sb.from("bundle_enrollments").select("expires_at").eq("bundle_id",bid).eq("user_id",me.id);
+    const isEnrolled = (benr||[]).some(active) || isAdmin;
+    root.innerHTML=`<p class="crumbs"><a href="learning.html">← All courses</a></p>
+      <div class="p-head"><h1>📦 ${esc(b.title)}</h1>${b.description?`<p>${esc(b.description)}</p>`:''}</div>
+      ${!isEnrolled&&b.self_enroll?`<button class="btn" id="b-signup" style="margin-bottom:16px">Sign up for this bundle</button>`:''}
+      ${!isEnrolled&&!b.self_enroll?`<div class="msg info">Enrollment in this bundle is managed by your program administrator.</div>`:''}
+      <div class="card-grid">${courses.map(c=>`<a class="p-card" href="learning.html?course=${c.id}">
+        ${c.cover_url?`<img src="${esc(c.cover_url)}" alt="" style="width:100%;height:120px;object-fit:cover;border-radius:10px;margin-bottom:10px">`:''}
+        <h3>${esc(c.title)}</h3><p>${esc(c.description||'')}</p></a>`).join('')||'<div class="empty">No courses in this bundle yet.</div>'}</div>`;
+    const bs=$("#b-signup"); if(bs) bs.addEventListener("click", async ()=>{ const { error }=await sb.rpc("self_enroll_bundle",{ p_bundle:bid }); if(error) return alert(error.message); showBundle(bid); });
   }
 
   // ---------- Course detail ----------

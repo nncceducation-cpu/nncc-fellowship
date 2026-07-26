@@ -67,8 +67,9 @@
     <div class="builder">
       <!-- Courses sidebar -->
       <div class="side">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <b style="color:var(--navy)">Courses</b>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:6px">
+          <b style="color:var(--navy);flex:1">Courses</b>
+          <button class="chip-btn" id="open-bundles">Bundles</button>
           <button class="btn" id="new-course" style="padding:7px 12px;font-size:13px">+ New</button>
         </div>
         <div id="course-list"></div>
@@ -198,12 +199,18 @@
     const course=state.courses.find(c=>c.id===state.curCourse)||{};
     pane.innerHTML=`
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
-        <h2 style="margin:0">${esc(course.title||'')}</h2>
-        <button class="btn" id="add-ch">+ Add chapter</button>
+        <div style="display:flex;align-items:center;gap:12px">
+          ${course.cover_url?`<img src="${esc(course.cover_url)}" alt="" style="width:64px;height:44px;object-fit:cover;border-radius:8px;border:1px solid var(--line)">`:''}
+          <h2 style="margin:0">${esc(course.title||'')}</h2>
+          <span class="badge ${course.visibility==='published'?'admin':'member'}">${esc(course.visibility||'published')}</span>
+          ${course.enrollment_required?`<span class="badge member">${course.self_enroll?'self sign-up':'private'}</span>`:'<span class="badge member">open</span>'}
+        </div>
+        <div style="display:flex;gap:8px"><button class="btn outline" id="course-settings">⚙ Settings</button><button class="btn" id="add-ch">+ Add chapter</button></div>
       </div>
       ${course.description?`<p class="muted-note" style="margin:-6px 0 14px">${esc(course.description)}</p>`:''}
       <div id="chapters">${state.chapters.map(chHTML).join("")||'<div class="empty">No chapters yet — add one.</div>'}</div>`;
     $("#add-ch").addEventListener("click", addChapter);
+    $("#course-settings").addEventListener("click", ()=>openCourseSettings(course));
   }
   function chHTML(ch){
     const ls=state.lessons[ch.id]||[];
@@ -453,6 +460,91 @@
     $("#f-media").value=publicUrl;
     $("#dz-status").textContent="Uploaded ✓  (remember to Save lesson)";
   }
+
+  // ---------- generic panel modal ----------
+  function openPanel(title, html, onMount){
+    let bg=document.getElementById("apanel");
+    if(!bg){ bg=document.createElement("div"); bg.id="apanel"; bg.className="modal-bg"; document.body.appendChild(bg);
+      bg.addEventListener("click",e=>{ if(e.target===bg) bg.classList.remove("open"); }); }
+    bg.innerHTML=`<div class="modal"><div class="modal-head"><h2 style="margin:0;font-size:1.15rem">${title}</h2><button class="chip-btn" id="ap-close">✕ Close</button></div><div class="modal-body" id="ap-body">${html}</div></div>`;
+    bg.classList.add("open"); bg.querySelector("#ap-close").addEventListener("click",()=>bg.classList.remove("open"));
+    if(onMount) onMount(bg.querySelector("#ap-body"));
+  }
+  const closePanel=()=>{ const bg=document.getElementById("apanel"); if(bg) bg.classList.remove("open"); };
+
+  // ---------- course settings ----------
+  function openCourseSettings(course){
+    openPanel("Course settings", `
+      <div class="field"><label>Title</label><input id="cs-title" value="${esc(course.title||'')}"></div>
+      <div class="field"><label>Description</label><textarea id="cs-desc" rows="3">${esc(course.description||'')}</textarea></div>
+      <div class="field"><label>Cover image (link or upload)</label><input id="cs-cover" value="${esc(course.cover_url||'')}" placeholder="https://...">
+        <div class="dropzone" id="cs-drop" style="margin-top:8px">Drop an image or click to upload<div class="muted-note" id="cs-dropstatus"></div></div>
+        <input type="file" id="cs-file" accept="image/*" style="display:none"></div>
+      <div class="row2">
+        <div class="field"><label>Visibility</label><select id="cs-vis">
+          <option value="draft">Draft — hidden from members</option><option value="published">Published — shown in catalog</option><option value="hidden">Hidden — link only</option></select></div>
+        <div class="field"><label>Access</label><select id="cs-access">
+          <option value="open">Open — every member</option><option value="signup">Members can self sign-up</option><option value="private">Private — admin enrolls</option></select></div>
+      </div>
+      <button class="btn" id="cs-save">Save settings</button>`,
+      (root)=>{
+        root.querySelector("#cs-vis").value=course.visibility||'published';
+        root.querySelector("#cs-access").value = !course.enrollment_required ? 'open' : (course.self_enroll?'signup':'private');
+        const drop=root.querySelector("#cs-drop"), fi=root.querySelector("#cs-file");
+        drop.addEventListener("click",()=>fi.click());
+        drop.addEventListener("dragover",e=>{e.preventDefault();drop.classList.add("drag");});
+        drop.addEventListener("dragleave",()=>drop.classList.remove("drag"));
+        drop.addEventListener("drop",e=>{e.preventDefault();drop.classList.remove("drag");if(e.dataTransfer.files[0])coverUp(e.dataTransfer.files[0]);});
+        fi.addEventListener("change",()=>{if(fi.files[0])coverUp(fi.files[0]);});
+        async function coverUp(file){ const st=root.querySelector("#cs-dropstatus"); st.textContent="Uploading…";
+          const safe=file.name.replace(/[^\w.\-]+/g,'_'); const path=`covers/${course.id}/${Date.now()}-${safe}`;
+          const {error}=await sb.storage.from("course-media").upload(path,file,{upsert:true,contentType:file.type||undefined});
+          if(error){ st.textContent="Failed: "+error.message; return; }
+          const {data:{publicUrl}}=sb.storage.from("course-media").getPublicUrl(path);
+          root.querySelector("#cs-cover").value=publicUrl; st.textContent="Uploaded ✓"; }
+        root.querySelector("#cs-save").addEventListener("click", async ()=>{
+          const access=root.querySelector("#cs-access").value;
+          const payload={ title:root.querySelector("#cs-title").value.trim(), description:root.querySelector("#cs-desc").value.trim()||null,
+            cover_url:root.querySelector("#cs-cover").value.trim()||null, visibility:root.querySelector("#cs-vis").value,
+            enrollment_required: access!=='open', self_enroll: access==='signup' };
+          const {error}=await sb.from("courses").update(payload).eq("id",course.id);
+          if(error) return flash(esc(error.message),"err");
+          closePanel(); flash("Course settings saved."); await loadCourses(); renderCourse();
+        });
+      });
+  }
+
+  // ---------- bundles ----------
+  async function openBundles(){
+    const { data:bundles } = await sb.from("bundles").select("*").order("sort_order").order("created_at");
+    const { data:bc } = await sb.from("bundle_courses").select("*");
+    const bcMap={}; (bc||[]).forEach(x=>{(bcMap[x.bundle_id]=bcMap[x.bundle_id]||[]).push(x.course_id);});
+    openPanel("Bundles", `<button class="btn" id="b-new">+ New bundle</button>
+      <p class="muted-note">A bundle grants access to several courses at once.</p>
+      <div id="b-list" style="margin-top:12px">${(bundles||[]).map(b=>`
+        <div class="q-card" data-bid="${b.id}" style="border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;background:var(--bg-soft)">
+          <input class="b-title" value="${esc(b.title)}" style="font-weight:600;width:100%;padding:7px 10px;border:1.5px solid var(--line);border-radius:8px">
+          <div class="field" style="margin-top:8px"><label>Courses in this bundle</label>
+            <div class="checklist" style="max-height:160px">${state.courses.map(c=>`<label><input type="checkbox" class="bc-chk" value="${c.id}" ${(bcMap[b.id]||[]).includes(c.id)?'checked':''}> ${esc(c.title)}</label>`).join("")}</div></div>
+          <div class="row2"><div class="field"><label>Visibility</label><select class="b-vis">
+            <option value="draft"${b.visibility==='draft'?' selected':''}>Draft</option><option value="published"${b.visibility==='published'?' selected':''}>Published</option><option value="hidden"${b.visibility==='hidden'?' selected':''}>Hidden</option></select></div>
+            <div class="field"><label style="display:block;margin-top:24px"><input type="checkbox" class="b-self" ${b.self_enroll?'checked':''}> Allow self sign-up</label></div></div>
+          <div style="display:flex;gap:8px"><button class="btn b-save" type="button">Save bundle</button><button class="chip-btn b-del" type="button">Delete</button></div>
+        </div>`).join("") || '<p class="muted-note">No bundles yet.</p>'}</div>`,
+      (root)=>{
+        root.querySelector("#b-new").addEventListener("click", async ()=>{ const t=prompt("Bundle title:"); if(!t)return; await sb.from("bundles").insert({title:t.trim()}); openBundles(); });
+        root.addEventListener("click", async (e)=>{ const card=e.target.closest("[data-bid]"); if(!card) return;
+          if(e.target.classList.contains("b-save")){ const bid=card.dataset.bid;
+            await sb.from("bundles").update({ title:card.querySelector(".b-title").value.trim(), visibility:card.querySelector(".b-vis").value, self_enroll:card.querySelector(".b-self").checked }).eq("id",bid);
+            const want=[...card.querySelectorAll(".bc-chk:checked")].map(c=>c.value);
+            await sb.from("bundle_courses").delete().eq("bundle_id",bid);
+            if(want.length) await sb.from("bundle_courses").insert(want.map(cid=>({bundle_id:bid,course_id:cid})));
+            flash("Bundle saved."); }
+          if(e.target.classList.contains("b-del")){ if(!confirm("Delete this bundle?"))return; await sb.from("bundles").delete().eq("id",card.dataset.bid); openBundles(); }
+        });
+      });
+  }
+  document.getElementById("open-bundles").addEventListener("click", openBundles);
 
   // ---------- boot ----------
   await loadCourses(); renderCourse();
