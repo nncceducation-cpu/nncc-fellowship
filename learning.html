@@ -114,7 +114,7 @@
 
     root.innerHTML=`<p class="crumbs"><a href="learning.html">Courses</a> ${cid?`› <a href="learning.html?course=${cid}">${esc(courseTitle)}</a>`:''} ${ch?`› ${esc(ch.title)}`:''}</p>
       <div class="p-head"><h1 style="margin:0">${esc(l.title)}</h1></div>
-      <div class="lesson-body" id="lv-body" style="margin-top:16px">${PM.render(l,{admin:isAdmin})}</div>
+      <div class="lesson-body" id="lv-body" style="margin-top:16px">${lessonBody(l)}</div>
       <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn" id="complete-btn">Mark as complete</button>
         ${cid?`<a class="btn outline" href="learning.html?course=${cid}">Back to course</a>`:''}
@@ -128,6 +128,87 @@
     btn.addEventListener("click", async ()=>{
       if(btn.dataset.done){ await sb.from("lesson_progress").delete().eq("user_id",me.id).eq("lesson_id",id); setState(false); }
       else { await sb.from("lesson_progress").upsert({ user_id:me.id, lesson_id:id }); setState(true); }
+    });
+
+    // interactive engines
+    const host=$("#lv-body");
+    if(l.lesson_type==='quiz') renderQuiz(l.id, host, ()=>setState(true));
+    else if(l.lesson_type==='assignment') renderAssignment(l.id, host, ()=>setState(true));
+  }
+
+  // Body for a lesson (quiz/assignment show only instructions here; the
+  // interactive part is appended separately).
+  function lessonBody(l){
+    const t=l.lesson_type;
+    if(t==='quiz'||t==='assignment'){
+      let h="";
+      if(l.caption) h+=`<p style="color:var(--muted)">${esc(l.caption)}</p>`;
+      if(l.content) h+=`<div class="lesson-text">${l.content}</div>`;
+      if(l.external_url) h+=`<p style="margin-top:12px"><a class="btn outline" href="${esc(l.external_url)}" target="_blank" rel="noopener">Open link ↗</a></p>`;
+      return h;
+    }
+    return PM.render(l,{admin:isAdmin});
+  }
+
+  // ---------- Quiz player ----------
+  async function renderQuiz(lessonId, host, onPass){
+    const wrap=document.createElement("div"); host.appendChild(wrap);
+    const { data:qs, error } = await sb.rpc("get_quiz",{ p_lesson:lessonId });
+    if(error){ wrap.innerHTML=`<div class="msg err">${esc(error.message)}</div>`; return; }
+    const questions=qs||[];
+    if(!questions.length){ wrap.innerHTML='<p class="small-link">This quiz has no questions yet.</p>'; return; }
+    const { data:att } = await sb.from("quiz_attempts").select("score,total,passed,created_at").eq("lesson_id",lessonId).eq("user_id",me.id).order("created_at",{ascending:false});
+    const best=(att||[]).reduce((b,a)=>(a.total&&(!b||a.score/a.total>b.score/b.total))?a:b,null);
+    wrap.innerHTML=`<div class="panel"><form id="quiz-form">
+      ${questions.map(qBlock).join("")}
+      <button class="btn" type="submit">Submit quiz</button></form>
+      <div id="quiz-result" style="margin-top:14px">${best?`<span class="small-link">Best score so far: ${best.score}/${best.total}${best.passed?' · ✓ passed':''}</span>`:''}</div></div>`;
+    wrap.querySelector("#quiz-form").addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      const answers={}; questions.forEach(q=>{ answers[q.id]=[...wrap.querySelectorAll(`input[name="q-${q.id}"]:checked`)].map(x=>x.value); });
+      const { data:res, error } = await sb.rpc("grade_quiz",{ p_lesson:lessonId, p_answers:answers });
+      if(error){ wrap.querySelector("#quiz-result").innerHTML=`<div class="msg err">${esc(error.message)}</div>`; return; }
+      wrap.querySelector("#quiz-result").innerHTML=`<div class="msg ${res.passed?'ok':'err'}">Score: ${res.score}/${res.total} — ${res.passed?'Passed ✓':'Not yet passed (70% needed)'}</div>`;
+      (res.results||[]).forEach(r=>{ const fb=wrap.querySelector(`.q[data-qid="${r.id}"] .q-fb`); if(fb) fb.innerHTML=`<span style="color:${r.correct?'#0c7373':'#8a1f1f'};font-weight:600;font-size:13px">${r.correct?'✓ Correct':'✗ Incorrect'}</span>${r.explanation?` <span class="small-link">${esc(r.explanation)}</span>`:''}`; });
+      if(res.passed){ await sb.from("lesson_progress").upsert({ user_id:me.id, lesson_id:lessonId }); if(onPass)onPass(); }
+    });
+  }
+  function qBlock(q,i){
+    const opts=q.qtype==='tf'?[{id:'t',text:'True'},{id:'f',text:'False'}]:(q.options||[]);
+    const inp=q.qtype==='multi'?'checkbox':'radio';
+    return `<div class="q" data-qid="${q.id}" style="margin-bottom:18px">
+      <b>${i+1}. ${esc(q.question)}</b>${q.qtype==='multi'?' <span class="small-link">(select all that apply)</span>':''}
+      <div style="margin-top:6px">${opts.map(o=>`<label style="display:block;margin:5px 0"><input type="${inp}" name="q-${q.id}" value="${esc(o.id)}"> ${esc(o.text)}</label>`).join("")}</div>
+      <div class="q-fb" style="margin-top:4px"></div></div>`;
+  }
+
+  // ---------- Assignment submission ----------
+  async function renderAssignment(lessonId, host, onSubmit){
+    const wrap=document.createElement("div"); host.appendChild(wrap);
+    const { data:subs } = await sb.from("assignment_submissions").select("*").eq("lesson_id",lessonId).eq("user_id",me.id).order("created_at",{ascending:false});
+    const last=(subs||[])[0];
+    wrap.innerHTML=`<div class="panel">
+      <h3 style="margin:0 0 8px">Your submission</h3>
+      ${last?`<div class="msg ${last.status==='graded'?'ok':'info'}">Status: ${esc(last.status)}${last.grade?` · Grade: <b>${esc(last.grade)}</b>`:''}</div>${last.feedback?`<p><b>Feedback:</b> ${esc(last.feedback)}</p>`:''}`:''}
+      <form id="asg-form">
+        <div class="field"><label>Your answer / notes</label><textarea id="asg-body" rows="4">${last?esc(last.body||''):''}</textarea></div>
+        <div class="field"><label>Attach a file (optional)</label><input type="file" id="asg-file"></div>
+        <div id="asg-msg"></div>
+        <button class="btn" type="submit">${last?'Submit again':'Submit assignment'}</button>
+      </form></div>`;
+    wrap.querySelector("#asg-form").addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      const body=wrap.querySelector("#asg-body").value.trim()||null;
+      const file=wrap.querySelector("#asg-file").files[0];
+      const msg=wrap.querySelector("#asg-msg"); let file_path=null;
+      if(file){ const safe=file.name.replace(/[^\w.\-]+/g,'_'); file_path=`${me.id}/${lessonId}/${Date.now()}-${safe}`;
+        msg.innerHTML='<span class="small-link">Uploading…</span>';
+        const { error:ue }=await sb.storage.from("submissions").upload(file_path,file,{upsert:true});
+        if(ue){ msg.innerHTML=`<div class="msg err">${esc(ue.message)}</div>`; return; } }
+      const { error }=await sb.from("assignment_submissions").insert({ lesson_id:lessonId, user_id:me.id, body, file_path });
+      if(error){ msg.innerHTML=`<div class="msg err">${esc(error.message)}</div>`; return; }
+      await sb.from("lesson_progress").upsert({ user_id:me.id, lesson_id:lessonId }); if(onSubmit)onSubmit();
+      msg.innerHTML='<div class="msg ok">Submitted ✓</div>'; setTimeout(()=>showLesson(lessonId),900);
     });
   }
 })();

@@ -112,7 +112,20 @@
         <textarea id="f-content" rows="6" placeholder="Write the lesson text. Basic HTML is allowed (headings, lists, links, images, embed code)."></textarea></div>
       <div class="field"><label>External link (optional) — e.g. Thinkific, a Google Form quiz, etc.</label><input id="f-ext" placeholder="https://..."></div>
 
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+      <!-- Quiz builder (type = quiz) -->
+      <div id="quiz-block" style="display:none;margin-top:18px;border-top:1px solid var(--line);padding-top:16px">
+        <h3 style="margin:0 0 6px">Quiz questions <span class="muted-note">(pass mark 70%)</span></h3>
+        <div id="q-list"></div>
+        <button class="btn outline" id="q-add" type="button">+ Add question</button>
+      </div>
+
+      <!-- Submissions review (type = assignment) -->
+      <div id="assign-block" style="display:none;margin-top:18px;border-top:1px solid var(--line);padding-top:16px">
+        <h3 style="margin:0 0 6px">Student submissions</h3>
+        <div id="sub-list"></div>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">
         <button class="btn" id="f-save">Save lesson</button>
         <button class="btn outline" id="f-preview">Preview</button>
         <button class="btn outline" id="f-delete" style="color:#8a1f1f;border-color:#f3c4c4">Delete</button>
@@ -259,8 +272,113 @@
     const labels={video:"Video link (YouTube / Vimeo / Dropbox / Drive / .mp4)",image:"Image link (or upload)",pdf:"PDF link (Dropbox / Drive / direct)",download:"File link (or upload)"};
     $("#f-media-label").textContent = labels[type]||"Media link";
     $("#f-content-label").textContent = (type==='text'||type==='embed')?"Body — HTML allowed (paste embed code for 'embed')":"Text / HTML body (optional)";
+    const isQuiz=type==='quiz', isAssign=type==='assignment';
+    $("#quiz-block").style.display=isQuiz?'block':'none';
+    $("#assign-block").style.display=isAssign?'block':'none';
+    if(state.editing){ if(isQuiz) loadQuiz(); else if(isAssign) loadSubmissions(); }
   }
   $("#f-type").addEventListener("change", updEditorUI);
+
+  // ---------- Quiz question builder ----------
+  async function loadQuiz(){
+    const { data } = await sb.from("quiz_questions").select("*").eq("lesson_id",state.editing.id).order("sort_order").order("created_at");
+    state.questions=data||[]; renderQuestions();
+  }
+  function optRow(qid, qtype, o, checked){
+    const inp = qtype==='multi'?'checkbox':'radio';
+    return `<div class="opt-row" style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+      <input type="${inp}" name="corr-${qid}" class="opt-correct" ${checked?'checked':''} title="Mark correct">
+      <input class="opt-text" style="flex:1;padding:7px 10px;border:1.5px solid var(--line);border-radius:8px" value="${esc(o.text||'')}" placeholder="Option text">
+      <button class="chip-btn opt-del" type="button">✕</button></div>`;
+  }
+  function optionsHTML(q){
+    if(q.qtype==='tf'){ const c=(q.correct||[])[0];
+      return `<label style="display:block;margin:4px 0"><input type="radio" name="tf-${q.id}" class="tf-correct" value="t" ${c==='t'?'checked':''}> True</label>
+              <label style="display:block;margin:4px 0"><input type="radio" name="tf-${q.id}" class="tf-correct" value="f" ${c==='f'?'checked':''}> False</label>`; }
+    const opts=(q.options&&q.options.length)?q.options:[{id:'a',text:''},{id:'b',text:''}];
+    return opts.map(o=>optRow(q.id,q.qtype,o,(q.correct||[]).includes(o.id))).join('');
+  }
+  function questionHTML(q,i){
+    return `<div class="q-card" data-qid="${q.id}" style="border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;background:var(--bg-soft)">
+      <div class="field"><label>Question ${i+1}</label><input class="q-text" value="${esc(q.question)}"></div>
+      <div class="row2">
+        <div class="field"><label>Type</label><select class="q-type">
+          <option value="single"${q.qtype==='single'?' selected':''}>Single choice</option>
+          <option value="multi"${q.qtype==='multi'?' selected':''}>Multiple answers</option>
+          <option value="tf"${q.qtype==='tf'?' selected':''}>True / False</option></select></div>
+        <div class="field"><label>Order</label><input class="q-order" type="number" value="${q.sort_order||i}"></div>
+      </div>
+      <label class="muted-note">Options — tick the correct one(s)</label>
+      <div class="q-options">${optionsHTML(q)}</div>
+      ${q.qtype!=='tf'?'<button class="btn outline q-addopt" type="button" style="font-size:12px;padding:5px 10px">+ Option</button>':''}
+      <div class="field" style="margin-top:10px"><label>Explanation (shown after answering)</label><input class="q-expl" value="${esc(q.explanation||'')}"></div>
+      <div style="display:flex;gap:8px"><button class="btn q-save" type="button">Save question</button><button class="chip-btn q-del" type="button">Delete</button></div>
+    </div>`;
+  }
+  function renderQuestions(){ $("#q-list").innerHTML=state.questions.length?state.questions.map(questionHTML).join(''):'<p class="muted-note">No questions yet.</p>'; }
+
+  $("#q-add").addEventListener("click", async ()=>{
+    const max=Math.max(0,...state.questions.map(q=>q.sort_order||0));
+    await sb.from("quiz_questions").insert({lesson_id:state.editing.id,question:"New question",qtype:"single",options:[{id:'a',text:''},{id:'b',text:''}],correct:[],sort_order:max+1});
+    loadQuiz();
+  });
+  $("#q-list").addEventListener("change",(e)=>{
+    if(e.target.classList.contains("q-type")){
+      const card=e.target.closest(".q-card"); const qtype=e.target.value;
+      const optsWrap=card.querySelector(".q-options"); const qid=card.dataset.qid;
+      if(qtype==='tf') optsWrap.innerHTML=optionsHTML({id:qid,qtype:'tf',correct:[]});
+      else optsWrap.innerHTML=optRow(qid,qtype,{text:''},false)+optRow(qid,qtype,{text:''},false);
+      const ao=card.querySelector(".q-addopt"); if(ao) ao.style.display=qtype==='tf'?'none':'inline-flex';
+    }
+  });
+  $("#q-list").addEventListener("click", async (e)=>{
+    const card=e.target.closest(".q-card"); if(!card) return;
+    if(e.target.classList.contains("q-addopt")){ card.querySelector(".q-options").insertAdjacentHTML("beforeend", optRow(card.dataset.qid, card.querySelector(".q-type").value, {text:''}, false)); return; }
+    if(e.target.classList.contains("opt-del")){ e.target.closest(".opt-row").remove(); return; }
+    if(e.target.classList.contains("q-del")){ if(!confirm("Delete this question?"))return; await sb.from("quiz_questions").delete().eq("id",card.dataset.qid); loadQuiz(); return; }
+    if(e.target.classList.contains("q-save")){ await saveQuestion(card); return; }
+  });
+  async function saveQuestion(card){
+    const qid=card.dataset.qid, qtype=card.querySelector(".q-type").value;
+    let options=[], correct=[];
+    if(qtype==='tf'){ options=[{id:'t',text:'True'},{id:'f',text:'False'}]; const c=card.querySelector(".tf-correct:checked"); if(c)correct=[c.value]; }
+    else { card.querySelectorAll(".opt-row").forEach((row,idx)=>{ const id=String.fromCharCode(97+idx); options.push({id,text:row.querySelector(".opt-text").value.trim()}); if(row.querySelector(".opt-correct").checked)correct.push(id); }); }
+    const payload={ question:card.querySelector(".q-text").value.trim(), qtype, options, correct,
+      explanation:card.querySelector(".q-expl").value.trim()||null, sort_order:parseInt(card.querySelector(".q-order").value||"0",10) };
+    const { error }=await sb.from("quiz_questions").update(payload).eq("id",qid);
+    if(error) return flash(esc(error.message),"err");
+    flash("Question saved."); loadQuiz();
+  }
+
+  // ---------- Assignment submissions review ----------
+  async function loadSubmissions(){
+    const { data }=await sb.from("assignment_submissions_view").select("*").eq("lesson_id",state.editing.id).order("created_at",{ascending:false});
+    state.subs=data||[];
+    $("#sub-list").innerHTML=state.subs.length?state.subs.map(subHTML).join(''):'<p class="muted-note">No submissions yet.</p>';
+  }
+  function subHTML(s){
+    return `<div class="sub-card" data-sid="${s.id}" data-file="${esc(s.file_path||'')}" style="border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(s.author_name||s.author_email||'member')}</b>
+        <span class="badge ${s.status==='graded'?'admin':'member'}">${s.status}</span></div>
+      ${s.body?`<div style="white-space:pre-wrap;margin:8px 0;font-size:14px">${esc(s.body)}</div>`:''}
+      ${s.file_path?`<button class="chip-btn sub-file" type="button">📎 View attached file</button>`:''}
+      <div class="row2" style="margin-top:8px">
+        <div class="field"><label>Grade</label><input class="sub-grade" value="${esc(s.grade||'')}" placeholder="e.g. Pass · 85%"></div>
+        <div class="field"><label>Feedback</label><input class="sub-feedback" value="${esc(s.feedback||'')}"></div>
+      </div>
+      <button class="btn sub-save" type="button">Save grade</button></div>`;
+  }
+  $("#sub-list").addEventListener("click", async (e)=>{
+    const card=e.target.closest(".sub-card"); if(!card) return;
+    if(e.target.classList.contains("sub-file")){
+      const { data, error }=await sb.storage.from("submissions").createSignedUrl(card.dataset.file, 3600);
+      if(error) return flash(esc(error.message),"err"); window.open(data.signedUrl,"_blank"); return;
+    }
+    if(e.target.classList.contains("sub-save")){
+      const { error }=await sb.from("assignment_submissions").update({ grade:card.querySelector(".sub-grade").value.trim()||null, feedback:card.querySelector(".sub-feedback").value.trim()||null, status:'graded', graded_by:me.id, graded_at:new Date().toISOString() }).eq("id",card.dataset.sid);
+      if(error) return flash(esc(error.message),"err"); flash("Grade saved."); loadSubmissions();
+    }
+  });
 
   function openEditor(l){
     state.editing=l;
