@@ -135,7 +135,8 @@
     let html="";
     if(l.video_url) html+=`<div class="video-embed"><iframe src="${esc(l.video_url)}" allowfullscreen loading="lazy"></iframe></div>`;
     if(l.content) html+=`<div style="white-space:pre-wrap">${esc(l.content)}</div>`;
-    if(!l.video_url && !l.content) html='<p class="small-link">No content added for this lesson yet.</p>';
+    if(!l.video_url && !l.content && !l.external_url) html='<p class="small-link">No content added for this lesson yet.</p>';
+    if(l.external_url) html+=`<p style="margin-top:20px"><a class="btn" href="${esc(l.external_url)}" target="_blank" rel="noopener">Open on Thinkific ↗</a></p>`;
     $("#lv-body").innerHTML=html;
     const { data:done } = await sb.from("lesson_progress").select("lesson_id").eq("user_id",me.id).eq("lesson_id",id).maybeSingle();
     const btn=$("#complete-btn");
