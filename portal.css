@@ -1,0 +1,114 @@
+/* =====================================================================
+   portal.css — styles for the member portal, reusing the site tokens
+   in styles.css (:root --navy, --teal, --gold, --line, etc.)
+   ===================================================================== */
+
+.portal-wrap { background: var(--bg-soft); min-height: 70vh; }
+.portal-wrap .container { padding-top: 40px; padding-bottom: 64px; }
+
+/* --- Auth card (login / set password / reset) --- */
+.auth-shell {
+  min-height: calc(100vh - 72px);
+  display: grid; place-items: center;
+  background:
+    radial-gradient(900px 500px at 85% -10%, rgba(15,138,138,.35), transparent 60%),
+    linear-gradient(135deg, var(--navy) 0%, var(--navy-700) 55%, #0a233f 100%);
+  padding: 40px 16px;
+}
+.auth-card {
+  width: 100%; max-width: 420px; background: #fff;
+  border-radius: var(--radius); box-shadow: var(--shadow-lg);
+  padding: 34px 32px;
+}
+.auth-card .mark-lg {
+  width: 52px; height: 52px; border-radius: 12px;
+  background: linear-gradient(135deg, var(--navy), var(--teal));
+  color:#fff; display:grid; place-items:center; font-weight:700;
+  font-family: var(--font-sans); letter-spacing:.5px; margin-bottom: 16px;
+}
+.auth-card h1 { font-size: 1.5rem; margin: 0 0 4px; }
+.auth-card .muted { color: var(--muted); font-size: 14.5px; margin: 0 0 22px; }
+
+.field { margin-bottom: 16px; }
+.field label { display:block; font-size: 13.5px; font-weight:600; color: var(--navy); margin-bottom:6px; }
+.field input, .field textarea, .field select {
+  width:100%; padding: 11px 13px; border:1.5px solid var(--line);
+  border-radius: var(--radius-sm); font: inherit; color: var(--ink); background:#fff;
+}
+.field input:focus, .field textarea:focus, .field select:focus {
+  outline:none; border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-50);
+}
+.btn.block { width:100%; justify-content:center; }
+.auth-alt { text-align:center; font-size: 14px; margin-top: 18px; }
+.auth-alt a { cursor:pointer; }
+
+.msg { border-radius: var(--radius-sm); padding: 11px 14px; font-size: 14px; margin-bottom: 16px; }
+.msg.err { background:#fdecec; color:#8a1f1f; border:1px solid #f3c4c4; }
+.msg.ok  { background: var(--teal-50); color: var(--teal-600); border:1px solid #bfe6e6; }
+.msg.info{ background: var(--navy-50); color: var(--navy); border:1px solid var(--navy-100); }
+
+/* --- user chip in the top bar --- */
+.user-chip { display:flex; align-items:center; gap:10px; font-size: 13.5px; }
+.user-chip .chip-name { font-weight:600; color: var(--navy); }
+.user-chip .chip-link {
+  font-size: 13px; padding: 6px 11px; border-radius: 999px;
+  border:1.5px solid var(--line); color: var(--navy);
+}
+.user-chip .chip-link:hover { border-color: var(--teal); color: var(--teal-600); text-decoration:none; }
+
+/* --- portal dashboard cards --- */
+.p-head { margin-bottom: 8px; }
+.p-head h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); margin:0; }
+.p-head p { color: var(--muted); margin: 6px 0 0; }
+.card-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(250px,1fr)); gap:18px; margin-top: 26px; }
+.p-card {
+  background:#fff; border:1px solid var(--line); border-radius: var(--radius);
+  padding: 22px; box-shadow: var(--shadow); transition: transform .12s, box-shadow .2s;
+  display:flex; flex-direction:column; gap:8px;
+}
+.p-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); text-decoration:none; }
+.p-card .ic { width:42px; height:42px; border-radius:10px; background: var(--teal-50);
+  display:grid; place-items:center; color: var(--teal-600); font-size:20px; font-weight:700; }
+.p-card h3 { margin:6px 0 0; font-size: 1.15rem; }
+.p-card p { margin:0; color: var(--muted); font-size: 14.5px; }
+
+/* --- tables (admin / directory) --- */
+.tbl { width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line);
+  border-radius: var(--radius); overflow:hidden; }
+.tbl th, .tbl td { text-align:left; padding: 12px 14px; border-bottom:1px solid var(--line); font-size:14.5px; }
+.tbl th { background: var(--navy-50); color: var(--navy); font-weight:600; }
+.tbl tr:last-child td { border-bottom:0; }
+.badge { display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600; }
+.badge.admin { background: var(--gold-50); color: var(--gold); }
+.badge.member { background: var(--navy-50); color: var(--navy); }
+.row-actions button { font-size:12.5px; padding:6px 10px; margin-right:6px; border-radius:8px;
+  border:1.5px solid var(--line); background:#fff; cursor:pointer; }
+.row-actions button:hover { border-color: var(--teal); color: var(--teal-600); }
+
+.panel { background:#fff; border:1px solid var(--line); border-radius: var(--radius);
+  padding: 24px; box-shadow: var(--shadow); margin-bottom: 26px; }
+.panel h2 { font-size: 1.2rem; margin:0 0 4px; }
+.panel .sub { color: var(--muted); font-size:14px; margin:0 0 18px; }
+.inline-form { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+.inline-form .field { margin:0; flex:1; min-width: 180px; }
+
+/* --- forum --- */
+.thread { background:#fff; border:1px solid var(--line); border-radius: var(--radius);
+  padding:16px 18px; margin-bottom:12px; display:flex; justify-content:space-between; gap:14px; }
+.thread a.t-title { font-family: var(--font-serif); font-weight:600; color:var(--navy); font-size:1.1rem; }
+.thread .t-meta { color: var(--muted); font-size:13px; }
+.post { background:#fff; border:1px solid var(--line); border-radius: var(--radius); padding:16px 18px; margin-bottom:12px; }
+.post .p-meta { color: var(--muted); font-size:13px; margin-bottom:6px; }
+.post .p-body { white-space:pre-wrap; }
+
+/* --- lessons --- */
+.lesson-list { list-style:none; padding:0; margin:14px 0 0; }
+.lesson-list li { border-bottom:1px solid var(--line); }
+.lesson-list a { display:flex; justify-content:space-between; padding:12px 4px; color:var(--ink); }
+.lesson-list a:hover { color: var(--teal-600); text-decoration:none; }
+.lesson-body { background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:26px; box-shadow:var(--shadow); }
+.video-embed { position:relative; padding-bottom:56.25%; height:0; margin:18px 0; border-radius:var(--radius-sm); overflow:hidden; }
+.video-embed iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+
+.empty { text-align:center; color: var(--muted); padding: 40px 10px; }
+.small-link { font-size:13px; color:var(--muted); }

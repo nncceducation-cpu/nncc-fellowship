@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Member Sign in — Harvey Sarnat NNCC Fellowship</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="portal.css">
+<link rel="icon" href="favicon.ico" sizes="any">
+</head>
+<body>
+
+<div class="auth-shell">
+  <div class="auth-card">
+    <div class="mark-lg">NNCC</div>
+
+    <!-- ===== Sign in ===== -->
+    <form id="form-signin" autocomplete="on">
+      <h1>Member sign in</h1>
+      <p class="muted">Harvey Sarnat NNCC Fellowship portal. Access is by invitation.</p>
+      <div id="signin-msg"></div>
+      <div class="field">
+        <label for="si-email">Email</label>
+        <input id="si-email" type="email" required autocomplete="username" placeholder="you@example.com">
+      </div>
+      <div class="field">
+        <label for="si-pass">Password</label>
+        <input id="si-pass" type="password" required autocomplete="current-password" placeholder="••••••••">
+      </div>
+      <button class="btn block" type="submit">Sign in</button>
+      <p class="auth-alt"><a id="to-forgot">Forgot your password?</a></p>
+      <p class="auth-alt small-link"><a href="index.html">← Back to the main site</a></p>
+    </form>
+
+    <!-- ===== Forgot password ===== -->
+    <form id="form-forgot" style="display:none">
+      <h1>Reset password</h1>
+      <p class="muted">Enter your email and we'll send you a reset link.</p>
+      <div id="forgot-msg"></div>
+      <div class="field">
+        <label for="fp-email">Email</label>
+        <input id="fp-email" type="email" required placeholder="you@example.com">
+      </div>
+      <button class="btn block" type="submit">Send reset link</button>
+      <p class="auth-alt"><a id="to-signin">← Back to sign in</a></p>
+    </form>
+
+    <!-- ===== Set / choose password (invite + recovery) ===== -->
+    <form id="form-setpass" style="display:none">
+      <h1>Set your password</h1>
+      <p class="muted">Welcome! Choose a password to finish setting up your account.</p>
+      <div id="setpass-msg"></div>
+      <div class="field">
+        <label for="sp-pass">New password</label>
+        <input id="sp-pass" type="password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters">
+      </div>
+      <div class="field">
+        <label for="sp-pass2">Confirm password</label>
+        <input id="sp-pass2" type="password" required minlength="8" autocomplete="new-password">
+      </div>
+      <button class="btn block" type="submit">Save password &amp; continue</button>
+    </form>
+  </div>
+</div>
+
+<script src="portal-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="portal-auth.js"></script>
+<script>
+(function () {
+  const $ = (s) => document.querySelector(s);
+  const show = (id) => ["form-signin","form-forgot","form-setpass"]
+    .forEach((f) => $("#"+f).style.display = (f===id ? "block" : "none"));
+  const say = (el, text, kind) => { $(el).innerHTML = text ? `<div class="msg ${kind}">${text}</div>` : ""; };
+  const params = new URLSearchParams(location.search);
+  const nextPage = params.get("next") || "portal.html";
+
+  if (!window.NNCC || !NNCC.configured) {
+    say("#signin-msg", "Portal not connected yet — see PORTAL-SETUP-GUIDE.md.", "info");
+    return;
+  }
+  const sb = NNCC.client;
+
+  // Detect invite / recovery links (Supabase puts type=invite|recovery in the URL hash)
+  const hash = location.hash || "";
+  const isRecovery = hash.includes("type=recovery") || hash.includes("type=invite") || params.get("mode")==="reset";
+  sb.auth.onAuthStateChange((event) => {
+    if (event === "PASSWORD_RECOVERY") show("form-setpass");
+  });
+  if (isRecovery) show("form-setpass");
+
+  // If already signed in (and not in the middle of setting a password) → go in.
+  (async () => {
+    if (isRecovery) return;
+    const u = await NNCC.user();
+    if (u) location.replace(nextPage);
+  })();
+
+  // ---- Sign in ----
+  $("#form-signin").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    say("#signin-msg","","");
+    const btn = e.submitter; btn.disabled = true;
+    const { error } = await NNCC.signIn($("#si-email").value.trim(), $("#si-pass").value);
+    btn.disabled = false;
+    if (error) return say("#signin-msg", error.message, "err");
+    location.replace(nextPage);
+  });
+
+  // ---- Forgot ----
+  $("#to-forgot").addEventListener("click", () => { say("#forgot-msg","",""); show("form-forgot"); });
+  $("#to-signin").addEventListener("click", () => show("form-signin"));
+  $("#form-forgot").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = e.submitter; btn.disabled = true;
+    const { error } = await NNCC.sendReset($("#fp-email").value.trim());
+    btn.disabled = false;
+    if (error) return say("#forgot-msg", error.message, "err");
+    say("#forgot-msg", "Check your email for a reset link.", "ok");
+  });
+
+  // ---- Set password ----
+  $("#form-setpass").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const p1 = $("#sp-pass").value, p2 = $("#sp-pass2").value;
+    if (p1 !== p2) return say("#setpass-msg", "Passwords don't match.", "err");
+    const btn = e.submitter; btn.disabled = true;
+    const { error } = await NNCC.setPassword(p1);
+    btn.disabled = false;
+    if (error) return say("#setpass-msg", error.message, "err");
+    say("#setpass-msg", "Password saved — signing you in…", "ok");
+    setTimeout(() => location.replace("portal.html"), 900);
+  });
+})();
+</script>
+</body>
+</html>

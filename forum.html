@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Members' Forum — Harvey Sarnat NNCC Fellowship</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="portal.css">
+<link rel="icon" href="favicon.ico" sizes="any">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container">
+    <a class="brand" href="portal.html">
+      <span class="mark">NNCC</span>
+      <span class="brand-text"><b>Harvey Sarnat NNCC Fellowship</b><span>Members' Forum</span></span>
+    </a>
+    <nav class="nav">
+      <a href="portal.html">Portal</a>
+      <a href="learning.html">Modules</a>
+      <a href="forum.html" class="active">Forum</a>
+      <span class="user-chip" id="user-chip"></span>
+    </nav>
+  </div>
+</header>
+
+<main class="portal-wrap">
+  <div class="container narrow">
+    <!-- Thread list view -->
+    <section id="list-view">
+      <div class="p-head" style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+        <div><h1>Members' forum</h1><p>Discuss cases, ask questions, share resources.</p></div>
+        <button class="btn" id="new-btn">+ New topic</button>
+      </div>
+      <form id="new-form" class="panel" style="display:none;margin-top:18px">
+        <div id="new-msg"></div>
+        <div class="field"><label>Topic title</label><input id="nt-title" required placeholder="e.g. aEEG interpretation in HIE"></div>
+        <div class="field"><label>First message</label><textarea id="nt-body" rows="4" required></textarea></div>
+        <button class="btn" type="submit">Post topic</button>
+        <button class="btn outline" type="button" id="new-cancel">Cancel</button>
+      </form>
+      <div id="threads" style="margin-top:22px"></div>
+    </section>
+
+    <!-- Single thread view -->
+    <section id="thread-view" style="display:none">
+      <p class="small-link"><a href="forum.html">← All topics</a></p>
+      <h1 id="tv-title" style="margin-top:6px"></h1>
+      <p class="small-link" id="tv-meta"></p>
+      <div id="posts" style="margin-top:18px"></div>
+      <form id="reply-form" class="panel" style="margin-top:18px">
+        <div id="reply-msg"></div>
+        <div class="field"><label>Reply</label><textarea id="rp-body" rows="3" required></textarea></div>
+        <button class="btn" type="submit">Post reply</button>
+      </form>
+    </section>
+  </div>
+</main>
+
+<script src="portal-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="portal-auth.js"></script>
+<script>
+(async function () {
+  const me = await NNCC.requireAuth(); if(!me) return;
+  const prof = await NNCC.profile();
+  NNCC.mountUserChip(document.getElementById("user-chip"));
+  const sb = NNCC.client;
+  const $=(s)=>document.querySelector(s);
+  const esc=(s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const when=(t)=> new Date(t).toLocaleString();
+  const say=(el,t,k)=>{$(el).innerHTML=t?`<div class="msg ${k}">${t}</div>`:"";};
+  const threadId = new URLSearchParams(location.search).get("thread");
+
+  if (threadId) { showThread(threadId); } else { showList(); }
+
+  // ---------- list ----------
+  async function showList(){
+    $("#list-view").style.display="block"; $("#thread-view").style.display="none";
+    const { data } = await sb.from("forum_threads_view").select("*").order("created_at",{ascending:false});
+    const box=$("#threads");
+    if(!data||!data.length){ box.innerHTML='<div class="empty">No topics yet — start the first one.</div>'; return; }
+    box.innerHTML = data.map(t=>`
+      <div class="thread">
+        <div><a class="t-title" href="forum.html?thread=${t.id}">${esc(t.title)}</a>
+          <div class="t-meta">Started by ${esc(t.author_name||'a member')} · ${when(t.created_at)}</div></div>
+        <div class="t-meta">${t.post_count} ${t.post_count==1?'reply':'replies'}</div>
+      </div>`).join("");
+  }
+  $("#new-btn").addEventListener("click",()=>{ $("#new-form").style.display="block"; $("#new-btn").style.display="none"; });
+  $("#new-cancel").addEventListener("click",()=>{ $("#new-form").style.display="none"; $("#new-btn").style.display="inline-flex"; });
+  $("#new-form").addEventListener("submit", async (e)=>{
+    e.preventDefault(); say("#new-msg","","");
+    const btn=e.submitter; btn.disabled=true;
+    const { data:th, error } = await sb.from("forum_threads")
+      .insert({ title:$("#nt-title").value.trim(), created_by:me.id }).select().single();
+    if(error){ btn.disabled=false; return say("#new-msg",esc(error.message),"err"); }
+    const { error:pe } = await sb.from("forum_posts")
+      .insert({ thread_id:th.id, body:$("#nt-body").value.trim(), created_by:me.id });
+    btn.disabled=false;
+    if(pe) return say("#new-msg",esc(pe.message),"err");
+    location.href="forum.html?thread="+th.id;
+  });
+
+  // ---------- single thread ----------
+  async function showThread(id){
+    $("#list-view").style.display="none"; $("#thread-view").style.display="block";
+    const { data:th } = await sb.from("forum_threads_view").select("*").eq("id",id).single();
+    if(!th){ $("#tv-title").textContent="Topic not found"; return; }
+    $("#tv-title").textContent = th.title;
+    $("#tv-meta").textContent = "Started by "+(th.author_name||"a member")+" · "+when(th.created_at);
+    await loadPosts(id);
+    $("#reply-form").addEventListener("submit", async (e)=>{
+      e.preventDefault(); say("#reply-msg","","");
+      const btn=e.submitter; btn.disabled=true;
+      const { error } = await sb.from("forum_posts")
+        .insert({ thread_id:id, body:$("#rp-body").value.trim(), created_by:me.id });
+      btn.disabled=false;
+      if(error) return say("#reply-msg",esc(error.message),"err");
+      $("#rp-body").value=""; loadPosts(id);
+    });
+  }
+  async function loadPosts(id){
+    const { data } = await sb.from("forum_posts_view").select("*").eq("thread_id",id).order("created_at",{ascending:true});
+    $("#posts").innerHTML=(data||[]).map(p=>`
+      <div class="post">
+        <div class="p-meta">${esc(p.author_name||'a member')} · ${when(p.created_at)}
+          ${(p.created_by===me.id||prof.role==='admin')?`· <a href="#" data-del="${p.id}" class="small-link">delete</a>`:''}</div>
+        <div class="p-body">${esc(p.body)}</div>
+      </div>`).join("");
+    $("#posts").querySelectorAll("[data-del]").forEach(a=>a.addEventListener("click",async(e)=>{
+      e.preventDefault(); if(!confirm("Delete this post?"))return;
+      await sb.from("forum_posts").delete().eq("id",a.dataset.del); loadPosts(id);
+    }));
+  }
+})();
+</script>
+</body>
+</html>

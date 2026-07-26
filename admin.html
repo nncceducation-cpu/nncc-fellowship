@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — Harvey Sarnat NNCC Fellowship Portal</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="portal.css">
+<link rel="icon" href="favicon.ico" sizes="any">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container">
+    <a class="brand" href="portal.html">
+      <span class="mark">NNCC</span>
+      <span class="brand-text"><b>Harvey Sarnat NNCC Fellowship</b><span>Admin</span></span>
+    </a>
+    <nav class="nav">
+      <a href="portal.html">Portal</a>
+      <a href="admin.html" class="active">Admin</a>
+      <span class="user-chip" id="user-chip"></span>
+    </nav>
+  </div>
+</header>
+
+<main class="portal-wrap">
+  <div class="container narrow">
+    <div class="p-head" style="margin-bottom:24px">
+      <h1>Admin panel</h1>
+      <p>Invite members, manage roles and add private resources.</p>
+    </div>
+
+    <!-- Invite -->
+    <section class="panel">
+      <h2>Invite a member</h2>
+      <p class="sub">Enter a full name and email. They'll receive an email to set their password, then can sign in.</p>
+      <div id="invite-msg"></div>
+      <form id="invite-form" class="inline-form">
+        <div class="field">
+          <label for="iv-name">Full name</label>
+          <input id="iv-name" type="text" placeholder="Dr. Jane Smith" required>
+        </div>
+        <div class="field">
+          <label for="iv-email">Email</label>
+          <input id="iv-email" type="email" placeholder="jane@example.com" required>
+        </div>
+        <button class="btn" type="submit">Send invite</button>
+      </form>
+    </section>
+
+    <!-- Members -->
+    <section class="panel">
+      <h2>Members</h2>
+      <p class="sub">Promote to admin, demote to member, or remove.</p>
+      <div id="members-list"></div>
+    </section>
+
+    <!-- Resources -->
+    <section class="panel">
+      <h2>Private resources</h2>
+      <p class="sub">Add a link or document shown to signed-in members on the portal.</p>
+      <div id="res-msg"></div>
+      <form id="res-form" class="inline-form" style="margin-bottom:18px">
+        <div class="field"><label>Title</label><input id="rs-title" required placeholder="EEG interpretation guide"></div>
+        <div class="field"><label>Category</label><input id="rs-cat" placeholder="Guides"></div>
+        <div class="field" style="flex-basis:100%"><label>URL</label><input id="rs-url" type="url" placeholder="https://…"></div>
+        <div class="field" style="flex-basis:100%"><label>Description (optional)</label><input id="rs-desc"></div>
+        <button class="btn" type="submit">Add resource</button>
+      </form>
+      <div id="res-list"></div>
+    </section>
+  </div>
+</main>
+
+<script src="portal-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="portal-auth.js"></script>
+<script>
+(async function () {
+  const me = await NNCC.requireAdmin();
+  if (!me) return;
+  NNCC.mountUserChip(document.getElementById("user-chip"));
+  const $ = (s)=>document.querySelector(s);
+  const say=(el,t,k)=>{$(el).innerHTML = t?`<div class="msg ${k}">${t}</div>`:"";};
+  const esc=(s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  // ---- Invite ----
+  $("#invite-form").addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    say("#invite-msg","","");
+    const btn=e.submitter; btn.disabled=true;
+    try {
+      await NNCC.inviteMember($("#iv-name").value.trim(), $("#iv-email").value.trim());
+      say("#invite-msg", "Invite sent to "+esc($("#iv-email").value.trim())+".", "ok");
+      $("#iv-name").value=""; $("#iv-email").value="";
+      loadMembers();
+    } catch(err){ say("#invite-msg", esc(err.message), "err"); }
+    btn.disabled=false;
+  });
+
+  // ---- Members ----
+  async function loadMembers(){
+    const { data } = await NNCC.members();
+    const rows=(data||[]).map(m=>{
+      const isSelf = m.id===me.id;
+      const toggle = m.role==='admin'
+        ? `<button data-act="demote" data-id="${m.id}" ${isSelf?'disabled title="You cannot demote yourself"':''}>Make member</button>`
+        : `<button data-act="promote" data-id="${m.id}">Make admin</button>`;
+      const del = isSelf ? '' : `<button data-act="delete" data-id="${m.id}">Remove</button>`;
+      return `<tr><td>${esc(m.full_name||'—')}</td><td>${esc(m.email||'')}</td>
+        <td><span class="badge ${m.role}">${m.role}</span></td>
+        <td class="row-actions">${toggle} ${del}</td></tr>`;
+    }).join("");
+    $("#members-list").innerHTML =
+      '<table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Actions</th></tr></thead><tbody>'+
+      rows+'</tbody></table>';
+  }
+  $("#members-list").addEventListener("click", async (e)=>{
+    const b=e.target.closest("button"); if(!b) return;
+    const id=b.dataset.id, act=b.dataset.act;
+    if(act==="promote") await NNCC.setRole(id,"admin");
+    if(act==="demote")  await NNCC.setRole(id,"member");
+    if(act==="delete"){ if(!confirm("Remove this member's profile? This does not delete their login; use Supabase → Authentication to fully delete.")) return;
+      await NNCC.client.from("profiles").delete().eq("id",id); }
+    loadMembers();
+  });
+
+  // ---- Resources ----
+  async function loadRes(){
+    const { data } = await NNCC.client.from("resources").select("*").order("created_at",{ascending:false});
+    if(!data||!data.length){ $("#res-list").innerHTML='<div class="empty">No resources yet.</div>'; return; }
+    $("#res-list").innerHTML='<table class="tbl"><thead><tr><th>Title</th><th>Category</th><th></th></tr></thead><tbody>'+
+      data.map(r=>`<tr><td><b>${esc(r.title)}</b><br><span class="small-link">${esc(r.url||'')}</span></td>
+        <td><span class="badge member">${esc(r.category||'General')}</span></td>
+        <td class="row-actions"><button data-del="${r.id}">Delete</button></td></tr>`).join("")+
+      '</tbody></table>';
+  }
+  $("#res-form").addEventListener("submit", async (e)=>{
+    e.preventDefault(); say("#res-msg","","");
+    const btn=e.submitter; btn.disabled=true;
+    const { error } = await NNCC.client.from("resources").insert({
+      title:$("#rs-title").value.trim(), category:$("#rs-cat").value.trim()||"General",
+      url:$("#rs-url").value.trim()||null, description:$("#rs-desc").value.trim()||null,
+      created_by: me.id
+    });
+    btn.disabled=false;
+    if(error) return say("#res-msg", esc(error.message), "err");
+    ["rs-title","rs-cat","rs-url","rs-desc"].forEach(i=>$("#"+i).value="");
+    loadRes();
+  });
+  $("#res-list").addEventListener("click", async (e)=>{
+    const b=e.target.closest("button"); if(!b||!b.dataset.del) return;
+    if(!confirm("Delete this resource?")) return;
+    await NNCC.client.from("resources").delete().eq("id",b.dataset.del); loadRes();
+  });
+
+  loadMembers(); loadRes();
+})();
+</script>
+</body>
+</html>
