@@ -85,6 +85,11 @@
 
   if(lessonId){ showLesson(lessonId); } else { showList(); }
 
+  function typeBadge(t){ if(!t) return '';
+    const map={video:['🎬','#e6f4f4','#0c7373'],pdf:['📄','#fbf4e6','#c8932f'],download:['⬇','#fbf4e6','#c8932f'],quiz:['❓','#eef3f9','#143a66'],survey:['🗳','#eef3f9','#143a66'],assignment:['📝','#e6f4f4','#0c7373'],multimedia:['🧩','#eef3f9','#143a66'],live:['🔴','#fdecec','#8a1f1f'],text:['📖','#f5f8fc','#54616e']};
+    const m=map[t]||['•','#f5f8fc','#54616e'];
+    return `<span style="display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;margin-right:8px;background:${m[1]};color:${m[2]}">${m[0]} ${esc(t)}</span>`; }
+
   async function showList(){
     $("#list-view").style.display="block"; $("#lesson-view").style.display="none";
     if(prof.role==="admin"){ $("#admin-tools").style.display="block"; await fillModuleSelect(); }
@@ -98,7 +103,7 @@
       const ls=(lessons||[]).filter(l=>l.module_id===m.id);
       return `<div class="panel"><h2>${esc(m.title)}</h2>${m.description?`<p class="sub">${esc(m.description)}</p>`:''}
         <ul class="lesson-list">${ls.length? ls.map(l=>`<li><a href="learning.html?lesson=${l.id}">
-          <span>${esc(l.title)}</span><span>${done.has(l.id)?'✓ done':'›'}</span></a></li>`).join('')
+          <span>${typeBadge(l.lesson_type)}${esc(l.title)}</span><span>${done.has(l.id)?'✓ done':'›'}</span></a></li>`).join('')
           : '<li><span class="small-link" style="display:block;padding:12px 4px">No lessons yet.</span></li>'}</ul></div>`;
     }).join("");
   }
@@ -132,12 +137,33 @@
     const { data:l } = await sb.from("lessons").select("*").eq("id",id).single();
     if(!l){ $("#lv-title").textContent="Lesson not found"; return; }
     $("#lv-title").textContent=l.title;
-    let html="";
-    if(l.video_url) html+=`<div class="video-embed"><iframe src="${esc(l.video_url)}" allowfullscreen loading="lazy"></iframe></div>`;
-    if(l.content) html+=`<div style="white-space:pre-wrap">${esc(l.content)}</div>`;
-    if(!l.video_url && !l.content && !l.external_url) html='<p class="small-link">No content added for this lesson yet.</p>';
+    let html=`<p style="margin:0 0 14px">${typeBadge(l.lesson_type)}</p>`;
+    if(l.video_url){
+      const yt=/youtube|youtu\.be|vimeo/.test(l.video_url);
+      html+= yt
+        ? `<div class="video-embed"><iframe src="${esc(l.video_url)}" allowfullscreen loading="lazy"></iframe></div>`
+        : `<video controls style="width:100%;border-radius:10px" src="${esc(l.video_url)}"></video>`;
+    } else if(l.lesson_type==='video'){
+      html+=`<div style="background:var(--navy-50);border:1px dashed var(--navy-100);border-radius:12px;padding:38px 20px;text-align:center;color:var(--navy);font-weight:600">🎬 Video not uploaded yet${prof.role==='admin'?' — add it below.':' — check back soon, or open it on Thinkific.'}</div>`;
+    }
+    if(l.content) html+=`<div style="white-space:pre-wrap;margin-top:14px">${esc(l.content)}</div>`;
     if(l.external_url) html+=`<p style="margin-top:20px"><a class="btn" href="${esc(l.external_url)}" target="_blank" rel="noopener">Open on Thinkific ↗</a></p>`;
+    if(prof.role==='admin'){
+      html+=`<div style="margin-top:24px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--bg-soft)">
+        <label style="font-weight:600;font-size:13px;color:var(--navy)">Admin — attach / update the video</label>
+        <p class="small-link" style="margin:4px 0 8px">Paste a YouTube embed URL (https://www.youtube.com/embed/ID) or a direct .mp4 link. Leave blank to keep it a placeholder.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input id="set-vid" style="flex:1;min-width:220px;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px" value="${esc(l.video_url||'')}" placeholder="https://...">
+          <button class="btn" id="save-vid">Save video</button>
+        </div><div id="vid-msg" class="small-link" style="margin-top:6px"></div></div>`;
+    }
     $("#lv-body").innerHTML=html;
+    if(prof.role==='admin'){ const sv=$("#save-vid"); if(sv) sv.addEventListener('click', async ()=>{
+      const url=$("#set-vid").value.trim()||null;
+      const { error }=await sb.from('lessons').update({video_url:url}).eq('id',id);
+      $("#vid-msg").textContent = error ? ('Error: '+error.message) : 'Saved — reloading…';
+      if(!error) setTimeout(()=>showLesson(id),700);
+    }); }
     const { data:done } = await sb.from("lesson_progress").select("lesson_id").eq("user_id",me.id).eq("lesson_id",id).maybeSingle();
     const btn=$("#complete-btn");
     const setState=(c)=>{ btn.textContent=c?"✓ Completed":"Mark as complete"; btn.classList.toggle("outline",c); btn.dataset.done=c?"1":""; };
