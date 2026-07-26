@@ -142,18 +142,43 @@
   async function showCourse(cid){
     const { data:course } = await sb.from("courses").select("*").eq("id",cid).single();
     if(!course){ root.innerHTML='<div class="empty">Course not found. <a href="learning.html">All courses</a></div>'; return; }
+
+    // prerequisite gate
+    if(course.prerequisite_course_id && !isAdmin){
+      const { data:preCert } = await sb.from("certificates").select("id").eq("course_id",course.prerequisite_course_id).eq("user_id",me.id).maybeSingle();
+      if(!preCert){ const { data:pre }=await sb.from("courses").select("title").eq("id",course.prerequisite_course_id).single();
+        root.innerHTML=`<p class="crumbs"><a href="learning.html">← All courses</a></p><div class="p-head"><h1>${esc(course.title)}</h1></div>
+          <div class="msg info">🔒 This course requires you to complete <b>${esc(pre?pre.title:'a prerequisite course')}</b> first. <a href="learning.html?course=${course.prerequisite_course_id}">Go to it →</a></div>`; return; }
+    }
+
     const { data:chs } = await sb.from("modules").select("*").eq("course_id",cid).order("sort_order").order("created_at");
     const ids=(chs||[]).map(c=>c.id);
     let les=[]; if(ids.length){ const { data } = await sb.from("lessons").select("*").in("module_id",ids).order("sort_order").order("created_at"); les=data||[]; }
     const done=await myDone();
     const byMod={}; les.forEach(l=>{(byMod[l.module_id]=byMod[l.module_id]||[]).push(l);});
+    // drip: unlock date = my enrollment date + chapter.drip_days
+    const { data:enr } = await sb.from("course_enrollments").select("enrolled_at").eq("course_id",cid).eq("user_id",me.id).maybeSingle();
+    const start = enr ? new Date(enr.enrolled_at) : null;
+    const unlockDate=(ch)=>{ if(isAdmin||!ch.drip_days||!start) return null; const d=new Date(start); d.setDate(d.getDate()+ch.drip_days); return d>new Date()?d:null; };
+
+    // completion + certificate
+    const total=les.length, dn=les.filter(l=>done.has(l.id)).length;
+    let certBtn="";
+    if(total>0 && dn===total && course.certificate_enabled!==false){
+      await sb.rpc("claim_certificate",{ p_course:cid }).catch(()=>{});
+      certBtn=`<a class="btn" href="certificate.html?course=${cid}" style="margin-bottom:16px">🎓 View your certificate</a>`;
+    }
+
     root.innerHTML=`<p class="crumbs"><a href="learning.html">← All courses</a></p>
       <div class="p-head"><h1>${esc(course.title)}</h1>${course.description?`<p>${esc(course.description)}</p>`:''}
       ${isAdmin?`<p class="small-link"><a href="authoring.html">✎ Edit this course in the builder</a></p>`:''}</div>
-      ${(chs||[]).map(ch=>{ const ls=byMod[ch.id]||[];
-        return `<div class="panel"><h2>${esc(ch.title)}</h2>
-          <ul class="lesson-list">${ls.length? ls.map(l=>`<li><a href="learning.html?lesson=${l.id}&course=${cid}">
-            <span>${PM.badge(l.lesson_type)}${esc(l.title)}</span><span>${done.has(l.id)?'✓':'›'}</span></a></li>`).join('')
+      ${total>0?`<div class="prog" style="max-width:320px"><i style="width:${Math.round(dn/total*100)}%"></i></div><p class="small-link">${dn}/${total} lessons · ${Math.round(dn/total*100)}%</p>`:''}
+      ${certBtn}
+      ${(chs||[]).map(ch=>{ const ls=byMod[ch.id]||[]; const ud=unlockDate(ch);
+        return `<div class="panel"><h2>${esc(ch.title)} ${ud?`<span class="badge member">🔒 unlocks ${ud.toLocaleDateString()}</span>`:''}</h2>
+          <ul class="lesson-list">${ls.length? ls.map(l=> ud
+              ? `<li><span style="display:flex;justify-content:space-between;padding:12px 4px;color:var(--muted)"><span>${PM.badge(l.lesson_type)}${esc(l.title)}</span><span>🔒</span></span></li>`
+              : `<li><a href="learning.html?lesson=${l.id}&course=${cid}"><span>${PM.badge(l.lesson_type)}${esc(l.title)}</span><span>${done.has(l.id)?'✓':'›'}</span></a></li>`).join('')
             : '<li><span class="small-link" style="display:block;padding:12px 4px">No lessons yet.</span></li>'}</ul></div>`;
       }).join('') || '<div class="empty">No chapters yet.</div>'}`;
   }
@@ -181,7 +206,8 @@
     setState(!!done);
     btn.addEventListener("click", async ()=>{
       if(btn.dataset.done){ await sb.from("lesson_progress").delete().eq("user_id",me.id).eq("lesson_id",id); setState(false); }
-      else { await sb.from("lesson_progress").upsert({ user_id:me.id, lesson_id:id }); setState(true); }
+      else { await sb.from("lesson_progress").upsert({ user_id:me.id, lesson_id:id }); setState(true);
+        if(cid) sb.rpc("claim_certificate",{ p_course:cid }).catch(()=>{}); }
     });
 
     // interactive engines

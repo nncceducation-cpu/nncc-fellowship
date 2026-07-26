@@ -71,6 +71,10 @@
   const flash=(t,k)=>{ $("#msg").innerHTML=t?`<div class="msg ${k||'ok'}">${t}</div>`:""; if(t) setTimeout(()=>$("#msg").innerHTML="",4000); };
   const fmtDate=(d)=> d? new Date(d).toLocaleDateString() : "—";
   const toIso=(v)=> v? new Date(v+"T23:59:59").toISOString() : null;
+  function downloadCSV(filename, rows){
+    const csv=rows.map(r=>r.map(c=>{ const s=String(c==null?'':c); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }).join(",")).join("\n");
+    const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=filename; a.click();
+  }
 
   let S={ members:[], courses:[], groups:[] };
   async function loadCore(){
@@ -115,10 +119,14 @@
         <textarea id="bulk" rows="4" class="" style="width:100%;padding:10px;border:1.5px solid var(--line);border-radius:10px" placeholder="Dr. Jane Smith, jane@example.com&#10;Dr. Omar Ali, omar@example.com"></textarea>
         <button class="btn" id="bulk-go" style="margin-top:10px">Send invites</button>
       </section>
-      <section class="panel"><h2>Members (${S.members.length})</h2>
+      <section class="panel"><div style="display:flex;justify-content:space-between;align-items:center"><h2>Members (${S.members.length})</h2>
+        <button class="chip-btn" id="exp-members">⬇ Export CSV</button></div>
         <table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Enrollments</th><th>Lessons done</th><th>Actions</th></tr></thead>
         <tbody>${rows}</tbody></table></section>`;
     $("#bulk-go").addEventListener("click", bulkInvite);
+    $("#exp-members").addEventListener("click", ()=>downloadCSV("members.csv",
+      [["Name","Email","Role","Status","Enrollments","Lessons done","Joined"],
+       ...S.members.map(m=>[m.full_name,m.email,m.role,m.status,m.enrollments,m.lessons_done,new Date(m.created_at).toISOString().slice(0,10)])]));
     $("#tab-members").addEventListener("click", membersActions);
   }
   async function bulkInvite(){

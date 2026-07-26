@@ -219,6 +219,7 @@
         <b>${esc(ch.title)}</b>
         <button class="chip-btn" data-chup="${ch.id}">▲</button>
         <button class="chip-btn" data-chdn="${ch.id}">▼</button>
+        <button class="chip-btn" data-chdrip="${ch.id}" title="Drip release">⏱ ${ch.drip_days?ch.drip_days+'d':'drip'}</button>
         <button class="chip-btn" data-ched="${ch.id}">✎</button>
         <button class="chip-btn" data-chdel="${ch.id}">🗑</button>
       </div>
@@ -237,6 +238,7 @@
     const t=e.target.closest("button"); if(!t) return;
     const d=t.dataset;
     if(d.chup||d.chdn){ await reorder("modules", state.chapters, d.chup||d.chdn, d.chup?-1:1); return renderCourse(); }
+    if(d.chdrip){ const ch=state.chapters.find(x=>x.id===d.chdrip); const n=prompt("Release this chapter how many days AFTER a learner enrolls? (0 = available immediately)", ch.drip_days||0); if(n===null)return; await sb.from("modules").update({drip_days:parseInt(n||"0",10)||0}).eq("id",ch.id); return renderCourse(); }
     if(d.ched){ const ch=state.chapters.find(x=>x.id===d.ched); const n=prompt("Chapter title:",ch.title); if(n===null)return; await sb.from("modules").update({title:n.trim()}).eq("id",ch.id); return renderCourse(); }
     if(d.chdel){ if(!confirm("Delete this chapter and its lessons?"))return; await sb.from("modules").delete().eq("id",d.chdel); return renderCourse(); }
     if(d.addles){ return addLesson(d.addles); }
@@ -486,10 +488,18 @@
         <div class="field"><label>Access</label><select id="cs-access">
           <option value="open">Open — every member</option><option value="signup">Members can self sign-up</option><option value="private">Private — admin enrolls</option></select></div>
       </div>
+      <div class="row2">
+        <div class="field"><label>Prerequisite course (optional)</label><select id="cs-prereq"><option value="">— none —</option>${state.courses.filter(x=>x.id!==course.id).map(x=>`<option value="${x.id}">${esc(x.title)}</option>`).join("")}</select></div>
+        <div class="field"><label style="display:block;margin-top:24px"><input type="checkbox" id="cs-cert"> Issue completion certificate</label></div>
+      </div>
+      <div class="field"><label>Certificate note (optional line printed on the certificate)</label><input id="cs-note" placeholder="e.g. 172 CME credits"></div>
       <button class="btn" id="cs-save">Save settings</button>`,
       (root)=>{
         root.querySelector("#cs-vis").value=course.visibility||'published';
         root.querySelector("#cs-access").value = !course.enrollment_required ? 'open' : (course.self_enroll?'signup':'private');
+        root.querySelector("#cs-prereq").value=course.prerequisite_course_id||'';
+        root.querySelector("#cs-cert").checked=course.certificate_enabled!==false;
+        root.querySelector("#cs-note").value=course.pass_note||'';
         const drop=root.querySelector("#cs-drop"), fi=root.querySelector("#cs-file");
         drop.addEventListener("click",()=>fi.click());
         drop.addEventListener("dragover",e=>{e.preventDefault();drop.classList.add("drag");});
@@ -506,7 +516,10 @@
           const access=root.querySelector("#cs-access").value;
           const payload={ title:root.querySelector("#cs-title").value.trim(), description:root.querySelector("#cs-desc").value.trim()||null,
             cover_url:root.querySelector("#cs-cover").value.trim()||null, visibility:root.querySelector("#cs-vis").value,
-            enrollment_required: access!=='open', self_enroll: access==='signup' };
+            enrollment_required: access!=='open', self_enroll: access==='signup',
+            prerequisite_course_id: root.querySelector("#cs-prereq").value||null,
+            certificate_enabled: root.querySelector("#cs-cert").checked,
+            pass_note: root.querySelector("#cs-note").value.trim()||null };
           const {error}=await sb.from("courses").update(payload).eq("id",course.id);
           if(error) return flash(esc(error.message),"err");
           closePanel(); flash("Course settings saved."); await loadCourses(); renderCourse();

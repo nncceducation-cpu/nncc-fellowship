@@ -58,6 +58,14 @@
         <div class="ic">👥</div><h3>Member Directory</h3>
         <p>See who else is part of the program.</p>
       </a>
+      <a class="p-card" href="#certificates">
+        <div class="ic">🎓</div><h3>My Certificates</h3>
+        <p>Download completion certificates for courses you've finished.</p>
+      </a>
+      <a class="p-card" id="analytics-card" href="analytics.html" style="display:none">
+        <div class="ic">📊</div><h3>Analytics</h3>
+        <p>Engagement, enrollments, completions and quiz performance.</p>
+      </a>
       <a class="p-card" id="builder-card" href="authoring.html" style="display:none">
         <div class="ic">🏗</div><h3>Course Builder</h3>
         <p>Create courses, chapters and lessons; upload videos, PDFs and images or link YouTube/Dropbox.</p>
@@ -76,6 +84,10 @@
     <h2 id="resources" style="margin-top:44px">Private resources</h2>
     <p class="small-link">Shared with members only. Admins can add resources from the Admin panel.</p>
     <div id="resources-list" style="margin-top:14px"></div>
+
+    <!-- My certificates -->
+    <h2 id="certificates" style="margin-top:44px">My certificates</h2>
+    <div id="certs-list" style="margin-top:14px"></div>
 
     <!-- Member directory -->
     <h2 id="directory" style="margin-top:44px">Member directory</h2>
@@ -99,8 +111,16 @@
 
   document.getElementById("greeting").textContent =
     "Welcome, " + (prof.full_name ? prof.full_name.split(" ")[0] : "member");
-  if (prof.role === "admin") { ["admin-card","builder-card","people-card"].forEach(id=>document.getElementById(id).style.display="flex"); }
+  if (prof.role === "admin") { ["admin-card","builder-card","people-card","analytics-card"].forEach(id=>document.getElementById(id).style.display="flex"); }
   NNCC.mountUserChip(document.getElementById("user-chip"));
+
+  // My certificates
+  const { data: certs } = await NNCC.client.from("certificates").select("*, courses(title)").order("issued_at",{ascending:false});
+  const cl = document.getElementById("certs-list");
+  if (!certs || !certs.length) { cl.innerHTML = '<div class="empty">Finish a course to earn a certificate.</div>'; }
+  else { cl.innerHTML = '<table class="tbl"><thead><tr><th>Course</th><th>Issued</th><th></th></tr></thead><tbody>' +
+    certs.map(c=>`<tr><td>${esc(c.courses?c.courses.title:'')}</td><td>${new Date(c.issued_at).toLocaleDateString()}</td>
+      <td><a class="btn outline" style="padding:5px 12px;font-size:13px" href="certificate.html?course=${c.course_id}">View</a></td></tr>`).join("") + '</tbody></table>'; }
 
   // Resources
   const { data: res } = await NNCC.client
