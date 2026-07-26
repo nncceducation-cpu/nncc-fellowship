@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Course Builder — Harvey Sarnat NNCC Fellowship</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="portal.css">
+<link rel="icon" href="favicon.ico" sizes="any">
+<style>
+  .builder { display:grid; grid-template-columns: 280px 1fr; gap:22px; align-items:start; }
+  @media (max-width: 880px){ .builder{ grid-template-columns:1fr; } }
+  .side { position:sticky; top:88px; }
+  .course-item { display:flex; align-items:center; gap:6px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; margin-bottom:8px; cursor:pointer; background:#fff; }
+  .course-item.active { border-color:var(--teal); background:var(--teal-50); }
+  .course-item .ci-title { flex:1; font-weight:600; color:var(--navy); font-size:14px; }
+  .chip-btn { border:1px solid var(--line); background:#fff; border-radius:8px; padding:3px 8px; cursor:pointer; font-size:12px; }
+  .chip-btn:hover { border-color:var(--teal); color:var(--teal-600); }
+  .chapter { border:1px solid var(--line); border-radius:14px; margin-bottom:16px; background:#fff; overflow:hidden; }
+  .chapter-head { display:flex; align-items:center; gap:8px; padding:12px 14px; background:var(--navy-50); }
+  .chapter-head b { flex:1; color:var(--navy); font-family:var(--font-serif); }
+  .les-row { display:flex; align-items:center; gap:8px; padding:10px 14px; border-top:1px solid var(--line); }
+  .les-row .lt { flex:1; font-size:14.5px; }
+  .muted-note { color:var(--muted); font-size:13px; }
+  .dropzone { border:2px dashed var(--navy-100); border-radius:12px; padding:22px; text-align:center; color:var(--muted); cursor:pointer; background:var(--bg-soft); }
+  .dropzone.drag { border-color:var(--teal); background:var(--teal-50); color:var(--teal-600); }
+  .modal-bg { position:fixed; inset:0; background:rgba(12,42,77,.5); display:none; place-items:center; z-index:80; padding:20px; }
+  .modal-bg.open { display:grid; }
+  .modal { background:#fff; border-radius:16px; width:100%; max-width:720px; max-height:90vh; overflow:auto; box-shadow:var(--shadow-lg); }
+  .modal-head { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid var(--line); position:sticky; top:0; background:#fff; }
+  .modal-body { padding:22px; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:620px){ .row2{ grid-template-columns:1fr; } }
+  .lesson-text img{max-width:100%} .embed-wrap iframe{max-width:100%}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container">
+    <a class="brand" href="portal.html">
+      <span class="mark">NNCC</span>
+      <span class="brand-text"><b>Harvey Sarnat NNCC Fellowship</b><span>Course Builder</span></span>
+    </a>
+    <nav class="nav">
+      <a href="portal.html">Portal</a>
+      <a href="learning.html">Modules</a>
+      <a href="authoring.html" class="active">Builder</a>
+      <span class="user-chip" id="user-chip"></span>
+    </nav>
+  </div>
+</header>
+
+<main class="portal-wrap">
+  <div class="container">
+    <div class="p-head" style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:20px">
+      <div><h1>Course builder</h1><p>Create courses, chapters and lessons. Drop in videos, images and PDFs, or link YouTube / Vimeo / Dropbox / Drive.</p></div>
+      <a class="btn outline" href="learning.html" target="_blank">View student site ↗</a>
+    </div>
+    <div id="msg"></div>
+
+    <div class="builder">
+      <!-- Courses sidebar -->
+      <div class="side">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <b style="color:var(--navy)">Courses</b>
+          <button class="btn" id="new-course" style="padding:7px 12px;font-size:13px">+ New</button>
+        </div>
+        <div id="course-list"></div>
+      </div>
+
+      <!-- Selected course -->
+      <div id="course-pane">
+        <div class="empty">Select or create a course to begin.</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Lesson editor modal -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="m-title" style="margin:0;font-size:1.2rem">Lesson</h2>
+      <button class="chip-btn" id="m-close">✕ Close</button>
+    </div>
+    <div class="modal-body">
+      <div id="m-msg"></div>
+      <div class="field"><label>Lesson title</label><input id="f-title" placeholder="e.g. Lecture 1 — Overview"></div>
+      <div class="row2">
+        <div class="field"><label>Type</label><select id="f-type"></select></div>
+        <div class="field"><label>Order</label><input id="f-order" type="number" step="1"></div>
+      </div>
+
+      <div id="media-block">
+        <div class="field"><label id="f-media-label">Media link (YouTube / Vimeo / Dropbox / Drive / direct URL)</label>
+          <input id="f-media" placeholder="https://..."></div>
+        <div class="dropzone" id="dropzone">
+          <div><b>Drop a file here</b> or click to upload</div>
+          <div class="muted-note" id="dz-hint">Video, image, PDF or any file. Big videos are best linked from YouTube/Vimeo.</div>
+          <div class="muted-note" id="dz-status" style="margin-top:6px"></div>
+        </div>
+        <input type="file" id="file-input" style="display:none">
+      </div>
+
+      <div class="field" style="margin-top:14px"><label>Caption / short instructions (optional)</label><input id="f-caption" placeholder="Shown under the media"></div>
+      <div class="field"><label id="f-content-label">Text / HTML body (optional)</label>
+        <textarea id="f-content" rows="6" placeholder="Write the lesson text. Basic HTML is allowed (headings, lists, links, images, embed code)."></textarea></div>
+      <div class="field"><label>External link (optional) — e.g. Thinkific, a Google Form quiz, etc.</label><input id="f-ext" placeholder="https://..."></div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn" id="f-save">Save lesson</button>
+        <button class="btn outline" id="f-preview">Preview</button>
+        <button class="btn outline" id="f-delete" style="color:#8a1f1f;border-color:#f3c4c4">Delete</button>
+      </div>
+      <div id="preview" class="lesson-body" style="margin-top:18px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<script src="portal-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="portal-auth.js"></script>
+<script src="portal-media.js"></script>
+<script>
+(async function () {
+  const me = await NNCC.requireAdmin(); if(!me) return;
+  NNCC.mountUserChip(document.getElementById("user-chip"));
+  const sb = NNCC.client, PM = window.PortalMedia;
+  const $=(s)=>document.querySelector(s), esc=PM.esc;
+  const say=(el,t,k)=>{$(el).innerHTML=t?`<div class="msg ${k}">${t}</div>`:"";};
+  const flash=(t,k)=>{ say("#msg",t,k||"ok"); setTimeout(()=>say("#msg","",""),3500); };
+
+  let state={ courses:[], curCourse:null, chapters:[], lessons:{}, editing:null };
+
+  // ---------- Courses ----------
+  async function loadCourses(){
+    const { data } = await sb.from("courses").select("*").order("sort_order").order("created_at");
+    state.courses=data||[];
+    $("#course-list").innerHTML = state.courses.map(c=>`
+      <div class="course-item ${state.curCourse===c.id?'active':''}" data-id="${c.id}">
+        <span class="ci-title" data-open="${c.id}">${esc(c.title)}</span>
+        <button class="chip-btn" data-up="${c.id}" title="Move up">▲</button>
+        <button class="chip-btn" data-dn="${c.id}" title="Move down">▼</button>
+        <button class="chip-btn" data-edc="${c.id}" title="Rename">✎</button>
+        <button class="chip-btn" data-delc="${c.id}" title="Delete">🗑</button>
+      </div>`).join("") || '<div class="muted-note">No courses yet.</div>';
+    if(!state.curCourse && state.courses[0]) state.curCourse=state.courses[0].id;
+  }
+  $("#course-list").addEventListener("click", async (e)=>{
+    const b=e.target.closest("[data-id],[data-open],[data-up],[data-dn],[data-edc],[data-delc]"); if(!b) return;
+    if(b.dataset.open){ state.curCourse=b.dataset.open; await loadCourses(); return renderCourse(); }
+    if(b.dataset.up||b.dataset.dn){ await reorder("courses", state.courses, b.dataset.up||b.dataset.dn, b.dataset.up?-1:1); await loadCourses(); return; }
+    if(b.dataset.edc){ const c=state.courses.find(x=>x.id===b.dataset.edc); const t=prompt("Course title:",c.title); if(t===null)return; const d=prompt("Course description:",c.description||""); await sb.from("courses").update({title:t.trim(),description:(d||'').trim()||null}).eq("id",c.id); await loadCourses(); return renderCourse(); }
+    if(b.dataset.delc){ if(!confirm("Delete this course and ALL its chapters & lessons?"))return; await sb.from("courses").delete().eq("id",b.dataset.delc); if(state.curCourse===b.dataset.delc)state.curCourse=null; await loadCourses(); return renderCourse(); }
+  });
+  $("#new-course").addEventListener("click", async ()=>{
+    const t=prompt("New course title:"); if(!t)return;
+    const max=Math.max(0,...state.courses.map(c=>c.sort_order||0));
+    const { data, error }=await sb.from("courses").insert({title:t.trim(),sort_order:max+1}).select().single();
+    if(error)return flash(esc(error.message),"err");
+    state.curCourse=data.id; await loadCourses(); renderCourse();
+  });
+
+  // ---------- Chapters + lessons ----------
+  async function loadCourse(){
+    if(!state.curCourse){ state.chapters=[]; state.lessons={}; return; }
+    const { data:chs } = await sb.from("modules").select("*").eq("course_id",state.curCourse).order("sort_order").order("created_at");
+    state.chapters=chs||[];
+    const ids=state.chapters.map(c=>c.id);
+    let les=[];
+    if(ids.length){ const { data } = await sb.from("lessons").select("*").in("module_id",ids).order("sort_order").order("created_at"); les=data||[]; }
+    state.lessons={}; state.chapters.forEach(c=>state.lessons[c.id]=[]);
+    les.forEach(l=>{ (state.lessons[l.module_id]=state.lessons[l.module_id]||[]).push(l); });
+  }
+  async function renderCourse(){
+    await loadCourse();
+    const pane=$("#course-pane");
+    if(!state.curCourse){ pane.innerHTML='<div class="empty">Select or create a course to begin.</div>'; return; }
+    const course=state.courses.find(c=>c.id===state.curCourse)||{};
+    pane.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+        <h2 style="margin:0">${esc(course.title||'')}</h2>
+        <button class="btn" id="add-ch">+ Add chapter</button>
+      </div>
+      ${course.description?`<p class="muted-note" style="margin:-6px 0 14px">${esc(course.description)}</p>`:''}
+      <div id="chapters">${state.chapters.map(chHTML).join("")||'<div class="empty">No chapters yet — add one.</div>'}</div>`;
+    $("#add-ch").addEventListener("click", addChapter);
+  }
+  function chHTML(ch){
+    const ls=state.lessons[ch.id]||[];
+    return `<div class="chapter">
+      <div class="chapter-head">
+        <b>${esc(ch.title)}</b>
+        <button class="chip-btn" data-chup="${ch.id}">▲</button>
+        <button class="chip-btn" data-chdn="${ch.id}">▼</button>
+        <button class="chip-btn" data-ched="${ch.id}">✎</button>
+        <button class="chip-btn" data-chdel="${ch.id}">🗑</button>
+      </div>
+      ${ls.map(l=>`<div class="les-row">
+        <span>${PM.badge(l.lesson_type)}</span>
+        <span class="lt">${esc(l.title)}</span>
+        <button class="chip-btn" data-lup="${l.id}">▲</button>
+        <button class="chip-btn" data-ldn="${l.id}">▼</button>
+        <button class="chip-btn" data-led="${l.id}">Edit</button>
+        <button class="chip-btn" data-ldel="${l.id}">🗑</button>
+      </div>`).join("")}
+      <div class="les-row"><button class="chip-btn" data-addles="${ch.id}">+ Add lesson</button></div>
+    </div>`;
+  }
+  document.addEventListener("click", async (e)=>{
+    const t=e.target.closest("button"); if(!t) return;
+    const d=t.dataset;
+    if(d.chup||d.chdn){ await reorder("modules", state.chapters, d.chup||d.chdn, d.chup?-1:1); return renderCourse(); }
+    if(d.ched){ const ch=state.chapters.find(x=>x.id===d.ched); const n=prompt("Chapter title:",ch.title); if(n===null)return; await sb.from("modules").update({title:n.trim()}).eq("id",ch.id); return renderCourse(); }
+    if(d.chdel){ if(!confirm("Delete this chapter and its lessons?"))return; await sb.from("modules").delete().eq("id",d.chdel); return renderCourse(); }
+    if(d.addles){ return addLesson(d.addles); }
+    if(d.lup||d.ldn){ const l=findLesson(d.lup||d.ldn); await reorder("lessons", state.lessons[l.module_id], d.lup||d.ldn, d.lup?-1:1); return renderCourse(); }
+    if(d.led){ return openEditor(findLesson(d.led)); }
+    if(d.ldel){ if(!confirm("Delete this lesson?"))return; await sb.from("lessons").delete().eq("id",d.ldel); return renderCourse(); }
+  });
+  function findLesson(id){ for(const k in state.lessons){ const f=(state.lessons[k]||[]).find(l=>l.id===id); if(f)return f; } return null; }
+
+  async function addChapter(){
+    const t=prompt("Chapter title:","New chapter"); if(!t)return;
+    const max=Math.max(0,...state.chapters.map(c=>c.sort_order||0));
+    const { error }=await sb.from("modules").insert({course_id:state.curCourse,title:t.trim(),sort_order:max+1});
+    if(error)return flash(esc(error.message),"err"); renderCourse();
+  }
+  async function addLesson(chId){
+    const t=prompt("Lesson title:","New lesson"); if(!t)return;
+    const arr=state.lessons[chId]||[]; const max=Math.max(0,...arr.map(l=>l.sort_order||0));
+    const { data, error }=await sb.from("lessons").insert({module_id:chId,title:t.trim(),lesson_type:'text',sort_order:max+1}).select().single();
+    if(error)return flash(esc(error.message),"err");
+    await renderCourse(); openEditor(data);
+  }
+
+  // Generic reorder: swap sort_order with neighbour
+  async function reorder(table, arr, id, dir){
+    const i=arr.findIndex(x=>x.id===id); const j=i+dir;
+    if(i<0||j<0||j>=arr.length) return;
+    const a=arr[i], b=arr[j];
+    await sb.from(table).update({sort_order:b.sort_order}).eq("id",a.id);
+    await sb.from(table).update({sort_order:a.sort_order}).eq("id",b.id);
+  }
+
+  // ---------- Lesson editor ----------
+  const modal=$("#modal");
+  $("#f-type").innerHTML = PM.TYPES.map(t=>`<option value="${t}">${t}</option>`).join("");
+  function mediaField(type){ return type==='video'?'video_url':'file_url'; }
+  function updEditorUI(){
+    const type=$("#f-type").value;
+    const showMedia=["video","image","pdf","download"].includes(type);
+    $("#media-block").style.display = showMedia?'block':'none';
+    const labels={video:"Video link (YouTube / Vimeo / Dropbox / Drive / .mp4)",image:"Image link (or upload)",pdf:"PDF link (Dropbox / Drive / direct)",download:"File link (or upload)"};
+    $("#f-media-label").textContent = labels[type]||"Media link";
+    $("#f-content-label").textContent = (type==='text'||type==='embed')?"Body — HTML allowed (paste embed code for 'embed')":"Text / HTML body (optional)";
+  }
+  $("#f-type").addEventListener("change", updEditorUI);
+
+  function openEditor(l){
+    state.editing=l;
+    $("#m-title").textContent="Edit lesson";
+    $("#f-title").value=l.title||"";
+    $("#f-type").value=(l.lesson_type||"text");
+    $("#f-order").value=l.sort_order||0;
+    $("#f-media").value = (l.lesson_type==='video'? (l.video_url||"") : (l.file_url||""));
+    $("#f-caption").value=l.caption||"";
+    $("#f-content").value=l.content||"";
+    $("#f-ext").value=l.external_url||"";
+    $("#dz-status").textContent="";
+    $("#preview").style.display="none";
+    updEditorUI(); modal.classList.add("open");
+  }
+  $("#m-close").addEventListener("click", ()=>modal.classList.remove("open"));
+  modal.addEventListener("click",(e)=>{ if(e.target===modal) modal.classList.remove("open"); });
+
+  function draftFromForm(){
+    const type=$("#f-type").value;
+    const d={ title:$("#f-title").value.trim(), lesson_type:type, sort_order:parseInt($("#f-order").value||"0",10),
+      caption:$("#f-caption").value.trim()||null, content:$("#f-content").value.trim()||null, external_url:$("#f-ext").value.trim()||null };
+    const mv=$("#f-media").value.trim()||null;
+    d.video_url = type==='video'? mv : (state.editing.video_url||null);
+    d.file_url  = type==='video'? (state.editing.file_url||null) : mv;
+    return d;
+  }
+  $("#f-preview").addEventListener("click", ()=>{
+    const d=Object.assign({}, state.editing, draftFromForm());
+    const p=$("#preview"); p.style.display="block"; p.innerHTML=PM.render(d,{admin:true});
+  });
+  $("#f-save").addEventListener("click", async ()=>{
+    if(!state.editing) return;
+    const d=draftFromForm();
+    if(!d.title) return say("#m-msg",'<div class="msg err">Title is required.</div>',"");
+    const { error }=await sb.from("lessons").update(d).eq("id",state.editing.id);
+    if(error) return say("#m-msg",`<div class="msg err">${esc(error.message)}</div>`,"");
+    modal.classList.remove("open"); flash("Lesson saved."); renderCourse();
+  });
+  $("#f-delete").addEventListener("click", async ()=>{
+    if(!state.editing) return; if(!confirm("Delete this lesson?"))return;
+    await sb.from("lessons").delete().eq("id",state.editing.id);
+    modal.classList.remove("open"); flash("Lesson deleted."); renderCourse();
+  });
+
+  // ---------- File upload (drag-drop + click) ----------
+  const dz=$("#dropzone"), fi=$("#file-input");
+  dz.addEventListener("click",()=>fi.click());
+  dz.addEventListener("dragover",(e)=>{ e.preventDefault(); dz.classList.add("drag"); });
+  dz.addEventListener("dragleave",()=>dz.classList.remove("drag"));
+  dz.addEventListener("drop",(e)=>{ e.preventDefault(); dz.classList.remove("drag"); if(e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]); });
+  fi.addEventListener("change",()=>{ if(fi.files[0]) uploadFile(fi.files[0]); });
+
+  async function uploadFile(file){
+    if(!state.editing) return;
+    $("#dz-status").textContent = `Uploading “${file.name}” (${(file.size/1048576).toFixed(1)} MB)…`;
+    const safe=file.name.replace(/[^\w.\-]+/g,"_");
+    const path=`${state.curCourse}/${state.editing.module_id}/${state.editing.id}/${Date.now()}-${safe}`;
+    const { error }=await sb.storage.from("course-media").upload(path,file,{upsert:true,contentType:file.type||undefined});
+    if(error){ $("#dz-status").textContent="Upload failed: "+error.message; return; }
+    const { data:{ publicUrl } }=sb.storage.from("course-media").getPublicUrl(path);
+    // if the lesson is still the default 'text', auto-pick a type from the file
+    if($("#f-type").value==='text'){
+      const n=file.name.toLowerCase();
+      const t = /\.(mp4|mov|webm|m4v|ogg)$/.test(n)?'video'
+              : /\.(png|jpe?g|gif|webp|svg|avif)$/.test(n)?'image'
+              : /\.pdf$/.test(n)?'pdf':'download';
+      $("#f-type").value=t; updEditorUI();
+    }
+    // write the URL into whichever field the current type uses
+    $("#f-media").value=publicUrl;
+    $("#dz-status").textContent="Uploaded ✓  (remember to Save lesson)";
+  }
+
+  // ---------- boot ----------
+  await loadCourses(); renderCourse();
+})();
+</script>
+</body>
+</html>

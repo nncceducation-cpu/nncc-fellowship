@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Education Modules — Harvey Sarnat NNCC Fellowship</title>
+<title>Courses — Harvey Sarnat NNCC Fellowship</title>
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,6 +11,14 @@
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="portal.css">
 <link rel="icon" href="favicon.ico" sizes="any">
+<style>
+  .prog { height:7px;border-radius:999px;background:var(--navy-50);overflow:hidden;margin-top:10px }
+  .prog > i { display:block;height:100%;background:var(--teal) }
+  .lesson-text img{max-width:100%;border-radius:8px} .lesson-text h1,.lesson-text h2,.lesson-text h3{font-family:var(--font-serif);color:var(--navy)}
+  .embed-wrap iframe{max-width:100%}
+  .crumbs{font-size:13px;color:var(--muted);margin-bottom:6px}
+  .crumbs a{color:var(--muted)}
+</style>
 </head>
 <body>
 
@@ -18,11 +26,11 @@
   <div class="container">
     <a class="brand" href="portal.html">
       <span class="mark">NNCC</span>
-      <span class="brand-text"><b>Harvey Sarnat NNCC Fellowship</b><span>Education Modules</span></span>
+      <span class="brand-text"><b>Harvey Sarnat NNCC Fellowship</b><span>Courses</span></span>
     </a>
     <nav class="nav">
       <a href="portal.html">Portal</a>
-      <a href="learning.html" class="active">Modules</a>
+      <a href="learning.html" class="active">Courses</a>
       <a href="forum.html">Forum</a>
       <span class="user-chip" id="user-chip"></span>
     </nav>
@@ -30,140 +38,89 @@
 </header>
 
 <main class="portal-wrap">
-  <div class="container narrow">
-    <!-- Module + lesson list -->
-    <section id="list-view">
-      <div class="p-head"><h1>Education modules</h1>
-        <p>The NNCC curriculum, lesson by lesson. Your progress is saved automatically.
-        The full CME-accredited course also lives on
-        <a href="https://nncceducation.thinkific.com/" target="_blank" rel="noopener">Thinkific</a>.</p></div>
-
-      <!-- Admin authoring -->
-      <section class="panel" id="admin-tools" style="display:none;margin-top:22px">
-        <h2>Add content <span class="badge admin">admin</span></h2>
-        <div id="auth-msg"></div>
-        <form id="mod-form" class="inline-form" style="margin-bottom:16px">
-          <div class="field"><label>New module title</label><input id="md-title" placeholder="Module 1 — Neonatal EEG" required></div>
-          <div class="field"><label>Description</label><input id="md-desc"></div>
-          <button class="btn" type="submit">Add module</button>
-        </form>
-        <form id="les-form" class="inline-form">
-          <div class="field"><label>Module</label><select id="ls-mod"></select></div>
-          <div class="field"><label>Lesson title</label><input id="ls-title" placeholder="Lesson 1 — Montages" required></div>
-          <div class="field" style="flex-basis:100%"><label>Video URL (YouTube embed, optional)</label><input id="ls-video" placeholder="https://www.youtube.com/embed/..."></div>
-          <div class="field" style="flex-basis:100%"><label>Lesson text (optional)</label><textarea id="ls-content" rows="3"></textarea></div>
-          <button class="btn" type="submit">Add lesson</button>
-        </form>
-      </section>
-
-      <div id="modules" style="margin-top:24px"></div>
-    </section>
-
-    <!-- Single lesson -->
-    <section id="lesson-view" style="display:none">
-      <p class="small-link"><a href="learning.html">← All modules</a></p>
-      <h1 id="lv-title" style="margin-top:6px"></h1>
-      <div class="lesson-body" id="lv-body"></div>
-      <button class="btn" id="complete-btn" style="margin-top:18px">Mark as complete</button>
-    </section>
-  </div>
+  <div class="container narrow" id="root"></div>
 </main>
 
 <script src="portal-config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="portal-auth.js"></script>
+<script src="portal-media.js"></script>
 <script>
 (async function () {
   const me = await NNCC.requireAuth(); if(!me) return;
   const prof = await NNCC.profile();
   NNCC.mountUserChip(document.getElementById("user-chip"));
-  const sb = NNCC.client;
-  const $=(s)=>document.querySelector(s);
-  const esc=(s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const say=(el,t,k)=>{$(el).innerHTML=t?`<div class="msg ${k}">${t}</div>`:"";};
-  const lessonId = new URLSearchParams(location.search).get("lesson");
+  const sb = NNCC.client, PM = window.PortalMedia;
+  const $=(s)=>document.querySelector(s), esc=PM.esc, root=$("#root");
+  const isAdmin = prof.role==="admin";
+  const qs=new URLSearchParams(location.search);
+  const courseId=qs.get("course"), lessonId=qs.get("lesson");
 
-  if(lessonId){ showLesson(lessonId); } else { showList(); }
+  if(lessonId) showLesson(lessonId);
+  else if(courseId) showCourse(courseId);
+  else showCourses();
 
-  function typeBadge(t){ if(!t) return '';
-    const map={video:['🎬','#e6f4f4','#0c7373'],pdf:['📄','#fbf4e6','#c8932f'],download:['⬇','#fbf4e6','#c8932f'],quiz:['❓','#eef3f9','#143a66'],survey:['🗳','#eef3f9','#143a66'],assignment:['📝','#e6f4f4','#0c7373'],multimedia:['🧩','#eef3f9','#143a66'],live:['🔴','#fdecec','#8a1f1f'],text:['📖','#f5f8fc','#54616e']};
-    const m=map[t]||['•','#f5f8fc','#54616e'];
-    return `<span style="display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;margin-right:8px;background:${m[1]};color:${m[2]}">${m[0]} ${esc(t)}</span>`; }
+  async function myDone(){ const { data } = await sb.from("lesson_progress").select("lesson_id").eq("user_id",me.id); return new Set((data||[]).map(p=>p.lesson_id)); }
 
-  async function showList(){
-    $("#list-view").style.display="block"; $("#lesson-view").style.display="none";
-    if(prof.role==="admin"){ $("#admin-tools").style.display="block"; await fillModuleSelect(); }
-    const { data:mods } = await sb.from("modules").select("*").order("sort_order").order("created_at");
-    const { data:lessons } = await sb.from("lessons").select("*").order("sort_order").order("created_at");
-    const { data:prog } = await sb.from("lesson_progress").select("lesson_id").eq("user_id",me.id);
-    const done = new Set((prog||[]).map(p=>p.lesson_id));
-    const box=$("#modules");
-    if(!mods||!mods.length){ box.innerHTML='<div class="empty">No modules yet.'+(prof.role==='admin'?' Add one above.':'')+'</div>'; return; }
-    box.innerHTML = mods.map(m=>{
-      const ls=(lessons||[]).filter(l=>l.module_id===m.id);
-      return `<div class="panel"><h2>${esc(m.title)}</h2>${m.description?`<p class="sub">${esc(m.description)}</p>`:''}
-        <ul class="lesson-list">${ls.length? ls.map(l=>`<li><a href="learning.html?lesson=${l.id}">
-          <span>${typeBadge(l.lesson_type)}${esc(l.title)}</span><span>${done.has(l.id)?'✓ done':'›'}</span></a></li>`).join('')
-          : '<li><span class="small-link" style="display:block;padding:12px 4px">No lessons yet.</span></li>'}</ul></div>`;
-    }).join("");
+  // ---------- Course catalog ----------
+  async function showCourses(){
+    const { data:courses } = await sb.from("courses").select("*").order("sort_order").order("created_at");
+    const list=(courses||[]).filter(c=>c.published || isAdmin);
+    const { data:mods } = await sb.from("modules").select("id,course_id");
+    const { data:les } = await sb.from("lessons").select("id,module_id");
+    const done=await myDone();
+    const modByCourse={}, lesByMod={};
+    (mods||[]).forEach(m=>{(modByCourse[m.course_id]=modByCourse[m.course_id]||[]).push(m.id);});
+    (les||[]).forEach(l=>{(lesByMod[l.module_id]=lesByMod[l.module_id]||[]).push(l.id);});
+    function courseStats(cid){ const mids=modByCourse[cid]||[]; let total=0,dn=0; mids.forEach(mid=>{(lesByMod[mid]||[]).forEach(lid=>{total++; if(done.has(lid))dn++;});}); return {total,dn}; }
+
+    root.innerHTML=`<div class="p-head"><h1>Courses</h1><p>Your NNCC education library.${isAdmin?' <a href="authoring.html">Open the course builder →</a>':''}</p></div>
+      <div class="card-grid">${list.map(c=>{ const s=courseStats(c.id); const pct=s.total?Math.round(s.dn/s.total*100):0;
+        return `<a class="p-card" href="learning.html?course=${c.id}">
+          <h3>${esc(c.title)}${c.published?'':' <span class="badge admin">draft</span>'}</h3>
+          <p>${esc(c.description||'')}</p>
+          <div class="prog"><i style="width:${pct}%"></i></div>
+          <span class="small-link">${s.dn}/${s.total} lessons · ${pct}%</span></a>`;}).join('')
+        || '<div class="empty">No courses yet.'+(isAdmin?' <a href="authoring.html">Create one →</a>':'')+'</div>'}</div>`;
   }
 
-  async function fillModuleSelect(){
-    const { data:mods } = await sb.from("modules").select("*").order("sort_order");
-    $("#ls-mod").innerHTML=(mods||[]).map(m=>`<option value="${m.id}">${esc(m.title)}</option>`).join("");
+  // ---------- Course detail ----------
+  async function showCourse(cid){
+    const { data:course } = await sb.from("courses").select("*").eq("id",cid).single();
+    if(!course){ root.innerHTML='<div class="empty">Course not found. <a href="learning.html">All courses</a></div>'; return; }
+    const { data:chs } = await sb.from("modules").select("*").eq("course_id",cid).order("sort_order").order("created_at");
+    const ids=(chs||[]).map(c=>c.id);
+    let les=[]; if(ids.length){ const { data } = await sb.from("lessons").select("*").in("module_id",ids).order("sort_order").order("created_at"); les=data||[]; }
+    const done=await myDone();
+    const byMod={}; les.forEach(l=>{(byMod[l.module_id]=byMod[l.module_id]||[]).push(l);});
+    root.innerHTML=`<p class="crumbs"><a href="learning.html">← All courses</a></p>
+      <div class="p-head"><h1>${esc(course.title)}</h1>${course.description?`<p>${esc(course.description)}</p>`:''}
+      ${isAdmin?`<p class="small-link"><a href="authoring.html">✎ Edit this course in the builder</a></p>`:''}</div>
+      ${(chs||[]).map(ch=>{ const ls=byMod[ch.id]||[];
+        return `<div class="panel"><h2>${esc(ch.title)}</h2>
+          <ul class="lesson-list">${ls.length? ls.map(l=>`<li><a href="learning.html?lesson=${l.id}&course=${cid}">
+            <span>${PM.badge(l.lesson_type)}${esc(l.title)}</span><span>${done.has(l.id)?'✓':'›'}</span></a></li>`).join('')
+            : '<li><span class="small-link" style="display:block;padding:12px 4px">No lessons yet.</span></li>'}</ul></div>`;
+      }).join('') || '<div class="empty">No chapters yet.</div>'}`;
   }
 
-  // admin: add module / lesson
-  const mf=$("#mod-form"); if(mf) mf.addEventListener("submit", async (e)=>{
-    e.preventDefault(); const btn=e.submitter; btn.disabled=true;
-    const { error } = await sb.from("modules").insert({ title:$("#md-title").value.trim(), description:$("#md-desc").value.trim()||null });
-    btn.disabled=false;
-    if(error) return say("#auth-msg",esc(error.message),"err");
-    $("#md-title").value=""; $("#md-desc").value=""; await fillModuleSelect(); showList();
-  });
-  const lf=$("#les-form"); if(lf) lf.addEventListener("submit", async (e)=>{
-    e.preventDefault(); const btn=e.submitter; btn.disabled=true;
-    const { error } = await sb.from("lessons").insert({
-      module_id:$("#ls-mod").value, title:$("#ls-title").value.trim(),
-      video_url:$("#ls-video").value.trim()||null, content:$("#ls-content").value.trim()||null });
-    btn.disabled=false;
-    if(error) return say("#auth-msg",esc(error.message),"err");
-    $("#ls-title").value=""; $("#ls-video").value=""; $("#ls-content").value=""; showList();
-  });
-
-  // single lesson
+  // ---------- Lesson ----------
   async function showLesson(id){
-    $("#list-view").style.display="none"; $("#lesson-view").style.display="block";
     const { data:l } = await sb.from("lessons").select("*").eq("id",id).single();
-    if(!l){ $("#lv-title").textContent="Lesson not found"; return; }
-    $("#lv-title").textContent=l.title;
-    let html=`<p style="margin:0 0 14px">${typeBadge(l.lesson_type)}</p>`;
-    if(l.video_url){
-      const yt=/youtube|youtu\.be|vimeo/.test(l.video_url);
-      html+= yt
-        ? `<div class="video-embed"><iframe src="${esc(l.video_url)}" allowfullscreen loading="lazy"></iframe></div>`
-        : `<video controls style="width:100%;border-radius:10px" src="${esc(l.video_url)}"></video>`;
-    } else if(l.lesson_type==='video'){
-      html+=`<div style="background:var(--navy-50);border:1px dashed var(--navy-100);border-radius:12px;padding:38px 20px;text-align:center;color:var(--navy);font-weight:600">🎬 Video not uploaded yet${prof.role==='admin'?' — add it below.':' — check back soon, or open it on Thinkific.'}</div>`;
-    }
-    if(l.content) html+=`<div style="white-space:pre-wrap;margin-top:14px">${esc(l.content)}</div>`;
-    if(l.external_url) html+=`<p style="margin-top:20px"><a class="btn" href="${esc(l.external_url)}" target="_blank" rel="noopener">Open on Thinkific ↗</a></p>`;
-    if(prof.role==='admin'){
-      html+=`<div style="margin-top:24px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--bg-soft)">
-        <label style="font-weight:600;font-size:13px;color:var(--navy)">Admin — attach / update the video</label>
-        <p class="small-link" style="margin:4px 0 8px">Paste a YouTube embed URL (https://www.youtube.com/embed/ID) or a direct .mp4 link. Leave blank to keep it a placeholder.</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <input id="set-vid" style="flex:1;min-width:220px;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px" value="${esc(l.video_url||'')}" placeholder="https://...">
-          <button class="btn" id="save-vid">Save video</button>
-        </div><div id="vid-msg" class="small-link" style="margin-top:6px"></div></div>`;
-    }
-    $("#lv-body").innerHTML=html;
-    if(prof.role==='admin'){ const sv=$("#save-vid"); if(sv) sv.addEventListener('click', async ()=>{
-      const url=$("#set-vid").value.trim()||null;
-      const { error }=await sb.from('lessons').update({video_url:url}).eq('id',id);
-      $("#vid-msg").textContent = error ? ('Error: '+error.message) : 'Saved — reloading…';
-      if(!error) setTimeout(()=>showLesson(id),700);
-    }); }
+    if(!l){ root.innerHTML='<div class="empty">Lesson not found. <a href="learning.html">All courses</a></div>'; return; }
+    const { data:ch } = await sb.from("modules").select("*").eq("id",l.module_id).single();
+    const cid = (ch&&ch.course_id)||qs.get("course");
+    let courseTitle=""; if(cid){ const { data:c }=await sb.from("courses").select("title").eq("id",cid).single(); courseTitle=c?c.title:""; }
+
+    root.innerHTML=`<p class="crumbs"><a href="learning.html">Courses</a> ${cid?`› <a href="learning.html?course=${cid}">${esc(courseTitle)}</a>`:''} ${ch?`› ${esc(ch.title)}`:''}</p>
+      <div class="p-head"><h1 style="margin:0">${esc(l.title)}</h1></div>
+      <div class="lesson-body" id="lv-body" style="margin-top:16px">${PM.render(l,{admin:isAdmin})}</div>
+      <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn" id="complete-btn">Mark as complete</button>
+        ${cid?`<a class="btn outline" href="learning.html?course=${cid}">Back to course</a>`:''}
+        ${isAdmin?`<a class="btn outline" href="authoring.html">✎ Edit in builder</a>`:''}
+      </div>`;
+
     const { data:done } = await sb.from("lesson_progress").select("lesson_id").eq("user_id",me.id).eq("lesson_id",id).maybeSingle();
     const btn=$("#complete-btn");
     const setState=(c)=>{ btn.textContent=c?"✓ Completed":"Mark as complete"; btn.classList.toggle("outline",c); btn.dataset.done=c?"1":""; };
