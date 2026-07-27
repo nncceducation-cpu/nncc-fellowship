@@ -114,6 +114,9 @@
         ${m.id===me.id?'':`<button data-del="${m.id}">Remove</button>`}
       </td></tr>`).join("");
     $("#tab-members").innerHTML=`
+      <section class="panel" id="jr-panel"><h2>Requests to join</h2>
+        <p class="sub">People who asked to join from the sign-in page. Invite or add them, or dismiss.</p>
+        <div id="jr-list" class="muted-note">Loading…</div></section>
       <section class="panel"><h2>Add a member</h2>
         <p class="sub">Creates the account immediately. Set a password (they can sign in right away) or leave it blank to auto-generate one you can share. No email is required.</p>
         <div id="add-msg"></div>
@@ -140,6 +143,25 @@
       [["Name","Email","Role","Status","Enrollments","Lessons done","Joined"],
        ...S.members.map(m=>[m.full_name,m.email,m.role,m.status,m.enrollments,m.lessons_done,new Date(m.created_at).toISOString().slice(0,10)])]));
     $("#tab-members").addEventListener("click", membersActions);
+    $("#jr-list").addEventListener("click", jrAction);
+    loadJoinRequests();
+  }
+  async function loadJoinRequests(){
+    const { data } = await sb.from("join_requests").select("*").eq("status","new").order("created_at",{ascending:false});
+    const box=$("#jr-list"); if(!box) return;
+    if(!data||!data.length){ box.innerHTML='<span class="muted-note">No pending requests.</span>'; return; }
+    box.innerHTML='<table class="tbl"><thead><tr><th>When</th><th>Name</th><th>Email</th><th>Message</th><th>Actions</th></tr></thead><tbody>'+
+      data.map(r=>`<tr><td>${new Date(r.created_at).toLocaleDateString()}</td><td>${esc(r.full_name||'—')}</td><td>${esc(r.email)}</td><td>${esc(r.message||'')}</td>
+        <td class="row-actions"><button data-jrinv="${r.id}" data-n="${esc(r.full_name||'')}" data-e="${esc(r.email)}">Invite</button>
+          <button data-jrfill data-n="${esc(r.full_name||'')}" data-e="${esc(r.email)}">Add…</button>
+          <button data-jrdis="${r.id}">Dismiss</button></td></tr>`).join('')+
+      '</tbody></table>';
+  }
+  async function jrAction(e){
+    const b=e.target.closest("button"); if(!b) return;
+    if(b.dataset.jrinv){ try{ await NNCC.inviteMember(b.dataset.n, b.dataset.e); await sb.from("join_requests").update({status:'handled'}).eq("id",b.dataset.jrinv); flash("Invited "+b.dataset.e+"."); await loadCore(); renderMembers(); }catch(err){ flash(esc(err.message),"err"); } return; }
+    if(b.hasAttribute("data-jrfill")){ $("#am-name").value=b.dataset.n; $("#am-email").value=b.dataset.e; $("#am-name").scrollIntoView({behavior:"smooth",block:"center"}); return; }
+    if(b.dataset.jrdis){ await sb.from("join_requests").update({status:'dismissed'}).eq("id",b.dataset.jrdis); loadJoinRequests(); return; }
   }
   async function addMemberDirect(){
     const name=$("#am-name").value.trim(), email=$("#am-email").value.trim(), pass=$("#am-pass").value;

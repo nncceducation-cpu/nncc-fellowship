@@ -33,6 +33,7 @@
       </div>
       <button class="btn block" type="submit">Sign in</button>
       <p class="auth-alt"><a id="to-forgot">Forgot your password?</a></p>
+      <p class="auth-alt">New here? <a id="to-join">Request to join</a></p>
       <p class="auth-alt small-link"><a href="index.html">← Back to the main site</a></p>
     </form>
 
@@ -64,6 +65,18 @@
       </div>
       <button class="btn block" type="submit">Save password &amp; continue</button>
     </form>
+
+    <!-- ===== Request to join ===== -->
+    <form id="form-join" style="display:none">
+      <h1>Request to join</h1>
+      <p class="muted">Access to the portal is by approval. Send your details and the program team will be in touch.</p>
+      <div id="join-msg"></div>
+      <div class="field"><label for="jn-name">Full name</label><input id="jn-name" type="text" placeholder="Dr. Jane Smith"></div>
+      <div class="field"><label for="jn-email">Email</label><input id="jn-email" type="email" required placeholder="you@example.com"></div>
+      <div class="field"><label for="jn-msg">Message (optional)</label><textarea id="jn-msg" rows="3" placeholder="Your role, institution, or why you'd like to join"></textarea></div>
+      <button class="btn block" type="submit">Send request</button>
+      <p class="auth-alt"><a id="to-signin2">← Back to sign in</a></p>
+    </form>
   </div>
 </div>
 
@@ -73,7 +86,7 @@
 <script>
 (function () {
   const $ = (s) => document.querySelector(s);
-  const show = (id) => ["form-signin","form-forgot","form-setpass"]
+  const show = (id) => ["form-signin","form-forgot","form-setpass","form-join"]
     .forEach((f) => $("#"+f).style.display = (f===id ? "block" : "none"));
   const say = (el, text, kind) => { $(el).innerHTML = text ? `<div class="msg ${kind}">${text}</div>` : ""; };
   const params = new URLSearchParams(location.search);
@@ -116,6 +129,29 @@
   // ---- Forgot ----
   $("#to-forgot").addEventListener("click", () => { say("#forgot-msg","",""); show("form-forgot"); });
   $("#to-signin").addEventListener("click", () => show("form-signin"));
+
+  // ---- Request to join (public) ----
+  $("#to-join").addEventListener("click", () => { say("#join-msg","",""); show("form-join"); });
+  $("#to-signin2").addEventListener("click", () => show("form-signin"));
+  $("#form-join").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = $("#jn-email").value.trim();
+    if (!email) return say("#join-msg", "Please enter your email.", "err");
+    const btn = e.submitter; btn.disabled = true;
+    say("#join-msg", "Sending…", "info");
+    try {
+      const res = await fetch(`${window.PORTAL_CONFIG.SUPABASE_URL}/functions/v1/join-request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: window.PORTAL_CONFIG.SUPABASE_ANON_KEY },
+        body: JSON.stringify({ full_name: $("#jn-name").value.trim(), email, message: $("#jn-msg").value.trim() }),
+      });
+      const b = await res.json().catch(() => ({}));
+      if (!res.ok) { say("#join-msg", b.error || "Could not send your request.", "err"); btn.disabled = false; return; }
+      say("#join-msg", "Thanks! Your request has been received — the program team will contact you.", "ok");
+      $("#jn-name").value = ""; $("#jn-email").value = ""; $("#jn-msg").value = "";
+    } catch (err) { say("#join-msg", err.message, "err"); }
+    btn.disabled = false;
+  });
   $("#form-forgot").addEventListener("submit", async (e) => {
     e.preventDefault();
     const btn = e.submitter; btn.disabled = true;
