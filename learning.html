@@ -257,8 +257,10 @@
   function qBlock(q,i){
     const opts=q.qtype==='tf'?[{id:'t',text:'True'},{id:'f',text:'False'}]:(q.options||[]);
     const inp=q.qtype==='multi'?'checkbox':'radio';
+    const img=q.image_url?`<div style="margin:8px 0"><img src="${esc(q.image_url)}" alt="Question figure" loading="lazy" style="max-width:100%;border:1px solid var(--line,#d8dee6);border-radius:8px" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'small-link',textContent:'📷 Figure — view the original on Thinkific (image could not load here)'}))"></div>`:'';
     return `<div class="q" data-qid="${q.id}" style="margin-bottom:18px">
       <b>${i+1}. ${esc(q.question)}</b>${q.qtype==='multi'?' <span class="small-link">(select all that apply)</span>':''}
+      ${img}
       <div style="margin-top:6px">${opts.map(o=>`<label style="display:block;margin:5px 0"><input type="${inp}" name="q-${q.id}" value="${esc(o.id)}"> ${esc(o.text)}</label>`).join("")}</div>
       <div class="q-fb" style="margin-top:4px"></div></div>`;
   }
