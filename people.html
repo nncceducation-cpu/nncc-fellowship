@@ -204,16 +204,22 @@
     const m=S.members.find(x=>x.id===uid)||{};
     const { data:enr } = await sb.from("course_enrollments").select("*").eq("user_id",uid);
     const emap={}; (enr||[]).forEach(e=>emap[e.course_id]=e);
+    const acc=e=>{ if(!e) return '—'; const s=e.starts_at?('from '+fmtDate(e.starts_at)):''; const x=e.expires_at?('until '+fmtDate(e.expires_at)):(e.starts_at?'':'no expiry'); const label=[s,x].filter(Boolean).join(' · ')||'active'; const pending=e.starts_at && new Date(e.starts_at)>new Date(); return pending?('<span class="small-link">⏳ scheduled</span> '+label):label; };
     const rows=S.courses.map(c=>{ const e=emap[c.id];
       return `<tr><td>${esc(c.title)}</td>
-        <td>${e?(e.expires_at?('until '+fmtDate(e.expires_at)):'no expiry'):'—'}</td>
-        <td class="row-actions">${e?`<button data-unenroll="${c.id}">Unenroll</button>`:`<button data-enroll="${c.id}">Enroll</button>`}</td></tr>`;}).join("");
+        <td>${acc(e)}</td>
+        <td class="row-actions">${e?`<button data-dates="${c.id}">Dates</button><button data-unenroll="${c.id}">Unenroll</button>`:`<button data-enroll="${c.id}">Enroll</button>`}</td></tr>`;}).join("");
     openModal(`Enrollments — ${esc(m.full_name||m.email)}`, `
-      <table class="tbl"><thead><tr><th>Course</th><th>Access</th><th></th></tr></thead><tbody>${rows}</tbody></table>
-      <div class="field" style="margin-top:12px"><label>Expiry for new enrollments (optional)</label><input type="date" id="md-exp"></div>`,
+      <table class="tbl"><thead><tr><th>Course</th><th>Access window</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="row2" style="margin-top:12px">
+        <div class="field"><label>Start date for new enrollment (optional)</label><input type="date" id="md-start"></div>
+        <div class="field"><label>Expiry date for new enrollment (optional)</label><input type="date" id="md-exp"></div>
+      </div>
+      <p class="muted-note">Blank start = access begins immediately. Blank expiry = never expires. Use “Dates” to change an existing enrollment.</p>`,
       (root)=>{ root.addEventListener("click", async (e)=>{ const b=e.target.closest("button"); if(!b)return;
-        if(b.dataset.enroll){ await sb.from("course_enrollments").upsert({course_id:b.dataset.enroll,user_id:uid,expires_at:toIso(root.querySelector("#md-exp").value),enrolled_by:me.id},{onConflict:"course_id,user_id"}); memberDetail(uid); }
+        if(b.dataset.enroll){ await sb.from("course_enrollments").upsert({course_id:b.dataset.enroll,user_id:uid,starts_at:toIso(root.querySelector("#md-start").value),expires_at:toIso(root.querySelector("#md-exp").value),enrolled_by:me.id},{onConflict:"course_id,user_id"}); memberDetail(uid); }
         if(b.dataset.unenroll){ await sb.from("course_enrollments").delete().eq("course_id",b.dataset.unenroll).eq("user_id",uid); memberDetail(uid); }
+        if(b.dataset.dates){ const cur=emap[b.dataset.dates]||{}; const s=prompt("Start date (YYYY-MM-DD) — blank = begins immediately:", cur.starts_at?cur.starts_at.slice(0,10):''); if(s===null)return; const x=prompt("Expiry date (YYYY-MM-DD) — blank = never expires:", cur.expires_at?cur.expires_at.slice(0,10):''); if(x===null)return; await sb.from("course_enrollments").update({starts_at:s?toIso(s):null,expires_at:x?toIso(x):null}).eq("course_id",b.dataset.dates).eq("user_id",uid); memberDetail(uid); }
       }); });
   }
 
@@ -231,6 +237,7 @@
         <div class="row2">
           <div class="field"><label>Who</label><select id="en-who">
             <option value="all">All members</option><option value="group">A group</option><option value="selected">Selected members</option></select></div>
+          <div class="field"><label>Start date (optional)</label><input type="date" id="en-start"></div>
           <div class="field"><label>Expiry date (optional)</label><input type="date" id="en-exp"></div>
         </div>
         <div class="field" id="en-groupwrap" style="display:none"><label>Group</label><select id="en-group">${S.groups.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join("")}</select></div>
@@ -247,15 +254,17 @@
     async function loadEnrolled(){
       const { data } = await sb.from("course_enrollments").select("*").eq("course_id",course());
       const byId={}; S.members.forEach(m=>byId[m.id]=m);
-      const rows=(data||[]).map(e=>{ const m=byId[e.user_id]||{};
+      const emap2={}; (data||[]).forEach(e=>emap2[e.user_id]=e);
+      const rows=(data||[]).map(e=>{ const m=byId[e.user_id]||{}; const pending=e.starts_at && new Date(e.starts_at)>new Date();
         return `<tr><td>${esc(m.full_name||m.email||e.user_id)}</td><td>${esc(m.email||'')}</td>
+          <td>${e.starts_at?(fmtDate(e.starts_at)+(pending?' ⏳':'')):'immediate'}</td>
           <td>${e.expires_at?fmtDate(e.expires_at):'no expiry'}</td>
-          <td class="row-actions"><button data-editexp="${e.user_id}">Set expiry</button><button data-unen="${e.user_id}">Unenroll</button></td></tr>`;}).join("");
+          <td class="row-actions"><button data-editdates="${e.user_id}">Set dates</button><button data-unen="${e.user_id}">Unenroll</button></td></tr>`;}).join("");
       $("#en-enrolled").innerHTML=`<h3 style="margin:14px 0 6px">Enrolled (${(data||[]).length})</h3>`+
-        ((data||[]).length?`<table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>Expires</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<p class="muted-note">Nobody enrolled yet.</p>');
+        ((data||[]).length?`<table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>Start</th><th>Expires</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<p class="muted-note">Nobody enrolled yet.</p>');
       $("#en-enrolled").querySelectorAll("button").forEach(btn=>btn.addEventListener("click", async ()=>{
         if(btn.dataset.unen){ await sb.from("course_enrollments").delete().eq("course_id",course()).eq("user_id",btn.dataset.unen); loadEnrolled(); }
-        if(btn.dataset.editexp){ const d=prompt("Expiry date (YYYY-MM-DD), blank = never:"); if(d===null)return; await sb.from("course_enrollments").update({expires_at:d?toIso(d):null}).eq("course_id",course()).eq("user_id",btn.dataset.editexp); loadEnrolled(); }
+        if(btn.dataset.editdates){ const cur=emap2[btn.dataset.editdates]||{}; const s=prompt("Start date (YYYY-MM-DD) — blank = immediately:", cur.starts_at?cur.starts_at.slice(0,10):''); if(s===null)return; const x=prompt("Expiry date (YYYY-MM-DD) — blank = never:", cur.expires_at?cur.expires_at.slice(0,10):''); if(x===null)return; await sb.from("course_enrollments").update({starts_at:s?toIso(s):null,expires_at:x?toIso(x):null}).eq("course_id",course()).eq("user_id",btn.dataset.editdates); loadEnrolled(); }
       }));
     }
     async function doEnroll(){
@@ -264,8 +273,8 @@
       else if(who==='selected') ids=[...document.querySelectorAll(".en-chk:checked")].map(c=>c.value);
       else if(who==='group'){ const { data } = await sb.from("group_members").select("user_id").eq("group_id",$("#en-group").value); ids=(data||[]).map(x=>x.user_id); }
       if(!ids.length) return flash("No members selected.","err");
-      const exp=toIso($("#en-exp").value);
-      const rows=ids.map(uid=>({course_id:course(),user_id:uid,expires_at:exp,enrolled_by:me.id}));
+      const exp=toIso($("#en-exp").value); const start=toIso($("#en-start").value);
+      const rows=ids.map(uid=>({course_id:course(),user_id:uid,starts_at:start,expires_at:exp,enrolled_by:me.id}));
       const { error }=await sb.from("course_enrollments").upsert(rows,{onConflict:"course_id,user_id"});
       if(error) return flash(esc(error.message),"err");
       flash(`Enrolled ${ids.length} member(s).`); loadEnrolled();
@@ -306,7 +315,8 @@
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn" id="gm-save">Save members</button>
         <select id="gm-course" style="padding:9px;border:1.5px solid var(--line);border-radius:10px">${S.courses.map(c=>`<option value="${c.id}">${esc(c.title)}</option>`).join("")}</select>
-        <input type="date" id="gm-exp" style="padding:9px;border:1.5px solid var(--line);border-radius:10px">
+        <input type="date" id="gm-start" title="Start date (optional)" style="padding:9px;border:1.5px solid var(--line);border-radius:10px">
+        <input type="date" id="gm-exp" title="Expiry date (optional)" style="padding:9px;border:1.5px solid var(--line);border-radius:10px">
         <button class="btn outline" id="gm-enroll">Enroll group into course</button>
       </div>`;
     $("#gm-save").addEventListener("click", async ()=>{
@@ -320,8 +330,8 @@
     $("#gm-enroll").addEventListener("click", async ()=>{
       const ids=[...box.querySelectorAll(".gm-chk:checked")].map(c=>c.value);
       if(!ids.length) return flash("No members in group.","err");
-      const exp=toIso($("#gm-exp").value);
-      const rows=ids.map(uid=>({course_id:$("#gm-course").value,user_id:uid,expires_at:exp,enrolled_by:me.id}));
+      const exp=toIso($("#gm-exp").value); const gstart=toIso($("#gm-start").value);
+      const rows=ids.map(uid=>({course_id:$("#gm-course").value,user_id:uid,starts_at:gstart,expires_at:exp,enrolled_by:me.id}));
       const { error }=await sb.from("course_enrollments").upsert(rows,{onConflict:"course_id,user_id"});
       flash(error?esc(error.message):`Enrolled ${ids.length} group member(s).`, error?"err":"ok");
     });
