@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Harvey Sarnat Neonatal Neurocritical Care Fellowship — University of Calgary</title>
-<meta name="description" content="A one-year Royal College AFC and UCNS-accredited fellowship in Neonatal Neurocritical Care at the University of Calgary — the first program in Canada accredited by UCNS, built on competency-based medical education and innovation.">
+<meta name="description" content="Gateway to the Harvey Sarnat Neonatal Neurocritical Care Fellowship at the University of Calgary — the program and curriculum, the member portal, the Innovation in Education Lab, and the NNCC learning modules and question bank.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
@@ -13,6 +13,37 @@
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+  /* ===== Landing gateway ===== */
+  .lp-hero{ position:relative; background:linear-gradient(160deg,var(--navy) 0%,var(--navy-700) 55%,var(--teal-600) 140%); color:#fff; overflow:hidden; }
+  .lp-hero::after{ content:""; position:absolute; inset:0; background:radial-gradient(900px 340px at 82% -10%, rgba(255,255,255,.12), transparent 60%); pointer-events:none; }
+  .lp-hero .container{ position:relative; padding:64px 20px 58px; text-align:center; z-index:1; }
+  .lp-hero .eyebrow{ display:inline-block; font-family:var(--font-sans); font-size:12.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:#cfe4f4; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); padding:7px 15px; border-radius:999px; }
+  .lp-hero h1{ font-family:var(--font-serif); font-weight:700; font-size:clamp(28px,4.4vw,46px); line-height:1.1; margin:20px auto 14px; max-width:16ch; }
+  .lp-hero p{ color:#dbe8f4; font-size:clamp(15px,1.6vw,18px); line-height:1.6; max-width:60ch; margin:0 auto; }
+
+  .lp-section{ background:var(--bg-soft); }
+  .lp-section .container{ padding:56px 20px 66px; }
+  .lp-lead{ text-align:center; max-width:64ch; margin:0 auto 40px; }
+  .lp-lead h2{ font-family:var(--font-serif); color:var(--navy); font-size:clamp(22px,2.6vw,30px); margin:0 0 10px; }
+  .lp-lead p{ color:var(--muted); font-size:16px; line-height:1.6; margin:0; }
+
+  .lp-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:26px; max-width:var(--maxw); margin:0 auto; }
+  @media(max-width:760px){ .lp-grid{ grid-template-columns:1fr; gap:20px; } }
+
+  .lp-card{ position:relative; display:flex; flex-direction:column; gap:16px; background:var(--bg); border:1px solid var(--line); border-radius:var(--radius); padding:30px 30px 26px; text-decoration:none; color:inherit; box-shadow:var(--shadow); transition:transform .22s ease, box-shadow .22s ease, border-color .22s ease; overflow:hidden; }
+  .lp-card::before{ content:""; position:absolute; left:0; top:0; height:4px; width:100%; background:var(--accent,var(--teal)); transform:scaleX(0); transform-origin:left; transition:transform .28s ease; }
+  .lp-card:hover{ transform:translateY(-6px); box-shadow:var(--shadow-lg); border-color:transparent; }
+  .lp-card:hover::before{ transform:scaleX(1); }
+  .lp-ic{ width:58px; height:58px; border-radius:14px; display:grid; place-items:center; background:var(--accent-50,var(--teal-50)); color:var(--accent,var(--teal)); flex:none; }
+  .lp-ic svg{ width:30px; height:30px; }
+  .lp-card h3{ font-family:var(--font-serif); color:var(--navy); font-size:21px; margin:0; line-height:1.2; }
+  .lp-card p{ color:var(--muted); font-size:14.7px; line-height:1.62; margin:0; flex:1; }
+  .lp-go{ display:inline-flex; align-items:center; gap:8px; font-family:var(--font-sans); font-weight:600; font-size:14px; color:var(--accent,var(--teal-600)); }
+  .lp-go svg{ width:16px; height:16px; transition:transform .22s ease; }
+  .lp-card:hover .lp-go svg{ transform:translateX(4px); }
+  .lp-tag{ position:absolute; top:22px; right:22px; font-family:var(--font-sans); font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); background:var(--bg-soft); border:1px solid var(--line); border-radius:999px; padding:4px 10px; }
+</style>
 </head>
 <body>
 
@@ -44,179 +75,76 @@
 </header>
 
 <!-- ===== Hero ===== -->
-<section class="hero">
+<section class="lp-hero">
   <div class="container">
-    <span class="eyebrow">Royal College AFC · UCNS Accredited · Est. University of Calgary</span>
-    <h1>The Harvey Sarnat Neonatal Neurocritical Care Fellowship</h1>
-    <p class="sub">A one-year, competency-based subspecialty fellowship training expert consultants in the diagnosis, management and neurodevelopmental follow-up of critically ill newborns — the first program in Canada accredited by the United Council for Neurologic Subspecialties.</p>
-    <div class="actions">
-      <a href="governance.html#apply" class="btn light">Apply for the Fellowship</a>
-      <a href="fellowship.html" class="btn ghost-light">Explore the Program</a>
-    </div>
-    <div class="hero-badges">
-      <div class="stat"><b>1 year</b><span>13 four-week blocks</span></div>
-      <div class="stat"><b>UCNS + RCPSC</b><span>Dual-aligned accreditation</span></div>
-      <div class="stat"><b>7 roles</b><span>Full CanMEDS competency framework</span></div>
-      <div class="stat"><b>2 Level III/IV NICUs</b><span>ACH &amp; Foothills Medical Centre</span></div>
-    </div>
+    <span class="eyebrow">Royal College AFC · UCNS Accredited · University of Calgary</span>
+    <h1>Harvey Sarnat Neonatal Neurocritical Care Fellowship</h1>
+    <p>Canada's first UCNS-accredited fellowship in neonatal neuro-critical care — training expert consultants in the diagnosis, management and neurodevelopmental follow-up of critically ill newborns. Choose where you'd like to go.</p>
   </div>
 </section>
 
-<!-- ===== Accreditation strip ===== -->
-<section class="block tight">
+<!-- ===== Gateway tiles ===== -->
+<section class="lp-section">
   <div class="container">
-    <div class="badge-row">
-      <span class="pill"><span class="dot"></span>Royal College Area of Focused Competence (AFC)</span>
-      <span class="pill"><span class="dot"></span>UCNS accredited 2025 — first in Canada</span>
-      <span class="pill"><span class="dot"></span>Competency Training Requirements (2025)</span>
-      <span class="pill"><span class="dot"></span>Programmatic, portfolio-based assessment</span>
+    <div class="lp-lead">
+      <h2>Explore the program</h2>
+      <p>Four ways in — the curriculum, the members' portal, the education lab, and the learning modules. Select a card to continue.</p>
     </div>
-  </div>
-</section>
 
-<!-- ===== What is NNCC ===== -->
-<section class="block soft" id="about">
-  <div class="container">
-    <div class="section-head">
-      <div class="kicker">The Discipline</div>
-      <h2>What is Neonatal Neurocritical Care?</h2>
-      <p>Neonatal Neurocritical Care (NNCC) is the area of enhanced competence concerned with the study, investigation, diagnosis and medical management of neurological conditions affecting fetuses and newborns — and with the long-term neurodevelopmental consequences of impaired early brain development and brain injury.</p>
-    </div>
-    <div class="prose narrow" style="text-align:center">
-      <p class="lead">Our fellowship prepares graduates of Neonatal-Perinatal Medicine or Pediatric Neurology to function as expert subspecialist consultants, integrating neonatology, pediatric neurology, neuroradiology, neurophysiology, neuropathology and neurosurgery into a single brain-focused model of care.</p>
-    </div>
-  </div>
-</section>
+    <div class="lp-grid">
 
-<!-- ===== Seven major tasks ===== -->
-<section class="block" id="scope">
-  <div class="container">
-    <div class="section-head">
-      <div class="kicker">Scope of Practice</div>
-      <h2>The Seven Major Tasks of NNCC</h2>
-      <p>The fellowship is structured around the Royal College's seven major tasks of the discipline — each mapped to learning experiences and portfolio evidence.</p>
-    </div>
-    <div class="grid cols-3">
-      <div class="card task-card"><span class="tnum">1</span><h4>Consultation for critical conditions</h4><p>Neurology consultation for neonates with critical neurological conditions in the NICU and selected PICU patients.</p></div>
-      <div class="card task-card"><span class="tnum">2</span><h4>Antenatal consultation</h4><p>Consultation for fetuses with anticipated or suspected neurological conditions.</p></div>
-      <div class="card task-card"><span class="tnum">3</span><h4>Neurodevelopmental follow-up</h4><p>Neonatal neurodevelopmental follow-up care after discharge.</p></div>
-      <div class="card task-card"><span class="tnum">4</span><h4>Interdisciplinary collaboration</h4><p>Collaboration with interdisciplinary teams caring for fetal and neonatal neurological conditions.</p></div>
-      <div class="card task-card"><span class="tnum">5</span><h4>Family counselling</h4><p>Counselling families regarding fetal and neonatal neurological conditions, including end-of-life discussions.</p></div>
-      <div class="card task-card"><span class="tnum">6</span><h4>Service management</h4><p>Triage and management of the NNCC consultation service.</p></div>
-      <div class="card task-card" style="grid-column: span 1"><span class="tnum">7</span><h4>Scholarship &amp; education</h4><p>Advancement of the discipline through scholarship, teaching and innovation.</p></div>
-      <a class="navcard" href="competencies.html" style="grid-column: span 2; display:flex; align-items:center; gap:20px">
-        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-        <span><h3 style="margin:0 0 4px">See how each task maps to the CanMEDS competencies</h3><p style="margin:0">Detailed enabling competencies across all seven roles, with the curriculum mapping for how each is taught and assessed.</p></span>
+      <!-- Fellowship Program -->
+      <a class="lp-card" href="fellowship.html" style="--accent:var(--navy);--accent-50:var(--navy-50)">
+        <span class="lp-tag">Curriculum</span>
+        <span class="lp-ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/><path d="M22 10v6"/>
+          </svg>
+        </span>
+        <h3>Fellowship Program</h3>
+        <p>The complete competency-based curriculum: 13 four-week blocks across two Level III/IV NICUs, mapped to the seven CanMEDS roles with defined rotations, milestones and assessment. See exactly how a fellow is trained, evaluated and prepared for independent practice.</p>
+        <span class="lp-go">Explore the curriculum <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </a>
-    </div>
-  </div>
-</section>
 
-<!-- ===== Why a role model ===== -->
-<section class="block navy" id="model">
-  <div class="container">
-    <div class="section-head navy">
-      <div class="kicker">A Program Designed to Be Copied</div>
-      <h2>Built as a blueprint for other programs</h2>
-      <p>Every element of the fellowship is documented, mapped and openly described — so other centres can adopt, adapt and accredit their own NNCC training.</p>
-    </div>
-    <div class="grid cols-4">
-      <div class="card" style="background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.12)">
-        <div class="ico" style="background:rgba(127,212,212,.15);color:#7fd4d4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
-        <h4 style="color:#fff">Competency-based</h4>
-        <p style="color:#b9cbe0">Graded supervision and programmatic assessment aligned to the 2025 Royal College CTR and Competency Portfolio.</p>
-      </div>
-      <div class="card" style="background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.12)">
-        <div class="ico" style="background:rgba(127,212,212,.15);color:#7fd4d4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-5h6v5"/></svg></div>
-        <h4 style="color:#fff">Transparent governance</h4>
-        <p style="color:#b9cbe0">Program and Competence Committees with published terms of reference, membership and decision processes.</p>
-      </div>
-      <div class="card" style="background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.12)">
-        <div class="ico" style="background:rgba(127,212,212,.15);color:#7fd4d4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg></div>
-        <h4 style="color:#fff">Safety &amp; wellness</h4>
-        <p style="color:#b9cbe0">Explicit supervision, trainee-safety and wellness policies covering physical and psychological security.</p>
-      </div>
-      <div class="card" style="background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.12)">
-        <div class="ico" style="background:rgba(127,212,212,.15);color:#7fd4d4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2a7 7 0 0 0-7 7c0 2.4 1.2 3.9 2.3 5 .8.8 1.2 1.3 1.2 2.5V18h7v-1.5c0-1.2.4-1.7 1.2-2.5C17.8 12.9 19 11.4 19 9a7 7 0 0 0-7-7ZM9 22h6"/></svg></div>
-        <h4 style="color:#fff">Innovation-driven</h4>
-        <p style="color:#b9cbe0">A dedicated Innovation Lab building simulators, modules and AI tools used by trainees worldwide.</p>
-      </div>
-    </div>
-  </div>
-</section>
+      <!-- Portal -->
+      <a class="lp-card" href="portal.html" style="--accent:var(--teal);--accent-50:var(--teal-50)">
+        <span class="lp-tag">Members</span>
+        <span class="lp-ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/>
+          </svg>
+        </span>
+        <h3>Member Portal</h3>
+        <p>The secure home for fellows and faculty. Sign in to reach your enrolled courses, follow your progress, submit and receive graded assignments, earn completion certificates, and take part in the members' discussion forum — everything in one place.</p>
+        <span class="lp-go">Sign in to the portal <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
 
-<!-- ===== Explore (nav cards) ===== -->
-<section class="block soft">
-  <div class="container">
-    <div class="section-head">
-      <div class="kicker">Explore the Program</div>
-      <h2>Everything in one place</h2>
-    </div>
-    <div class="navcards">
-      <a class="navcard" href="fellowship.html">
-        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15Z"/></svg></span>
-        <h3>Program &amp; Curriculum</h3>
-        <p>Dr. Harvey Sarnat, eligibility, the 13-block rotation structure, graded supervision and learning experiences.</p>
-        <span class="more">View the program →</span>
+      <!-- Innovation Lab -->
+      <a class="lp-card" href="innovation.html" style="--accent:var(--gold);--accent-50:var(--gold-50)">
+        <span class="lp-tag">Research &amp; teaching</span>
+        <span class="lp-ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 3h6"/><path d="M10 3v6.6a2 2 0 0 1-.3 1L5 19a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-4.7-8.4a2 2 0 0 1-.3-1V3"/><path d="M7.5 15h9"/>
+          </svg>
+        </span>
+        <h3>Innovation in Education Lab</h3>
+        <p>Where teaching meets research. Discover the projects, digital tools and studies advancing how neonatal neuro-critical care is taught — from competency mapping and simulation to novel assessment methods that other centres can adopt and adapt.</p>
+        <span class="lp-go">Visit the lab <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </a>
-      <a class="navcard" href="competencies.html">
-        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span>
-        <h3>Competencies</h3>
-        <p>The full CanMEDS framework with enabling competencies for the consultation context, plus the curriculum map.</p>
-        <span class="more">View competencies →</span>
-      </a>
-      <a class="navcard" href="assessment.html">
-        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
-        <h3>Assessment &amp; Portfolio</h3>
-        <p>Programmatic assessment, portfolio EPAs with case-mix requirements, the tracking tool and the competence committee cycle.</p>
-        <span class="more">View assessment →</span>
-      </a>
-      <a class="navcard" href="governance.html">
-        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-        <h3>Governance &amp; People</h3>
-        <p>Committees, supervision, safety and wellness policies, the leadership team and how to apply.</p>
-        <span class="more">View governance →</span>
-      </a>
-      <a class="navcard" href="innovation.html">
-        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3"/><circle cx="12" cy="12" r="3"/></svg></span>
-        <h3>Innovation Lab</h3>
-        <p>Locally built simulators, teaching modules and AI tools used in workshops across nine countries.</p>
-        <span class="more">View the lab →</span>
-      </a>
-      <a class="navcard" href="https://nncceducation.thinkific.com/" target="_blank" rel="noopener">
-        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span>
-        <h3>Education Modules</h3>
-        <p>The online NNCC curriculum on Thinkific — 172 CME credits across NNCC and AI-in-healthcare modules.</p>
-        <span class="more">Open the modules →</span>
-      </a>
-    </div>
-  </div>
-</section>
 
-<!-- ===== Leadership snapshot ===== -->
-<section class="block">
-  <div class="container">
-    <div class="section-head">
-      <div class="kicker">Program Leadership</div>
-      <h2>Led by a multidisciplinary team</h2>
-      <p>A collaboration across Neonatology, Pediatric Neurology, Neuroradiology, Neurophysiology and Pediatric Neurosurgery.</p>
-    </div>
-    <div class="people">
-      <div class="person"><div class="av">KM</div><b>Dr. Khorshid Mohammad</b><div class="role">Program Director</div><div class="site">Alberta Children's Hospital</div></div>
-      <div class="person"><div class="av">SG</div><b>Dr. Sujith Gurram</b><div class="role">Co-Program Director</div><div class="site">Alberta Children's Hospital</div></div>
-      <div class="person"><div class="av">HZ</div><b>Dr. Hussein Zein</b><div class="role">NNCC Lead · Competence Committee Chair</div><div class="site">Foothills Medical Centre</div></div>
-    </div>
-    <div style="text-align:center;margin-top:26px"><a href="governance.html#people" class="btn outline">Meet the full team</a></div>
-  </div>
-</section>
+      <!-- Modules -->
+      <a class="lp-card" href="modules.html" style="--accent:var(--teal-600);--accent-50:var(--teal-50)">
+        <span class="lp-tag">Learn</span>
+        <span class="lp-ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H12v16H6.5A2.5 2.5 0 0 0 4 21.5V5.5Z"/><path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H12v16h5.5a2.5 2.5 0 0 1 2.5 2.5V5.5Z"/>
+          </svg>
+        </span>
+        <h3>Learning Modules</h3>
+        <p>Core Competencies in NNCC — a structured library of self-paced modules and a large question bank spanning brain monitoring, cranial ultrasound and MRI, hypoxic-ischemic encephalopathy, and neurodevelopmental follow-up. CME-aligned content built for focused, verifiable study.</p>
+        <span class="lp-go">Browse the modules <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
 
-<!-- ===== CTA ===== -->
-<section class="block soft">
-  <div class="container">
-    <div class="cta">
-      <h2>Train where newborn brain health is the mission</h2>
-      <p>We welcome candidates with a strong drive toward a career in neonatal neuro-critical care. Submit a letter of intent and CV to begin.</p>
-      <a href="governance.html#apply" class="btn light">How to Apply</a>
     </div>
   </div>
 </section>
@@ -242,7 +170,7 @@
         <h4>Resources</h4>
         <ul>
           <li><a href="innovation.html">Innovation Lab</a></li><li><a href="https://www.youtube.com/@SarnatNNCC" target="_blank" rel="noopener">YouTube channel</a></li>
-          <li><a href="https://nncceducation.thinkific.com/" target="_blank" rel="noopener">Education Modules</a></li>
+          <li><a href="modules.html">Learning Modules</a></li>
           <li><a href="governance.html#apply">Apply</a></li>
         </ul>
       </div>
@@ -256,4 +184,10 @@
     </div>
     <div class="bottom">
       <span>© 2026 Calgary Newborn Neuro-Intensive Care Program · University of Calgary</span>
-      <span>Aligned to the RCPSC Competency Training Requirements, Standards of 
+      <span>Aligned to the RCPSC Competency Training Requirements</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
