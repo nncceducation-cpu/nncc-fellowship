@@ -312,15 +312,18 @@
     $("#en-go").addEventListener("click", doEnroll);
     async function loadEnrolled(){
       const { data } = await sb.from("course_enrollments").select("*").eq("course_id",course());
+      let prog={}; try{ const { data:pg } = await sb.rpc("admin_course_progress",{p_course:course()}); if(pg) prog=pg; }catch(_){}
       const byId={}; S.members.forEach(m=>byId[m.id]=m);
       const emap2={}; (data||[]).forEach(e=>emap2[e.user_id]=e);
       const rows=(data||[]).map(e=>{ const m=byId[e.user_id]||{}; const pending=e.starts_at && new Date(e.starts_at)>new Date();
+        const p=prog[e.user_id]||{done:0,total:0};
         return `<tr><td>${esc(m.full_name||m.email||e.user_id)}</td><td>${esc(m.email||'')}</td>
+          <td>${uBar(p.done,p.total)}</td>
           <td>${e.starts_at?(fmtDate(e.starts_at)+(pending?' ⏳':'')):'immediate'}</td>
           <td>${e.expires_at?fmtDate(e.expires_at):'no expiry'}</td>
           <td class="row-actions"><button data-editdates="${e.user_id}">Set dates</button><button data-unen="${e.user_id}">Unenroll</button></td></tr>`;}).join("");
       $("#en-enrolled").innerHTML=`<h3 style="margin:14px 0 6px">Enrolled (${(data||[]).length})</h3>`+
-        ((data||[]).length?`<table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>Start</th><th>Expires</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<p class="muted-note">Nobody enrolled yet.</p>');
+        ((data||[]).length?`<table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>Progress</th><th>Start</th><th>Expires</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<p class="muted-note">Nobody enrolled yet.</p>');
       $("#en-enrolled").querySelectorAll("button").forEach(btn=>btn.addEventListener("click", async ()=>{
         if(btn.dataset.unen){ await sb.from("course_enrollments").delete().eq("course_id",course()).eq("user_id",btn.dataset.unen); loadEnrolled(); }
         if(btn.dataset.editdates){ const cur=emap2[btn.dataset.editdates]||{}; const s=prompt("Start date (YYYY-MM-DD) — blank = immediately:", cur.starts_at?cur.starts_at.slice(0,10):''); if(s===null)return; const x=prompt("Expiry date (YYYY-MM-DD) — blank = never:", cur.expires_at?cur.expires_at.slice(0,10):''); if(x===null)return; await sb.from("course_enrollments").update({starts_at:s?toIso(s):null,expires_at:x?toIso(x):null}).eq("course_id",course()).eq("user_id",btn.dataset.editdates); loadEnrolled(); }
