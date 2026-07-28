@@ -10,6 +10,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="portal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css">
+<style>
+  #f-editor-wrap .ql-toolbar{ border:1.5px solid var(--line); border-bottom:0; border-radius:10px 10px 0 0; background:#fbfcfe; }
+  #f-editor-wrap .ql-container{ border:1.5px solid var(--line); border-radius:0 0 10px 10px; font-family:var(--font-sans); font-size:15px; }
+  #f-editor-wrap .ql-editor{ min-height:180px; line-height:1.6; }
+  #f-editor-wrap .ql-editor.ql-blank::before{ color:#9aa6b2; font-style:normal; }
+</style>
 <link rel="icon" href="favicon.ico" sizes="any">
 <style>
   .builder { display:grid; grid-template-columns: 280px 1fr; gap:22px; align-items:start; }
@@ -111,7 +118,9 @@
 
       <div class="field" style="margin-top:14px"><label>Caption / short instructions (optional)</label><input id="f-caption" placeholder="Shown under the media"></div>
       <div class="field"><label id="f-content-label">Text / HTML body (optional)</label>
-        <textarea id="f-content" rows="6" placeholder="Write the lesson text. Basic HTML is allowed (headings, lists, links, images, embed code)."></textarea></div>
+        <div id="f-editor-wrap"><div id="f-editor"></div></div>
+        <textarea id="f-content" rows="6" style="display:none" placeholder="Paste raw HTML / embed code (e.g. an iframe) here."></textarea>
+        <p class="small-link" id="f-embed-note" style="display:none;margin-top:6px">Paste raw HTML or embed code (such as an &lt;iframe&gt;) above.</p></div>
       <div class="field"><label>External link (optional), e.g. Thinkific, a Google Form quiz, etc.</label><input id="f-ext" placeholder="https://..."></div>
 
       <!-- Quiz builder (type = quiz) -->
@@ -142,6 +151,7 @@
 <script src="portal-auth.js"></script>
 <script src="portal-shell.js"></script>
 <script src="portal-media.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
 <script>
 (async function () {
   const me = await NNCC.requireAdmin(); if(!me) return;
@@ -274,6 +284,38 @@
 
   // ---------- Lesson editor ----------
   const modal=$("#modal");
+
+  // ---------- Rich text editor (Word-like) for the lesson body ----------
+  let quill=null;
+  if(window.Quill && document.getElementById("f-editor")){
+    quill=new Quill("#f-editor",{ theme:"snow", placeholder:"Write the lesson text. Use the toolbar to format, just like a Word document.",
+      modules:{ toolbar:[
+        [{header:[2,3,false]}],
+        ["bold","italic","underline","strike"],
+        [{color:[]},{background:[]}],
+        [{list:"ordered"},{list:"bullet"}],
+        [{indent:"-1"},{indent:"+1"}],
+        [{align:[]}],
+        ["blockquote","link"],
+        ["clean"]
+      ]}});
+    quill.on("text-change",()=>{ const html=quill.root.innerHTML; $("#f-content").value=(html==="<p><br></p>"?"":html); });
+  }
+  // legacy lessons store plain text with newlines; convert to paragraphs so breaks survive
+  function toEditorHtml(s){ s=s||"";
+    if(/<[a-z!/]/i.test(s)) return s;                       // already HTML
+    const e=(x)=>x.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    return s.split(/\n{2,}/).map(p=>"<p>"+e(p).replace(/\n/g,"<br>")+"</p>").join(""); }
+  function setQuill(html){ if(!quill){ $("#f-content").value=html||""; return; }
+    const delta=quill.clipboard.convert({ html: toEditorHtml(html) }); quill.setContents(delta,"silent");
+    const out=quill.root.innerHTML; $("#f-content").value=(out==="<p><br></p>"?"":out); }
+  function setBodyMode(type){
+    const embed = type==="embed"; const wrap=document.getElementById("f-editor-wrap"); const ta=$("#f-content");
+    if(wrap) wrap.style.display = embed?"none":"block";
+    ta.style.display = embed?"block":"none";
+    document.getElementById("f-embed-note").style.display = embed?"block":"none";
+    if(!embed) setQuill(ta.value);   // load the editor from the stored HTML
+  }
   $("#f-type").innerHTML = PM.TYPES.map(t=>`<option value="${t}">${t}</option>`).join("");
   function mediaField(type){ return type==='video'?'video_url':'file_url'; }
   function updEditorUI(){
@@ -282,7 +324,8 @@
     $("#media-block").style.display = showMedia?'block':'none';
     const labels={video:"Video link (YouTube / Vimeo / Dropbox / Drive / .mp4)",image:"Image link (or upload)",pdf:"PDF link (Dropbox / Drive / direct)",download:"File link (or upload)"};
     $("#f-media-label").textContent = labels[type]||"Media link";
-    $("#f-content-label").textContent = (type==='text'||type==='embed')?"Body, HTML allowed (paste embed code for 'embed')":"Text / HTML body (optional)";
+    $("#f-content-label").textContent = type==='embed' ? "Body, HTML / embed code" : "Lesson text (format it like a Word document)";
+    setBodyMode(type);
     const isQuiz=type==='quiz', isAssign=type==='assignment';
     $("#quiz-block").style.display=isQuiz?'block':'none';
     $("#assign-block").style.display=isAssign?'block':'none';
