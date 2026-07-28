@@ -11,8 +11,42 @@
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="portal.css">
 <link rel="icon" href="favicon.ico" sizes="any">
+<style>
+  /* Blurred preview of the members' portal behind the sign-in card */
+  .login-bg{ position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
+  .login-bg .preview-scale{ transform:scale(1.06); transform-origin:top center; filter:blur(5px) saturate(1.03); }
+  .login-bg .portal-wrap{ min-height:100vh; }
+  .login-bg .veil{ position:absolute; inset:0;
+    background:radial-gradient(1100px 620px at 84% -12%, rgba(15,138,138,.30), transparent 60%),
+               linear-gradient(135deg, rgba(12,42,77,.86) 0%, rgba(20,58,102,.83) 55%, rgba(10,35,63,.90) 100%); }
+  .auth-shell{ position:relative; z-index:2; background:none !important; }
+  .auth-card{ box-shadow:0 30px 80px rgba(4,18,36,.45), 0 4px 14px rgba(4,18,36,.3); }
+  @media (prefers-reduced-motion: no-preference){ .auth-card{ animation:cardIn .5s ease both; } }
+  @keyframes cardIn{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
+</style>
 </head>
 <body>
+
+<!-- Portal preview (decorative, non-interactive) shown behind the sign-in card -->
+<div class="login-bg" aria-hidden="true">
+  <div class="preview-scale">
+    <div class="portal-wrap"><div class="container">
+      <div class="p-head" style="padding-top:40px">
+        <h1>Welcome back</h1>
+        <p>Your private area for the Harvey Sarnat NNCC Fellowship, resources, education modules and the members' forum.</p>
+      </div>
+      <div class="card-grid">
+        <div class="p-card"><div class="ic">▶</div><h3>Education Modules</h3><p>Work through the NNCC curriculum, lesson by lesson, and track your progress.</p></div>
+        <div class="p-card"><div class="ic">💬</div><h3>Members' Forum</h3><p>Ask questions, share cases and discuss with fellows and faculty.</p></div>
+        <div class="p-card"><div class="ic">📁</div><h3>Private Resources</h3><p>Documents, links and reference material shared with members only.</p></div>
+        <div class="p-card"><div class="ic">👥</div><h3>Member Directory</h3><p>See who else is part of the program.</p></div>
+        <div class="p-card"><div class="ic">🎓</div><h3>My Certificates</h3><p>Download completion certificates for courses you've finished.</p></div>
+        <div class="p-card"><div class="ic">📊</div><h3>Your Progress</h3><p>Lessons completed and quizzes passed across every course.</p></div>
+      </div>
+    </div></div>
+  </div>
+  <div class="veil"></div>
+</div>
 
 <div class="auth-shell" id="auth-shell" style="visibility:hidden">
   <div class="auth-card">
