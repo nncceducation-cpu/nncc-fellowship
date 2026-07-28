@@ -14,11 +14,11 @@
 <style>
   /* Blurred preview of the members' portal behind the sign-in card */
   .login-bg{ position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
-  .login-bg .preview-scale{ transform:scale(1.06); transform-origin:top center; filter:blur(5px) saturate(1.03); }
+  .login-bg .preview-scale{ transform:scale(1.04); transform-origin:top center; filter:blur(2.5px) saturate(1.05); }
   .login-bg .portal-wrap{ min-height:100vh; }
   .login-bg .veil{ position:absolute; inset:0;
-    background:radial-gradient(1100px 620px at 84% -12%, rgba(15,138,138,.30), transparent 60%),
-               linear-gradient(135deg, rgba(12,42,77,.86) 0%, rgba(20,58,102,.83) 55%, rgba(10,35,63,.90) 100%); }
+    background:radial-gradient(1100px 620px at 84% -12%, rgba(15,138,138,.18), transparent 60%),
+               linear-gradient(135deg, rgba(12,42,77,.42) 0%, rgba(20,58,102,.36) 55%, rgba(10,35,63,.48) 100%); }
   .auth-shell{ position:relative; z-index:2; background:none !important; }
   .auth-card{ box-shadow:0 30px 80px rgba(4,18,36,.45), 0 4px 14px rgba(4,18,36,.3); }
   @media (prefers-reduced-motion: no-preference){ .auth-card{ animation:cardIn .5s ease both; } }
