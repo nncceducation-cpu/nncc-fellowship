@@ -31,7 +31,7 @@
 <body>
 <header class="topbar">
   <div class="container">
-    <a class="brand" href="portal.html"><span class="mark">NNCC</span>
+    <a class="brand" href="portal.html"><img class="mark" src="logo-nncc.png" alt="NNCC" style="border-radius:50%;object-fit:cover;background:none;padding:0">
       <span class="brand-text"><b>Harvey Sarnat NNCC Fellowship</b><span>Certificate</span></span></a>
     <nav class="nav"><a href="portal.html">Portal</a><a href="learning.html">Courses</a><span class="user-chip" id="user-chip"></span></nav>
   </div>
@@ -66,7 +66,7 @@
   if(!cert){ $("#cert").innerHTML='<div class="empty">You haven’t completed this course yet, so no certificate is available.</div>'; return; }
   const dt=new Date(cert.issued_at).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
   $("#cert").innerHTML=`<div class="cert"><div class="cert-inner">
-    <div class="mark">NNCC</div>
+    <img class="mark" src="logo-nncc.png" alt="NNCC" style="border-radius:50%;object-fit:cover;background:none;padding:0">
     <div class="eyebrow">Certificate of Completion</div>
     <h1>Harvey Sarnat NNCC Fellowship</h1>
     <p class="line">This certifies that</p>

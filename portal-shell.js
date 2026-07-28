@@ -24,7 +24,7 @@
     const rail = document.createElement("aside");
     rail.className = "side-rail";
     rail.innerHTML =
-      `<a class="rail-brand" href="portal.html"><span class="mark">NNCC</span><b>Member Portal</b></a>
+      `<a class="rail-brand" href="portal.html"><img class="mark" src="logo-nncc.png" alt="NNCC" style="border-radius:50%;object-fit:cover;background:none;padding:0"><b>Member Portal</b></a>
        <nav>${ITEMS.map(([h, ic, l, adm]) =>
          `<a href="${h}" data-adm="${adm}" class="${h === here ? "active" : ""}"><span class="ri">${ic}</span>${l}</a>`
        ).join("")}</nav>
