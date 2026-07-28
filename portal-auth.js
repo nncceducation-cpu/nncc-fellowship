@@ -1,5 +1,5 @@
 /* =====================================================================
-   portal-auth.js  —  shared authentication + data helpers
+   portal-auth.js,  shared authentication + data helpers
    Load order on every portal page:
      <script src="portal-config.js"></script>
      <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -29,7 +29,7 @@
       "background:#fbf4e6;color:#7a5a12;border-bottom:1px solid #e7d3a1;" +
       "padding:10px 16px;font:14px/1.5 Inter,system-ui,sans-serif;text-align:center";
     d.innerHTML =
-      "⚠️ Portal not connected yet — add your Supabase URL and anon key in " +
+      "⚠️ Portal not connected yet, add your Supabase URL and anon key in " +
       "<code>portal-config.js</code>. (See PORTAL-SETUP-GUIDE.md)";
     document.body.prepend(d);
   }
@@ -114,7 +114,7 @@
             Authorization: `Bearer ${token}`,
             apikey: cfg.SUPABASE_ANON_KEY,
           },
-          body: JSON.stringify({ full_name, email, ...extra }),
+          body: JSON.stringify({ full_name, email...extra }),
         }
       );
       const body = await res.json().catch(() => ({}));

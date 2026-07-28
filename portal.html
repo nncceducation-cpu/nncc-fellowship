@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Member Portal — Harvey Sarnat NNCC Fellowship</title>
+<title>Member Portal, Harvey Sarnat NNCC Fellowship</title>
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -38,7 +38,7 @@
     <div id="denied" style="display:none"></div>
     <div class="p-head">
       <h1 id="greeting">Welcome</h1>
-      <p>Your private area for the Harvey Sarnat NNCC Fellowship — resources, education modules and the members' forum.</p>
+      <p>Your private area for the Harvey Sarnat NNCC Fellowship, resources, education modules and the members' forum.</p>
     </div>
 
     <div class="card-grid">
@@ -141,7 +141,7 @@
   const { data: mem } = await NNCC.members();
   const dl = document.getElementById("directory-list");
   dl.innerHTML = '<table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead><tbody>' +
-    (mem||[]).map(m => `<tr><td>${esc(m.full_name||'—')}</td><td>${esc(m.email||'')}</td>
+    (mem||[]).map(m => `<tr><td>${esc(m.full_name||'-')}</td><td>${esc(m.email||'')}</td>
       <td><span class="badge ${m.role}">${m.role}</span></td></tr>`).join("") +
     '</tbody></table>';
 

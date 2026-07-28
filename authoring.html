@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Course Builder — Harvey Sarnat NNCC Fellowship</title>
+<title>Course Builder, Harvey Sarnat NNCC Fellowship</title>
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -92,7 +92,7 @@
     </div>
     <div class="modal-body">
       <div id="m-msg"></div>
-      <div class="field"><label>Lesson title</label><input id="f-title" placeholder="e.g. Lecture 1 — Overview"></div>
+      <div class="field"><label>Lesson title</label><input id="f-title" placeholder="e.g. Lecture 1, Overview"></div>
       <div class="row2">
         <div class="field"><label>Type</label><select id="f-type"></select></div>
         <div class="field"><label>Order</label><input id="f-order" type="number" step="1"></div>
@@ -112,7 +112,7 @@
       <div class="field" style="margin-top:14px"><label>Caption / short instructions (optional)</label><input id="f-caption" placeholder="Shown under the media"></div>
       <div class="field"><label id="f-content-label">Text / HTML body (optional)</label>
         <textarea id="f-content" rows="6" placeholder="Write the lesson text. Basic HTML is allowed (headings, lists, links, images, embed code)."></textarea></div>
-      <div class="field"><label>External link (optional) — e.g. Thinkific, a Google Form quiz, etc.</label><input id="f-ext" placeholder="https://..."></div>
+      <div class="field"><label>External link (optional), e.g. Thinkific, a Google Form quiz, etc.</label><input id="f-ext" placeholder="https://..."></div>
 
       <!-- Quiz builder (type = quiz) -->
       <div id="quiz-block" style="display:none;margin-top:18px;border-top:1px solid var(--line);padding-top:16px">
@@ -176,7 +176,7 @@
   });
   $("#new-course").addEventListener("click", async ()=>{
     const t=prompt("New course title:"); if(!t)return;
-    const max=Math.max(0,...state.courses.map(c=>c.sort_order||0));
+    const max=Math.max(0...state.courses.map(c=>c.sort_order||0));
     const { data, error }=await sb.from("courses").insert({title:t.trim(),sort_order:max+1}).select().single();
     if(error)return flash(esc(error.message),"err");
     state.curCourse=data.id; await loadCourses(); renderCourse();
@@ -209,7 +209,7 @@
         <div style="display:flex;gap:8px"><button class="btn outline" id="course-settings">⚙ Settings</button><button class="btn" id="add-ch">+ Add chapter</button></div>
       </div>
       ${course.description?`<p class="muted-note" style="margin:-6px 0 14px">${esc(course.description)}</p>`:''}
-      <div id="chapters">${state.chapters.map(chHTML).join("")||'<div class="empty">No chapters yet — add one.</div>'}</div>`;
+      <div id="chapters">${state.chapters.map(chHTML).join("")||'<div class="empty">No chapters yet, add one.</div>'}</div>`;
     $("#add-ch").addEventListener("click", addChapter);
     $("#course-settings").addEventListener("click", ()=>openCourseSettings(course));
   }
@@ -251,13 +251,13 @@
 
   async function addChapter(){
     const t=prompt("Chapter title:","New chapter"); if(!t)return;
-    const max=Math.max(0,...state.chapters.map(c=>c.sort_order||0));
+    const max=Math.max(0...state.chapters.map(c=>c.sort_order||0));
     const { error }=await sb.from("modules").insert({course_id:state.curCourse,title:t.trim(),sort_order:max+1});
     if(error)return flash(esc(error.message),"err"); renderCourse();
   }
   async function addLesson(chId){
     const t=prompt("Lesson title:","New lesson"); if(!t)return;
-    const arr=state.lessons[chId]||[]; const max=Math.max(0,...arr.map(l=>l.sort_order||0));
+    const arr=state.lessons[chId]||[]; const max=Math.max(0...arr.map(l=>l.sort_order||0));
     const { data, error }=await sb.from("lessons").insert({module_id:chId,title:t.trim(),lesson_type:'text',sort_order:max+1}).select().single();
     if(error)return flash(esc(error.message),"err");
     await renderCourse(); openEditor(data);
@@ -282,7 +282,7 @@
     $("#media-block").style.display = showMedia?'block':'none';
     const labels={video:"Video link (YouTube / Vimeo / Dropbox / Drive / .mp4)",image:"Image link (or upload)",pdf:"PDF link (Dropbox / Drive / direct)",download:"File link (or upload)"};
     $("#f-media-label").textContent = labels[type]||"Media link";
-    $("#f-content-label").textContent = (type==='text'||type==='embed')?"Body — HTML allowed (paste embed code for 'embed')":"Text / HTML body (optional)";
+    $("#f-content-label").textContent = (type==='text'||type==='embed')?"Body, HTML allowed (paste embed code for 'embed')":"Text / HTML body (optional)";
     const isQuiz=type==='quiz', isAssign=type==='assignment';
     $("#quiz-block").style.display=isQuiz?'block':'none';
     $("#assign-block").style.display=isAssign?'block':'none';
@@ -319,13 +319,13 @@
           <option value="tf"${q.qtype==='tf'?' selected':''}>True / False</option></select></div>
         <div class="field"><label>Order</label><input class="q-order" type="number" value="${q.sort_order||i}"></div>
       </div>
-      <label class="muted-note">Options — tick the correct one(s)</label>
+      <label class="muted-note">Options, tick the correct one(s)</label>
       <div class="q-options">${optionsHTML(q)}</div>
       ${q.qtype!=='tf'?'<button class="btn outline q-addopt" type="button" style="font-size:12px;padding:5px 10px">+ Option</button>':''}
       <div class="field" style="margin-top:10px"><label>Explanation (shown after answering)</label><input class="q-expl" value="${esc(q.explanation||'')}"></div>
       <div class="field" style="margin-top:10px"><label>Question image (URL or upload)</label>
         <input class="q-image" value="${esc(q.image_url||'')}" placeholder="https://…  (or upload a figure below)">
-        ${q.image_url?`<img src="${esc(q.image_url)}" alt="figure" style="max-width:200px;display:block;margin-top:6px;border:1px solid var(--line);border-radius:6px" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'muted-note',textContent:'⚠ image link set but could not load — re-upload the figure'}))">`:''}
+        ${q.image_url?`<img src="${esc(q.image_url)}" alt="figure" style="max-width:200px;display:block;margin-top:6px;border:1px solid var(--line);border-radius:6px" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'muted-note',textContent:'⚠ image link set but could not load, re-upload the figure'}))">`:''}
         <input type="file" class="q-imgfile" accept="image/*" style="margin-top:6px;font-size:12px">
         <div class="muted-note q-imgstatus"></div></div>
       <div style="display:flex;gap:8px"><button class="btn q-save" type="button">Save question</button><button class="chip-btn q-del" type="button">Delete</button></div>
@@ -334,7 +334,7 @@
   function renderQuestions(){ $("#q-list").innerHTML=state.questions.length?state.questions.map(questionHTML).join(''):'<p class="muted-note">No questions yet.</p>'; }
 
   $("#q-add").addEventListener("click", async ()=>{
-    const max=Math.max(0,...state.questions.map(q=>q.sort_order||0));
+    const max=Math.max(0...state.questions.map(q=>q.sort_order||0));
     await sb.from("quiz_questions").insert({lesson_id:state.editing.id,question:"New question",qtype:"single",options:[{id:'a',text:''},{id:'b',text:''}],correct:[],sort_order:max+1});
     loadQuiz();
   });
@@ -347,7 +347,7 @@
       const { error }=await sb.storage.from("course-media").upload(path,file,{upsert:true,contentType:file.type||undefined});
       if(error){ st.textContent="Upload failed: "+error.message; return; }
       const { data:{ publicUrl } }=sb.storage.from("course-media").getPublicUrl(path);
-      card.querySelector(".q-image").value=publicUrl; st.textContent="Uploaded ✓ — click Save question.";
+      card.querySelector(".q-image").value=publicUrl; st.textContent="Uploaded ✓, click Save question.";
       return;
     }
     if(e.target.classList.contains("q-type")){
@@ -501,12 +501,12 @@
         <input type="file" id="cs-file" accept="image/*" style="display:none"></div>
       <div class="row2">
         <div class="field"><label>Visibility</label><select id="cs-vis">
-          <option value="draft">Draft — hidden from members</option><option value="published">Published — shown in catalog</option><option value="hidden">Hidden — link only</option></select></div>
+          <option value="draft">Draft, hidden from members</option><option value="published">Published, shown in catalog</option><option value="hidden">Hidden, link only</option></select></div>
         <div class="field"><label>Access</label><select id="cs-access">
-          <option value="open">Open — every member</option><option value="signup">Members can self sign-up</option><option value="private">Private — admin enrolls</option></select></div>
+          <option value="open">Open, every member</option><option value="signup">Members can self sign-up</option><option value="private">Private, admin enrolls</option></select></div>
       </div>
       <div class="row2">
-        <div class="field"><label>Prerequisite course (optional)</label><select id="cs-prereq"><option value="">— none —</option>${state.courses.filter(x=>x.id!==course.id).map(x=>`<option value="${x.id}">${esc(x.title)}</option>`).join("")}</select></div>
+        <div class="field"><label>Prerequisite course (optional)</label><select id="cs-prereq"><option value="">, none, </option>${state.courses.filter(x=>x.id!==course.id).map(x=>`<option value="${x.id}">${esc(x.title)}</option>`).join("")}</select></div>
         <div class="field"><label style="display:block;margin-top:24px"><input type="checkbox" id="cs-cert"> Issue completion certificate</label></div>
       </div>
       <div class="field"><label>Certificate note (optional line printed on the certificate)</label><input id="cs-note" placeholder="e.g. 172 CME credits"></div>

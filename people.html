@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>People & Enrollments — Harvey Sarnat NNCC Fellowship</title>
+<title>People & Enrollments, Harvey Sarnat NNCC Fellowship</title>
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -43,7 +43,7 @@
 <main class="portal-wrap">
   <div class="container">
     <div class="p-head" style="margin-bottom:16px"><h1>People &amp; Enrollments</h1>
-      <p>Manage members, enrollments (with expiry), groups and email — the admin control centre.</p></div>
+      <p>Manage members, enrollments (with expiry), groups and email, the admin control centre.</p></div>
     <div id="msg"></div>
     <div class="tabs">
       <button data-tab="members" class="active">Members</button>
@@ -70,7 +70,7 @@
   const $=(s)=>document.querySelector(s);
   const esc=(s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const flash=(t,k)=>{ $("#msg").innerHTML=t?`<div class="msg ${k||'ok'}">${t}</div>`:""; if(t) setTimeout(()=>$("#msg").innerHTML="",4000); };
-  const fmtDate=(d)=> d? new Date(d).toLocaleDateString() : "—";
+  const fmtDate=(d)=> d? new Date(d).toLocaleDateString() : "-";
   const toIso=(v)=> v? new Date(v+"T23:59:59").toISOString() : null;
   function downloadCSV(filename, rows){
     const csv=rows.map(r=>r.map(c=>{ const s=String(c==null?'':c); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }).join(",")).join("\n");
@@ -104,7 +104,7 @@
   // ================= MEMBERS =================
   function renderMembers(){
     const rows=S.members.map(m=>`<tr>
-      <td><a href="#" data-open="${m.id}" style="color:var(--brand,#144e8c);font-weight:600;text-decoration:none">${esc(m.full_name||'—')}</a></td>
+      <td><a href="#" data-open="${m.id}" style="color:var(--brand,#144e8c);font-weight:600;text-decoration:none">${esc(m.full_name||'-')}</a></td>
       <td><a href="#" data-open="${m.id}" style="color:var(--brand,#144e8c);text-decoration:none">${esc(m.email||'')}</a></td>
       <td><span class="badge ${m.role}">${m.role}</span> ${m.status==='suspended'?'<span class="badge" style="background:#fdecec;color:#8a1f1f">suspended</span>':''}</td>
       <td>${m.enrollments}</td><td>${m.lessons_done}</td>
@@ -152,7 +152,7 @@
     const box=$("#jr-list"); if(!box) return;
     if(!data||!data.length){ box.innerHTML='<span class="muted-note">No pending requests.</span>'; return; }
     box.innerHTML='<table class="tbl"><thead><tr><th>When</th><th>Name</th><th>Email</th><th>Message</th><th>Actions</th></tr></thead><tbody>'+
-      data.map(r=>`<tr><td>${new Date(r.created_at).toLocaleDateString()}</td><td>${esc(r.full_name||'—')}</td><td>${esc(r.email)}</td><td>${esc(r.message||'')}</td>
+      data.map(r=>`<tr><td>${new Date(r.created_at).toLocaleDateString()}</td><td>${esc(r.full_name||'-')}</td><td>${esc(r.email)}</td><td>${esc(r.message||'')}</td>
         <td class="row-actions"><button data-jrinv="${r.id}" data-n="${esc(r.full_name||'')}" data-e="${esc(r.email)}">Invite</button>
           <button data-jrfill data-n="${esc(r.full_name||'')}" data-e="${esc(r.email)}">Add…</button>
           <button data-jrdis="${r.id}">Dismiss</button></td></tr>`).join('')+
@@ -171,7 +171,7 @@
     try{
       const r=await NNCC.addMember(name,email,pass);
       const cred = r.password
-        ? `Auto-generated password: <b>${esc(r.password)}</b> — share it now; it won't be shown again.`
+        ? `Auto-generated password: <b>${esc(r.password)}</b>, share it now; it won't be shown again.`
         : `They can sign in with the password you set.`;
       const msg=`<div class="msg ok">✓ Created <b>${esc(email)}</b>. ${cred}<br><span class="small-link">They can also use “Forgot password” on the login page to reset it.</span></div>`;
       await loadCore(); renderMembers();
@@ -235,9 +235,9 @@
     if(i===0){
       body.innerHTML=`<section class="panel"><h2>User info</h2>
         <div class="row2">
-          <div class="field"><label>Email</label><div>${esc(P.email||'—')}</div></div>
+          <div class="field"><label>Email</label><div>${esc(P.email||'-')}</div></div>
           <div class="field"><label>Status</label><div>${esc(P.status||'active')}</div></div>
-          <div class="field"><label>Joined</label><div>${P.created_at?fmtDate(P.created_at):'—'}</div></div>
+          <div class="field"><label>Joined</label><div>${P.created_at?fmtDate(P.created_at):', '}</div></div>
           <div class="field"><label>Last login</label><div>${P.last_login?fmtDate(P.last_login):'never'}</div></div>
         </div>
         <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
@@ -253,7 +253,7 @@
       const list = i===2 ? enr.filter(e=>e.starts_at && new Date(e.starts_at)>new Date()) : enr;
       const rows=list.map(e=>`<tr>
         <td>${esc(e.title)}</td><td>${uBar(e.done,e.total)}</td><td>${uStatus(e)}</td>
-        <td>${e.certificate?('✓ '+esc(e.certificate)):'—'}</td>
+        <td>${e.certificate?('✓ '+esc(e.certificate)):', '}</td>
         <td>${e.starts_at?fmtDate(e.starts_at):'immediate'}</td>
         <td>${e.expires_at?fmtDate(e.expires_at):'no expiry'}</td>
         <td class="row-actions"><button data-edates="${e.course_id}">Dates</button><button data-unen="${e.course_id}">Unenroll</button></td></tr>`).join("");
@@ -263,14 +263,14 @@
         <h2>${i===2?'Scheduled enrollments':'Enrollments'} (${list.length})</h2>
         ${list.length?`<table class="tbl"><thead><tr><th>Course</th><th>Progress</th><th>Status</th><th>Certificate</th><th>Start</th><th>Expiry</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<p class="muted-note">'+(i===2?'No scheduled (future-start) enrollments.':'Not enrolled in anything yet.')+'</p>'}
         ${i===1?`<h3 style="margin:16px 0 6px">Enroll in a course</h3>
-          <div class="row2"><div class="field"><label>Course</label><select id="u-newc">${addOpts||'<option value="">— already in every course —</option>'}</select></div>
+          <div class="row2"><div class="field"><label>Course</label><select id="u-newc">${addOpts||'<option value="">, already in every course, </option>'}</select></div>
             <div class="field"><label>Start (optional)</label><input type="date" id="u-news"></div>
             <div class="field"><label>Expiry (optional)</label><input type="date" id="u-newx"></div></div>
           <button class="btn" id="u-enroll" style="margin-top:8px">Enroll</button>`:''}
       </section>`;
       body.querySelectorAll("[data-edates]").forEach(b=>b.addEventListener("click", async()=>{ const cid=b.dataset.edates; const cur=enr.find(e=>e.course_id===cid)||{};
-        const s=prompt("Start date (YYYY-MM-DD) — blank = immediately:", cur.starts_at?cur.starts_at.slice(0,10):''); if(s===null)return;
-        const x=prompt("Expiry date (YYYY-MM-DD) — blank = never:", cur.expires_at?cur.expires_at.slice(0,10):''); if(x===null)return;
+        const s=prompt("Start date (YYYY-MM-DD), blank = immediately:", cur.starts_at?cur.starts_at.slice(0,10):''); if(s===null)return;
+        const x=prompt("Expiry date (YYYY-MM-DD), blank = never:", cur.expires_at?cur.expires_at.slice(0,10):''); if(x===null)return;
         await sb.from("course_enrollments").update({starts_at:s?toIso(s):null,expires_at:x?toIso(x):null}).eq("course_id",cid).eq("user_id",uid); openUser(uid); }));
       body.querySelectorAll("[data-unen]").forEach(b=>b.addEventListener("click", async()=>{ if(!confirm("Unenroll from this course?"))return; await sb.from("course_enrollments").delete().eq("course_id",b.dataset.unen).eq("user_id",uid); openUser(uid); }));
       const eb=body.querySelector("#u-enroll"); if(eb) eb.addEventListener("click", async()=>{ const cid=body.querySelector("#u-newc").value; if(!cid){flash("Pick a course.","err");return;} await sb.from("course_enrollments").upsert({course_id:cid,user_id:uid,starts_at:toIso(body.querySelector("#u-news").value),expires_at:toIso(body.querySelector("#u-newx").value),enrolled_by:me.id},{onConflict:"course_id,user_id"}); flash("Enrolled."); openUser(uid); });
@@ -326,7 +326,7 @@
         ((data||[]).length?`<table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>Progress</th><th>Start</th><th>Expires</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<p class="muted-note">Nobody enrolled yet.</p>');
       $("#en-enrolled").querySelectorAll("button").forEach(btn=>btn.addEventListener("click", async ()=>{
         if(btn.dataset.unen){ await sb.from("course_enrollments").delete().eq("course_id",course()).eq("user_id",btn.dataset.unen); loadEnrolled(); }
-        if(btn.dataset.editdates){ const cur=emap2[btn.dataset.editdates]||{}; const s=prompt("Start date (YYYY-MM-DD) — blank = immediately:", cur.starts_at?cur.starts_at.slice(0,10):''); if(s===null)return; const x=prompt("Expiry date (YYYY-MM-DD) — blank = never:", cur.expires_at?cur.expires_at.slice(0,10):''); if(x===null)return; await sb.from("course_enrollments").update({starts_at:s?toIso(s):null,expires_at:x?toIso(x):null}).eq("course_id",course()).eq("user_id",btn.dataset.editdates); loadEnrolled(); }
+        if(btn.dataset.editdates){ const cur=emap2[btn.dataset.editdates]||{}; const s=prompt("Start date (YYYY-MM-DD), blank = immediately:", cur.starts_at?cur.starts_at.slice(0,10):''); if(s===null)return; const x=prompt("Expiry date (YYYY-MM-DD), blank = never:", cur.expires_at?cur.expires_at.slice(0,10):''); if(x===null)return; await sb.from("course_enrollments").update({starts_at:s?toIso(s):null,expires_at:x?toIso(x):null}).eq("course_id",course()).eq("user_id",btn.dataset.editdates); loadEnrolled(); }
       }));
     }
     async function doEnroll(){
@@ -372,7 +372,7 @@
     const { data:gm } = await sb.from("group_members").select("user_id").eq("group_id",gid);
     const inSet=new Set((gm||[]).map(x=>x.user_id));
     const box=$("#g-detail"); box.style.display="block";
-    box.innerHTML=`<h2>${esc(g.name)} — members</h2>
+    box.innerHTML=`<h2>${esc(g.name)}, members</h2>
       <div class="checklist" style="margin:8px 0">${S.members.map(m=>`<label><input type="checkbox" class="gm-chk" value="${m.id}" ${inSet.has(m.id)?'checked':''}> ${esc(m.full_name||m.email)} <span class="small-link">${esc(m.email)}</span></label>`).join("")}</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn" id="gm-save">Save members</button>

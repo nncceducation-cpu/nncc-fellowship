@@ -1,5 +1,5 @@
 // =====================================================================
-//  Portal configuration  —  connected to the nncc-portal Supabase project
+//  Portal configuration,  connected to the nncc-portal Supabase project
 //  Supabase → Project Settings → API
 //  The publishable key is SAFE to publish: it only grants what your
 //  Row-Level Security policies allow. Never put a secret key here.

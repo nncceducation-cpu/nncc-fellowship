@@ -1,5 +1,5 @@
 /* =====================================================================
-   portal-media.js — shared media helpers for the portal LMS.
+   portal-media.js, shared media helpers for the portal LMS.
    Handles YouTube / Vimeo / Dropbox / Google Drive / direct files, and
    renders a lesson's body by its type. Used by learning.html (student)
    and authoring.html (admin preview).
@@ -73,7 +73,7 @@ window.PortalMedia = (function () {
     return `<p><a class="btn" href="${esc(direct(u))}" target="_blank" rel="noopener" download>⬇ ${esc(label || "Download file")}</a></p>`;
   }
   function placeholder(kind, admin) {
-    const hint = admin ? " — add it from the builder." : " — coming soon.";
+    const hint = admin ? ", add it from the builder." : ", coming soon.";
     return `<div style="background:var(--navy-50);border:1px dashed var(--navy-100);border-radius:12px;padding:36px 20px;text-align:center;color:var(--navy);font-weight:600">${esc(kind)} not added yet${hint}</div>`;
   }
 

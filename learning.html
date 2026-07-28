@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Courses — Harvey Sarnat NNCC Fellowship</title>
+<title>Courses, Harvey Sarnat NNCC Fellowship</title>
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,7 +14,7 @@
 <style>
   .prog { height:7px;border-radius:999px;background:var(--navy-50);overflow:hidden;margin-top:10px }
   .prog > i { display:block;height:100%;background:var(--teal) }
-  .lesson-text img{max-width:100%;border-radius:8px} .lesson-text h1,.lesson-text h2,.lesson-text h3{font-family:var(--font-serif);color:var(--navy)}
+  .lesson-text img{max-width:100%;border-radius:8px} .lesson-text h1.lesson-text h2.lesson-text h3{font-family:var(--font-serif);color:var(--navy)}
   .embed-wrap iframe{max-width:100%}
   .crumbs{font-size:13px;color:var(--muted);margin-bottom:6px}
   .crumbs a{color:var(--muted)}
@@ -249,7 +249,7 @@
       const answers={}; questions.forEach(q=>{ answers[q.id]=[...wrap.querySelectorAll(`input[name="q-${q.id}"]:checked`)].map(x=>x.value); });
       const { data:res, error } = await sb.rpc("grade_quiz",{ p_lesson:lessonId, p_answers:answers });
       if(error){ wrap.querySelector("#quiz-result").innerHTML=`<div class="msg err">${esc(error.message)}</div>`; return; }
-      wrap.querySelector("#quiz-result").innerHTML=`<div class="msg ${res.passed?'ok':'err'}">Score: ${res.score}/${res.total} — ${res.passed?'Passed ✓':'Not yet passed (70% needed)'}</div>`;
+      wrap.querySelector("#quiz-result").innerHTML=`<div class="msg ${res.passed?'ok':'err'}">Score: ${res.score}/${res.total}, ${res.passed?'Passed ✓':'Not yet passed (70% needed)'}</div>`;
       (res.results||[]).forEach(r=>{ const fb=wrap.querySelector(`.q[data-qid="${r.id}"] .q-fb`); if(fb) fb.innerHTML=`<span style="color:${r.correct?'#0c7373':'#8a1f1f'};font-weight:600;font-size:13px">${r.correct?'✓ Correct':'✗ Incorrect'}</span>${r.explanation?` <span class="small-link">${esc(r.explanation)}</span>`:''}`; });
       if(res.passed){ await sb.from("lesson_progress").upsert({ user_id:me.id, lesson_id:lessonId }); if(onPass)onPass(); }
     });
@@ -257,7 +257,7 @@
   function qBlock(q,i){
     const opts=q.qtype==='tf'?[{id:'t',text:'True'},{id:'f',text:'False'}]:(q.options||[]);
     const inp=q.qtype==='multi'?'checkbox':'radio';
-    const img=q.image_url?`<div style="margin:8px 0"><img src="${esc(q.image_url)}" alt="Question figure" loading="lazy" style="max-width:100%;border:1px solid var(--line,#d8dee6);border-radius:8px" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'small-link',textContent:'📷 Figure — view the original on Thinkific (image could not load here)'}))"></div>`:'';
+    const img=q.image_url?`<div style="margin:8px 0"><img src="${esc(q.image_url)}" alt="Question figure" loading="lazy" style="max-width:100%;border:1px solid var(--line,#d8dee6);border-radius:8px" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'small-link',textContent:'📷 Figure, view the original on Thinkific (image could not load here)'}))"></div>`:'';
     return `<div class="q" data-qid="${q.id}" style="margin-bottom:18px">
       <b>${i+1}. ${esc(q.question)}</b>${q.qtype==='multi'?' <span class="small-link">(select all that apply)</span>':''}
       ${img}

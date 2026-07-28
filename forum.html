@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Members' Forum — Harvey Sarnat NNCC Fellowship</title>
+<title>Members' Forum, Harvey Sarnat NNCC Fellowship</title>
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -85,7 +85,7 @@
     $("#list-view").style.display="block"; $("#thread-view").style.display="none";
     const { data } = await sb.from("forum_threads_view").select("*").order("created_at",{ascending:false});
     const box=$("#threads");
-    if(!data||!data.length){ box.innerHTML='<div class="empty">No topics yet — start the first one.</div>'; return; }
+    if(!data||!data.length){ box.innerHTML='<div class="empty">No topics yet, start the first one.</div>'; return; }
     box.innerHTML = data.map(t=>`
       <div class="thread">
         <div><a class="t-title" href="forum.html?thread=${t.id}">${esc(t.title)}</a>

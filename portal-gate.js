@@ -1,5 +1,5 @@
 /* =====================================================================
-   portal-gate.js — drop-in "members only" guard for EXISTING pages.
+   portal-gate.js, drop-in "members only" guard for EXISTING pages.
    To protect a page (e.g. assessment.html), add these lines to its
    <head>, right after the <title>:
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Analytics — Harvey Sarnat NNCC Fellowship</title>
+<title>Analytics, Harvey Sarnat NNCC Fellowship</title>
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -64,7 +64,7 @@
       <td><div class="prog" style="width:120px"><i style="width:${rate}%"></i></div><span class="small-link">${rate}%</span></td></tr>`;}).join("");
   const nameById={}; M.forEach(m=>nameById[m.id]=m.full_name||m.email);
   const titleById={}; (ca||[]).forEach(r=>titleById[r.course_id]=r.title);
-  const certRows=C.map(c=>`<tr><td>${new Date(c.issued_at).toLocaleDateString()}</td><td>${esc(nameById[c.user_id]||'—')}</td><td>${esc(titleById[c.course_id]||'—')}</td><td>${esc(c.serial)}</td></tr>`).join("");
+  const certRows=C.map(c=>`<tr><td>${new Date(c.issued_at).toLocaleDateString()}</td><td>${esc(nameById[c.user_id]||'-')}</td><td>${esc(titleById[c.course_id]||'-')}</td><td>${esc(c.serial)}</td></tr>`).join("");
 
   $("#body").innerHTML=`
     <div class="kpis">

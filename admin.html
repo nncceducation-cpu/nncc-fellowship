@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Admin — Harvey Sarnat NNCC Fellowship Portal</title>
+<title>Admin, Harvey Sarnat NNCC Fellowship Portal</title>
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -113,7 +113,7 @@
         ? `<button data-act="demote" data-id="${m.id}" ${isSelf?'disabled title="You cannot demote yourself"':''}>Make member</button>`
         : `<button data-act="promote" data-id="${m.id}">Make admin</button>`;
       const del = isSelf ? '' : `<button data-act="delete" data-id="${m.id}">Remove</button>`;
-      return `<tr><td>${esc(m.full_name||'—')}</td><td>${esc(m.email||'')}</td>
+      return `<tr><td>${esc(m.full_name||'-')}</td><td>${esc(m.email||'')}</td>
         <td><span class="badge ${m.role}">${m.role}</span></td>
         <td class="row-actions">${toggle} ${del}</td></tr>`;
     }).join("");

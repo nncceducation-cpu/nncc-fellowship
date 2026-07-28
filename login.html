@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Member Sign in — Harvey Sarnat NNCC Fellowship</title>
+<title>Member Sign in, Harvey Sarnat NNCC Fellowship</title>
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -93,7 +93,7 @@
   const nextPage = params.get("next") || "portal.html";
 
   if (!window.NNCC || !NNCC.configured) {
-    say("#signin-msg", "Portal not connected yet — see PORTAL-SETUP-GUIDE.md.", "info");
+    say("#signin-msg", "Portal not connected yet, see PORTAL-SETUP-GUIDE.md.", "info");
     return;
   }
   const sb = NNCC.client;
@@ -147,7 +147,7 @@
       });
       const b = await res.json().catch(() => ({}));
       if (!res.ok) { say("#join-msg", b.error || "Could not send your request.", "err"); btn.disabled = false; return; }
-      say("#join-msg", "Thanks! Your request has been received — the program team will contact you.", "ok");
+      say("#join-msg", "Thanks! Your request has been received, the program team will contact you.", "ok");
       $("#jn-name").value = ""; $("#jn-email").value = ""; $("#jn-msg").value = "";
     } catch (err) { say("#join-msg", err.message, "err"); }
     btn.disabled = false;
@@ -170,7 +170,7 @@
     const { error } = await NNCC.setPassword(p1);
     btn.disabled = false;
     if (error) return say("#setpass-msg", error.message, "err");
-    say("#setpass-msg", "Password saved — signing you in…", "ok");
+    say("#setpass-msg", "Password saved, signing you in…", "ok");
     setTimeout(() => location.replace("portal.html"), 900);
   });
 })();

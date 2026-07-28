@@ -1,5 +1,5 @@
 /* =====================================================================
-   portal-shell.js — injects a persistent Thinkific-style left sidebar
+   portal-shell.js, injects a persistent Thinkific-style left sidebar
    into every portal page. Include AFTER portal-auth.js:
      <script src="portal-shell.js"></script>
    Admin-only links are hidden for non-admins. The current page is
