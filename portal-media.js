@@ -7,6 +7,11 @@
 window.PortalMedia = (function () {
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
     c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  // turn bare URLs in plain text into clickable links that open in the SAME window
+  const linkify = (escaped) => escaped.replace(/(https?:\/\/[^\s<>"']+)/g,
+    (u) => `<a href="${u}" target="_self" rel="noopener">${u}</a>`);
+  // lesson body text: keep authored HTML as-is; make legacy plain text clickable
+  const textHtml = (c) => (/<[a-z!/]/i.test(c) ? c : linkify(esc(c)).replace(/\n/g, "<br>"));
 
   // --- URL detection ---------------------------------------------------
   function ytId(u) {
@@ -101,13 +106,25 @@ window.PortalMedia = (function () {
     }
     // caption / instructions
     if (l.caption) h += `<p style="color:var(--muted);margin-top:12px">${esc(l.caption)}</p>`;
-    // main text body (rendered as HTML for text/embed; admins author it)
-    if (c && t !== "embed") h += `<div class="lesson-text" style="margin-top:14px">${c}</div>`;
+
+    // interactive web app (survey / assignment checker): embed inline in the SAME window
+    let embeddedApp = false;
+    if (t === "survey" && ext) {
+      h += `<div class="embed-wrap" style="margin-top:14px">
+        <iframe src="${esc(ext)}" title="${esc(l.title || "Interactive")}" loading="lazy"
+          style="width:100%;height:80vh;min-height:560px;border:1px solid var(--line,#e3e8ee);border-radius:12px"
+          allow="clipboard-write; fullscreen"></iframe></div>
+        <p style="margin-top:10px"><a class="btn outline" href="${esc(ext)}" target="_self" rel="noopener">Open in this window</a></p>`;
+      embeddedApp = true;
+    }
+    // main text body (authored HTML as-is; legacy plain-text URLs become clickable, same-window links)
+    if (c && t !== "embed" && !(embeddedApp && c.trim() === ext))
+      h += `<div class="lesson-text" style="margin-top:14px">${textHtml(c)}</div>`;
     // supplementary file (e.g. a slide PDF attached to a video lesson)
     if (f && !["image", "pdf", "download"].includes(t)) h += `<div style="margin-top:16px">${downloadBlock(f, "Attached file")}</div>`;
-    // external link (e.g. Thinkific)
-    if (ext && t !== "pdf" && t !== "download")
-      h += `<p style="margin-top:18px"><a class="btn outline" href="${esc(ext)}" target="_blank" rel="noopener">Open link ↗</a></p>`;
+    // external link, opens in the same window (no new tab)
+    if (ext && t !== "pdf" && t !== "download" && !embeddedApp)
+      h += `<p style="margin-top:18px"><a class="btn outline" href="${esc(ext)}" target="_self" rel="noopener">Open link</a></p>`;
     if (!h) h = placeholder("Content", opts.admin);
     return h;
   }
