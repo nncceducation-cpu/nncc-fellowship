@@ -14,7 +14,7 @@
 </head>
 <body>
 
-<div class="auth-shell">
+<div class="auth-shell" id="auth-shell" style="visibility:hidden">
   <div class="auth-card">
     <img class="mark-lg" src="logo-nncc.png" alt="NNCC" style="border-radius:50%;object-fit:cover;background:none;padding:0">
 
@@ -91,8 +91,11 @@
   const say = (el, text, kind) => { $(el).innerHTML = text ? `<div class="msg ${kind}">${text}</div>` : ""; };
   const params = new URLSearchParams(location.search);
   const nextPage = params.get("next") || "portal.html";
+  const reveal = () => { const s = $("#auth-shell"); if (s) s.style.visibility = "visible"; };
+  setTimeout(reveal, 4000); // failsafe: never leave the page blank
 
   if (!window.NNCC || !NNCC.configured) {
+    reveal();
     say("#signin-msg", "Portal not connected yet, see PORTAL-SETUP-GUIDE.md.", "info");
     return;
   }
@@ -106,13 +109,13 @@
   sb.auth.onAuthStateChange((event) => {
     if (event === "PASSWORD_RECOVERY") show("form-setpass");
   });
-  if (isRecovery) show("form-setpass");
+  if (isRecovery) { show("form-setpass"); reveal(); }
 
   // If already signed in (and not in the middle of setting a password) → go in.
   (async () => {
     if (isRecovery) return;
     const u = await NNCC.user();
-    if (u) location.replace(nextPage);
+    if (u) location.replace(nextPage); else reveal();
   })();
 
   // ---- Sign in ----
