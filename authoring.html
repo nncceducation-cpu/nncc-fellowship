@@ -176,7 +176,7 @@
   });
   $("#new-course").addEventListener("click", async ()=>{
     const t=prompt("New course title:"); if(!t)return;
-    const max=Math.max(0...state.courses.map(c=>c.sort_order||0));
+    const max=Math.max(0, ...state.courses.map(c=>c.sort_order||0));
     const { data, error }=await sb.from("courses").insert({title:t.trim(),sort_order:max+1}).select().single();
     if(error)return flash(esc(error.message),"err");
     state.curCourse=data.id; await loadCourses(); renderCourse();
@@ -251,13 +251,13 @@
 
   async function addChapter(){
     const t=prompt("Chapter title:","New chapter"); if(!t)return;
-    const max=Math.max(0...state.chapters.map(c=>c.sort_order||0));
+    const max=Math.max(0, ...state.chapters.map(c=>c.sort_order||0));
     const { error }=await sb.from("modules").insert({course_id:state.curCourse,title:t.trim(),sort_order:max+1});
     if(error)return flash(esc(error.message),"err"); renderCourse();
   }
   async function addLesson(chId){
     const t=prompt("Lesson title:","New lesson"); if(!t)return;
-    const arr=state.lessons[chId]||[]; const max=Math.max(0...arr.map(l=>l.sort_order||0));
+    const arr=state.lessons[chId]||[]; const max=Math.max(0, ...arr.map(l=>l.sort_order||0));
     const { data, error }=await sb.from("lessons").insert({module_id:chId,title:t.trim(),lesson_type:'text',sort_order:max+1}).select().single();
     if(error)return flash(esc(error.message),"err");
     await renderCourse(); openEditor(data);
@@ -334,7 +334,7 @@
   function renderQuestions(){ $("#q-list").innerHTML=state.questions.length?state.questions.map(questionHTML).join(''):'<p class="muted-note">No questions yet.</p>'; }
 
   $("#q-add").addEventListener("click", async ()=>{
-    const max=Math.max(0...state.questions.map(q=>q.sort_order||0));
+    const max=Math.max(0, ...state.questions.map(q=>q.sort_order||0));
     await sb.from("quiz_questions").insert({lesson_id:state.editing.id,question:"New question",qtype:"single",options:[{id:'a',text:''},{id:'b',text:''}],correct:[],sort_order:max+1});
     loadQuiz();
   });

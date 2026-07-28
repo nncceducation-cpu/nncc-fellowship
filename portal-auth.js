@@ -114,7 +114,7 @@
             Authorization: `Bearer ${token}`,
             apikey: cfg.SUPABASE_ANON_KEY,
           },
-          body: JSON.stringify({ full_name, email...extra }),
+          body: JSON.stringify({ full_name, email, ...extra }),
         }
       );
       const body = await res.json().catch(() => ({}));
