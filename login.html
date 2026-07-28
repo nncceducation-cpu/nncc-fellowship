@@ -107,6 +107,8 @@
       <div id="join-msg"></div>
       <div class="field"><label for="jn-name">Full name</label><input id="jn-name" type="text" placeholder="Dr. Jane Smith"></div>
       <div class="field"><label for="jn-email">Email</label><input id="jn-email" type="email" required placeholder="you@example.com"></div>
+      <div class="field"><label for="jn-country">Country</label><select id="jn-country"></select></div>
+      <div class="field"><label for="jn-prof">Profession</label><select id="jn-prof"></select></div>
       <div class="field"><label for="jn-msg">Message (optional)</label><textarea id="jn-msg" rows="3" placeholder="Your role, institution, or why you'd like to join"></textarea></div>
       <button class="btn block" type="submit">Send request</button>
       <p class="auth-alt"><a id="to-signin2">← Back to sign in</a></p>
@@ -116,6 +118,7 @@
 
 <script src="portal-config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="countries.js"></script>
 <script src="portal-auth.js"></script>
 <script>
 (function () {
@@ -168,6 +171,7 @@
   $("#to-signin").addEventListener("click", () => show("form-signin"));
 
   // ---- Request to join (public) ----
+  if (window.fillCountrySelect) { fillCountrySelect($("#jn-country")); fillProfessionSelect($("#jn-prof")); }
   $("#to-join").addEventListener("click", () => { say("#join-msg","",""); show("form-join"); });
   $("#to-signin2").addEventListener("click", () => show("form-signin"));
   $("#form-join").addEventListener("submit", async (e) => {
@@ -180,7 +184,7 @@
       const res = await fetch(`${window.PORTAL_CONFIG.SUPABASE_URL}/functions/v1/join-request`, {
         method: "POST",
         headers: { "Content-Type": "application/json", apikey: window.PORTAL_CONFIG.SUPABASE_ANON_KEY },
-        body: JSON.stringify({ full_name: $("#jn-name").value.trim(), email, message: $("#jn-msg").value.trim() }),
+        body: JSON.stringify({ full_name: $("#jn-name").value.trim(), email, message: $("#jn-msg").value.trim(), country: $("#jn-country").value, profession: $("#jn-prof").value }),
       });
       const b = await res.json().catch(() => ({}));
       if (!res.ok) { say("#join-msg", b.error || "Could not send your request.", "err"); btn.disabled = false; return; }

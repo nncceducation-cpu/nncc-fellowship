@@ -10,12 +10,28 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="portal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsvectormap@1.5.3/dist/css/jsvectormap.min.css">
 <link rel="icon" href="favicon.ico" sizes="any">
 <style>
-  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
-  .kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
-  .kpi b{display:block;font-family:var(--font-serif);font-size:2rem;color:var(--navy)}
-  .kpi span{color:var(--muted);font-size:13px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:22px}
+  .kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow)}
+  .kpi b{display:block;font-family:var(--font-serif);font-size:1.9rem;color:var(--navy);line-height:1.1}
+  .kpi span{color:var(--muted);font-size:12.5px}
+  .a-grid{display:grid;gap:18px;grid-template-columns:repeat(12,1fr);margin-bottom:18px}
+  .a-grid .panel{margin:0}
+  .col-8{grid-column:span 8}.col-4{grid-column:span 4}.col-6{grid-column:span 6}.col-12{grid-column:span 12}
+  @media(max-width:900px){.col-8,.col-4,.col-6{grid-column:span 12}}
+  .chart-wrap{position:relative;height:270px}
+  #map{height:380px;width:100%}
+  .toplist{list-style:none;margin:0;padding:0}
+  .toplist li{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  .toplist li:last-child{border-bottom:none}
+  .toplist .lab{min-width:120px;color:var(--ink)}
+  .toplist .bar{flex:1;height:8px;background:var(--bg-soft);border-radius:6px;overflow:hidden}
+  .toplist .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--teal),var(--navy))}
+  .toplist .n{font-weight:700;color:var(--navy);min-width:26px;text-align:right}
+  .panel h2{margin-top:0;font-size:1.15rem}
+  .panel .sub{color:var(--muted);font-size:13px;margin:-4px 0 14px}
 </style>
 </head>
 <body>
@@ -26,37 +42,46 @@
 </div></header>
 
 <main class="portal-wrap"><div class="container">
-  <div class="p-head" style="margin-bottom:16px"><h1>Analytics</h1><p>Engagement and completion across the portal.</p></div>
+  <div class="p-head" style="margin-bottom:16px"><h1>Analytics</h1><p>Engagement, reach and completion across the portal.</p></div>
   <div id="body"><div class="empty">Loading…</div></div>
 </div></main>
 
 <script src="portal-config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="countries.js"></script>
 <script src="portal-auth.js"></script>
 <script src="portal-shell.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsvectormap@1.5.3/dist/js/jsvectormap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsvectormap@1.5.3/dist/maps/world.js"></script>
 <script>
 (async function(){
   const me=await NNCC.requireAdmin(); if(!me) return;
   NNCC.mountUserChip(document.getElementById("user-chip"));
   const sb=NNCC.client, $=(s)=>document.querySelector(s);
   const esc=(s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const NAVY="#0c2a4d", TEAL="#0f8a8a", GOLD="#c8932f";
+  const PALETTE=["#0f8a8a","#0c2a4d","#c8932f","#3f7cbf","#7bbf9e","#b0592f","#6b6fb0","#2f9e8f","#c77d9e","#8aa63a","#5b6673","#d0a24a"];
 
-  const [{data:members},{data:ca},{data:attempts},{data:certs},{data:enroll}] = await Promise.all([
+  const [{data:members},{data:ca},{data:attempts},{data:certs},{data:enroll}, an] = await Promise.all([
     sb.from("members_overview").select("*"),
     sb.from("course_analytics").select("*").order("enrollments",{ascending:false}),
     sb.from("quiz_attempts").select("score,total,passed,created_at"),
     sb.from("certificates").select("serial,issued_at,course_id,user_id").order("issued_at",{ascending:false}).limit(10),
     sb.from("course_enrollments").select("id,expires_at"),
+    sb.rpc("admin_analytics").then(r=>r.data).catch(()=>null),
   ]);
   const M=members||[], A=attempts||[], C=certs||[];
+  const AN = an || {total_members:M.length, with_country:0, by_country:[], by_profession:[], signups_by_month:[]};
   const totalMembers=M.length, admins=M.filter(m=>m.role==='admin').length, suspended=M.filter(m=>m.status==='suspended').length;
   const activeLearners=M.filter(m=>m.lessons_done>0).length;
   const totalEnroll=(enroll||[]).length;
   const totalCompletions=(ca||[]).reduce((s,r)=>s+(r.completions||0),0);
-  const attemptsN=A.length, passed=A.filter(a=>a.passed).length;
+  const attemptsN=A.length, passed=A.filter(a=>a.passed).length, failed=attemptsN-passed;
   const avgScore = attemptsN? Math.round(A.reduce((s,a)=>s+(a.total?a.score/a.total:0),0)/attemptsN*100) : 0;
   const since30=new Date(Date.now()-30*864e5);
   const newMembers=M.filter(m=>new Date(m.created_at)>since30).length;
+  const countriesN=(AN.by_country||[]).length;
 
   const kpi=(v,l)=>`<div class="kpi"><b>${v}</b><span>${l}</span></div>`;
   const courseRows=(ca||[]).map(r=>{ const rate=r.enrollments? Math.round(r.completions/r.enrollments*100):0;
@@ -66,18 +91,82 @@
   const titleById={}; (ca||[]).forEach(r=>titleById[r.course_id]=r.title);
   const certRows=C.map(c=>`<tr><td>${new Date(c.issued_at).toLocaleDateString()}</td><td>${esc(nameById[c.user_id]||'-')}</td><td>${esc(titleById[c.course_id]||'-')}</td><td>${esc(c.serial)}</td></tr>`).join("");
 
+  // top countries list
+  const cn=(code)=> window.countryName? countryName(code): code;
+  const maxCountry=Math.max(1,...(AN.by_country||[]).map(c=>c.n));
+  const topCountries=(AN.by_country||[]).slice(0,8).map(c=>`<li><span class="lab">${esc(cn(c.code))}</span>
+     <span class="bar"><i style="width:${Math.round(c.n/maxCountry*100)}%"></i></span><span class="n">${c.n}</span></li>`).join("")
+     || '<li><span class="small-link">No country data yet, ask members to add their country when they sign up.</span></li>';
+
   $("#body").innerHTML=`
     <div class="kpis">
-      ${kpi(totalMembers,"Members")}${kpi(activeLearners,"Active learners")}${kpi(newMembers,"New (30 days)")}
-      ${kpi(totalEnroll,"Enrollments")}${kpi(totalCompletions,"Completions")}
-      ${kpi(attemptsN,"Quiz attempts")}${kpi(avgScore+"%","Avg quiz score")}${kpi(admins,"Admins")}${kpi(suspended,"Suspended")}
+      ${kpi(totalMembers,"Members")}${kpi(newMembers,"New (30 days)")}${kpi(countriesN,"Countries")}
+      ${kpi(activeLearners,"Active learners")}${kpi(totalCompletions,"Completions")}
+      ${kpi(attemptsN,"Quiz attempts")}${kpi(avgScore+"%","Avg quiz score")}${kpi(admins,"Admins")}
     </div>
-    <div class="panel"><h2>Courses</h2>
-      <table class="tbl"><thead><tr><th>Course</th><th>Enrolled</th><th>Active</th><th>Completed</th><th>Completion rate</th></tr></thead>
-      <tbody>${courseRows||'<tr><td colspan="5" class="small-link">No courses.</td></tr>'}</tbody></table></div>
+
+    <div class="a-grid">
+      <div class="panel col-8"><h2>Where our members are</h2>
+        <p class="sub">${AN.with_country||0} of ${totalMembers} members have a country on file, across ${countriesN} countries.</p>
+        <div id="map"></div></div>
+      <div class="panel col-4"><h2>Top countries</h2>
+        <ul class="toplist" style="margin-top:8px">${topCountries}</ul></div>
+    </div>
+
+    <div class="a-grid">
+      <div class="panel col-6"><h2>New members over time</h2>
+        <p class="sub">Sign-ups per month (last 12 months).</p>
+        <div class="chart-wrap"><canvas id="c-signups"></canvas></div></div>
+      <div class="panel col-6"><h2>Members by profession</h2>
+        <div class="chart-wrap"><canvas id="c-prof"></canvas></div></div>
+    </div>
+
+    <div class="a-grid">
+      <div class="panel col-4"><h2>Quiz outcomes</h2>
+        <p class="sub">Passed vs. not passed across ${attemptsN} attempts.</p>
+        <div class="chart-wrap"><canvas id="c-quiz"></canvas></div></div>
+      <div class="panel col-8"><h2>Course completion</h2>
+        <table class="tbl"><thead><tr><th>Course</th><th>Enrolled</th><th>Active</th><th>Completed</th><th>Completion rate</th></tr></thead>
+        <tbody>${courseRows||'<tr><td colspan="5" class="small-link">No courses.</td></tr>'}</tbody></table></div>
+    </div>
+
     <div class="panel"><h2>Recent certificates</h2>
       <table class="tbl"><thead><tr><th>Date</th><th>Member</th><th>Course</th><th>Certificate ID</th></tr></thead>
       <tbody>${certRows||'<tr><td colspan="4" class="small-link">None yet.</td></tr>'}</tbody></table></div>`;
+
+  // ---- World map (jsVectorMap choropleth by ISO2) ----
+  try{
+    const cvals={}; (AN.by_country||[]).forEach(c=>cvals[c.code]=c.n);
+    new jsVectorMap({
+      selector:"#map", map:"world", zoomOnScroll:false, backgroundColor:"transparent",
+      regionStyle:{ initial:{ fill:"#e3e8ee", stroke:"#fff", strokeWidth:.4 }, hover:{ fill:"#0f8a8a" } },
+      series:{ regions:[{ attribute:"fill", values:cvals, scale:["#cfeaea", NAVY], normalizeFunction:"polynomial" }] },
+      onRegionTooltipShow(event, tooltip, code){ const n=cvals[code]||0; tooltip.text(tooltip.text()+": "+n+" member"+(n===1?"":"s"), true); }
+    });
+  }catch(e){ document.getElementById("map").innerHTML='<div class="empty">Map could not load.</div>'; }
+
+  // ---- Charts ----
+  const mkChart=(id,cfg)=>{ const el=document.getElementById(id); if(el && window.Chart) new Chart(el,cfg); };
+  Chart.defaults.font.family="Inter, sans-serif"; Chart.defaults.color="#54616e";
+
+  // signups over time
+  const sm=AN.signups_by_month||[];
+  const fmtM=(m)=>{ const [y,mo]=m.split("-"); return new Date(y,mo-1,1).toLocaleDateString(undefined,{month:"short",year:"2-digit"}); };
+  mkChart("c-signups",{ type:"line",
+    data:{ labels:sm.map(x=>fmtM(x.m)), datasets:[{ label:"New members", data:sm.map(x=>x.n),
+      borderColor:TEAL, backgroundColor:"rgba(15,138,138,.14)", fill:true, tension:.35, pointBackgroundColor:TEAL, pointRadius:3 }] },
+    options:{ maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{ beginAtZero:true, ticks:{precision:0} }, x:{grid:{display:false}} } } });
+
+  // profession doughnut
+  const bp=AN.by_profession||[];
+  mkChart("c-prof",{ type:"doughnut",
+    data:{ labels:bp.map(x=>x.name), datasets:[{ data:bp.map(x=>x.n), backgroundColor:PALETTE, borderWidth:2, borderColor:"#fff" }] },
+    options:{ maintainAspectRatio:false, cutout:"58%", plugins:{ legend:{ position:"right", labels:{ boxWidth:12, font:{size:12} } } } } });
+
+  // quiz outcomes doughnut
+  mkChart("c-quiz",{ type:"doughnut",
+    data:{ labels:["Passed","Not passed"], datasets:[{ data:[passed,failed], backgroundColor:[TEAL,"#e0b0b0"], borderWidth:2, borderColor:"#fff" }] },
+    options:{ maintainAspectRatio:false, cutout:"62%", plugins:{ legend:{ position:"bottom" } } } });
 })();
 </script>
 </body>

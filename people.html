@@ -60,6 +60,7 @@
 
 <script src="portal-config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="countries.js"></script>
 <script src="portal-auth.js"></script>
 <script src="portal-shell.js"></script>
 <script>
@@ -78,7 +79,10 @@
       <div style="display:flex;flex-wrap:wrap;gap:6px 16px;padding-top:4px">${ACCESS.map(([k,l])=>
         `<label style="display:inline-flex;gap:6px;align-items:center;font-size:13.5px;font-weight:500;color:var(--ink)"><input type="checkbox" id="${prefix}-${k}" ${cur[k]?'checked':''}> ${l}</label>`).join("")}</div></div>`;
   const readBoxes=(prefix)=>({ modules:!!$("#"+prefix+"-modules")?.checked, forum:!!$("#"+prefix+"-forum")?.checked, resources:!!$("#"+prefix+"-resources")?.checked, directory:!!$("#"+prefix+"-directory")?.checked });
-  const setAccess=(email,uid,b,inst)=> sb.rpc("admin_set_access",{p_user:uid||null,p_email:email||null,p_modules:b.modules,p_forum:b.forum,p_resources:b.resources,p_directory:b.directory,p_institution:(inst===undefined?null:inst)});
+  const setAccess=(email,uid,b,inst,country,profession)=> sb.rpc("admin_set_access",{p_user:uid||null,p_email:email||null,p_modules:b.modules,p_forum:b.forum,p_resources:b.resources,p_directory:b.directory,p_institution:(inst===undefined?null:inst),p_country:(country===undefined||country===''?null:country),p_profession:(profession===undefined||profession===''?null:profession)});
+  const cpFields=(prefix)=>`<div class="field"><label>Country</label><select id="${prefix}-country"></select></div>
+      <div class="field"><label>Profession</label><select id="${prefix}-prof"></select></div>`;
+  const fillCP=(prefix,country,prof)=>{ if(window.fillCountrySelect){ fillCountrySelect($("#"+prefix+"-country"),country||""); fillProfessionSelect($("#"+prefix+"-prof"),prof||""); } };
   function downloadCSV(filename, rows){
     const csv=rows.map(r=>r.map(c=>{ const s=String(c==null?'':c); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }).join(",")).join("\n");
     const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=filename; a.click();
@@ -132,6 +136,7 @@
           <div class="field"><label>Full name</label><input id="am-name" placeholder="Dr. Jane Smith"></div>
           <div class="field"><label>Email</label><input id="am-email" type="email" placeholder="jane@example.com"></div>
           <div class="field"><label>Password (optional)</label><input id="am-pass" placeholder="blank = auto-generate"></div>
+          ${cpFields("am")}
           ${accessBoxes("am")}
           <button class="btn" id="am-go">Add member</button>
         </div>
@@ -149,6 +154,7 @@
         <tbody>${rows}</tbody></table></section>`;
     $("#bulk-go").addEventListener("click", bulkInvite);
     $("#am-go").addEventListener("click", addMemberDirect);
+    fillCP("am");
     $("#exp-members").addEventListener("click", ()=>downloadCSV("members.csv",
       [["Name","Email","Role","Status","Enrollments","Lessons done","Joined"],
        ...S.members.map(m=>[m.full_name,m.email,m.role,m.status,m.enrollments,m.lessons_done,new Date(m.created_at).toISOString().slice(0,10)])]));
@@ -160,27 +166,28 @@
     const { data } = await sb.from("join_requests").select("*").eq("status","new").order("created_at",{ascending:false});
     const box=$("#jr-list"); if(!box) return;
     if(!data||!data.length){ box.innerHTML='<span class="muted-note">No pending requests.</span>'; return; }
-    box.innerHTML='<table class="tbl"><thead><tr><th>When</th><th>Name</th><th>Email</th><th>Message</th><th>Actions</th></tr></thead><tbody>'+
-      data.map(r=>`<tr><td>${new Date(r.created_at).toLocaleDateString()}</td><td>${esc(r.full_name||'-')}</td><td>${esc(r.email)}</td><td>${esc(r.message||'')}</td>
-        <td class="row-actions"><button data-jrinv="${r.id}" data-n="${esc(r.full_name||'')}" data-e="${esc(r.email)}">Invite</button>
-          <button data-jrfill data-n="${esc(r.full_name||'')}" data-e="${esc(r.email)}">Add…</button>
+    const cn=(c)=>c?(window.countryName?countryName(c):c):'-';
+    box.innerHTML='<table class="tbl"><thead><tr><th>When</th><th>Name</th><th>Email</th><th>Country</th><th>Profession</th><th>Message</th><th>Actions</th></tr></thead><tbody>'+
+      data.map(r=>`<tr><td>${new Date(r.created_at).toLocaleDateString()}</td><td>${esc(r.full_name||'-')}</td><td>${esc(r.email)}</td><td>${esc(cn(r.country))}</td><td>${esc(r.profession||'-')}</td><td>${esc(r.message||'')}</td>
+        <td class="row-actions"><button data-jrinv="${r.id}" data-n="${esc(r.full_name||'')}" data-e="${esc(r.email)}" data-c="${esc(r.country||'')}" data-p="${esc(r.profession||'')}">Invite</button>
+          <button data-jrfill data-n="${esc(r.full_name||'')}" data-e="${esc(r.email)}" data-c="${esc(r.country||'')}" data-p="${esc(r.profession||'')}">Add…</button>
           <button data-jrdis="${r.id}">Dismiss</button></td></tr>`).join('')+
       '</tbody></table>';
   }
   async function jrAction(e){
     const b=e.target.closest("button"); if(!b) return;
-    if(b.dataset.jrinv){ try{ await NNCC.inviteMember(b.dataset.n, b.dataset.e); await sb.from("join_requests").update({status:'handled'}).eq("id",b.dataset.jrinv); flash("Invited "+b.dataset.e+"."); await loadCore(); renderMembers(); }catch(err){ flash(esc(err.message),"err"); } return; }
-    if(b.hasAttribute("data-jrfill")){ $("#am-name").value=b.dataset.n; $("#am-email").value=b.dataset.e; $("#am-name").scrollIntoView({behavior:"smooth",block:"center"}); return; }
+    if(b.dataset.jrinv){ try{ await NNCC.inviteMember(b.dataset.n, b.dataset.e); try{ await setAccess(b.dataset.e,null,{modules:true,forum:false,resources:false,directory:false},null,b.dataset.c,b.dataset.p); }catch(_){} await sb.from("join_requests").update({status:'handled'}).eq("id",b.dataset.jrinv); flash("Invited "+b.dataset.e+"."); await loadCore(); renderMembers(); }catch(err){ flash(esc(err.message),"err"); } return; }
+    if(b.hasAttribute("data-jrfill")){ $("#am-name").value=b.dataset.n; $("#am-email").value=b.dataset.e; if($("#am-country"))$("#am-country").value=b.dataset.c||""; if($("#am-prof"))$("#am-prof").value=b.dataset.p||""; $("#am-name").scrollIntoView({behavior:"smooth",block:"center"}); return; }
     if(b.dataset.jrdis){ await sb.from("join_requests").update({status:'dismissed'}).eq("id",b.dataset.jrdis); loadJoinRequests(); return; }
   }
   async function addMemberDirect(){
     const name=$("#am-name").value.trim(), email=$("#am-email").value.trim(), pass=$("#am-pass").value;
     if(!email) return $("#add-msg").innerHTML='<div class="msg err">Email is required.</div>';
     $("#add-msg").innerHTML='<span class="small-link">Creating…</span>';
-    const acc=readBoxes("am");
+    const acc=readBoxes("am"); const amCountry=$("#am-country")?.value||""; const amProf=$("#am-prof")?.value||"";
     try{
       const r=await NNCC.addMember(name,email,pass);
-      try{ await setAccess(email,null,acc); }catch(_){}
+      try{ await setAccess(email,null,acc,null,amCountry,amProf); }catch(_){}
       const cred = r.password
         ? `Auto-generated password: <b>${esc(r.password)}</b>, share it now; it won't be shown again.`
         : `They can sign in with the password you set.`;
@@ -260,8 +267,9 @@
           <div id="ua-msg"></div>
           <div class="inline-form">
             ${accessBoxes("ua",{})}
+            ${cpFields("ua")}
             <div class="field" style="grid-column:1/-1"><label>Institution (shown in the member directory)</label><input id="ua-inst" placeholder="e.g. University of Calgary" style="max-width:340px"></div>
-            <button class="btn" id="ua-save">Save access</button>
+            <button class="btn" id="ua-save">Save access &amp; profile</button>
           </div>
         </section>`;
       body.querySelectorAll("[data-uact]").forEach(b=>b.addEventListener("click", async()=>{ const a=b.dataset.uact;
@@ -269,12 +277,14 @@
         if(a==='suspend') await sb.from("profiles").update({status:'suspended'}).eq("id",uid);
         if(a==='activate') await sb.from("profiles").update({status:'active'}).eq("id",uid);
         flash("Updated."); openUser(uid); }));
+      fillCP("ua");
       (async()=>{ const {data:acc}=await sb.rpc("admin_get_access",{p_user:uid}); const a=(acc&&acc[0])||{};
         ["modules","forum","resources","directory"].forEach(k=>{ const cb=$("#ua-"+k); if(cb) cb.checked=!!a["acc_"+k]; });
         const inst=$("#ua-inst"); if(inst) inst.value=a.institution||"";
+        fillCP("ua", a.country, a.profession);
       })();
       $("#ua-save")?.addEventListener("click", async()=>{ $("#ua-msg").innerHTML='<span class="small-link">Saving…</span>';
-        try{ await setAccess(null, uid, readBoxes("ua"), $("#ua-inst").value.trim()); $("#ua-msg").innerHTML='<div class="msg ok">Access updated.</div>'; }
+        try{ await setAccess(null, uid, readBoxes("ua"), $("#ua-inst").value.trim(), $("#ua-country").value, $("#ua-prof").value); $("#ua-msg").innerHTML='<div class="msg ok">Saved.</div>'; }
         catch(e){ $("#ua-msg").innerHTML='<div class="msg err">'+esc(e.message)+'</div>'; } });
     } else if(i===1 || i===2){
       const list = i===2 ? enr.filter(e=>e.starts_at && new Date(e.starts_at)>new Date()) : enr;
