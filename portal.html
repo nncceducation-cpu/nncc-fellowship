@@ -42,23 +42,23 @@
     </div>
 
     <div class="card-grid">
-      <a class="p-card" href="learning.html">
+      <a class="p-card" id="card-modules" href="learning.html" style="display:none">
         <div class="ic">▶</div><h3>Education Modules</h3>
         <p>Work through the NNCC curriculum, lesson by lesson, and track your progress.</p>
       </a>
-      <a class="p-card" href="forum.html">
+      <a class="p-card" id="card-forum" href="forum.html" style="display:none">
         <div class="ic">💬</div><h3>Members' Forum</h3>
         <p>Ask questions, share cases and discuss with fellows and faculty.</p>
       </a>
-      <a class="p-card" href="#resources">
+      <a class="p-card" id="card-resources" href="#resources" style="display:none">
         <div class="ic">📁</div><h3>Private Resources</h3>
         <p>Documents, links and reference material shared with members only.</p>
       </a>
-      <a class="p-card" href="#directory">
+      <a class="p-card" id="card-directory" href="#directory" style="display:none">
         <div class="ic">👥</div><h3>Member Directory</h3>
         <p>See who else is part of the program.</p>
       </a>
-      <a class="p-card" href="#certificates">
+      <a class="p-card" id="card-certs" href="#certificates" style="display:none">
         <div class="ic">🎓</div><h3>My Certificates</h3>
         <p>Download completion certificates for courses you've finished.</p>
       </a>
@@ -81,17 +81,23 @@
     </div>
 
     <!-- Private resources -->
-    <h2 id="resources" style="margin-top:44px">Private resources</h2>
-    <p class="small-link">Shared with members only. Admins can add resources from the Admin panel.</p>
-    <div id="resources-list" style="margin-top:14px"></div>
+    <section id="sec-resources" style="display:none">
+      <h2 id="resources" style="margin-top:44px">Private resources</h2>
+      <p class="small-link">Shared with members only. Admins can add resources from the Admin panel.</p>
+      <div id="resources-list" style="margin-top:14px"></div>
+    </section>
 
     <!-- My certificates -->
-    <h2 id="certificates" style="margin-top:44px">My certificates</h2>
-    <div id="certs-list" style="margin-top:14px"></div>
+    <section id="sec-certs" style="display:none">
+      <h2 id="certificates" style="margin-top:44px">My certificates</h2>
+      <div id="certs-list" style="margin-top:14px"></div>
+    </section>
 
     <!-- Member directory -->
-    <h2 id="directory" style="margin-top:44px">Member directory</h2>
-    <div id="directory-list" style="margin-top:14px"></div>
+    <section id="sec-directory" style="display:none">
+      <h2 id="directory" style="margin-top:44px">Member directory</h2>
+      <div id="directory-list" style="margin-top:14px"></div>
+    </section>
   </div>
 </main>
 
@@ -104,46 +110,67 @@
   const me = await NNCC.requireAuth();
   if (!me) return;
   const prof = await NNCC.profile();
+  const admin = prof.role === "admin";
+  const can = (area) => admin || !!prof["acc_" + area];
 
-  if (new URLSearchParams(location.search).get("denied")) {
+  const denied = new URLSearchParams(location.search).get("denied");
+  if (denied) {
+    const labels = { modules:"the Education Modules", forum:"the Members' Forum", resources:"Private Resources", directory:"the Member Directory", "1":"that admin area" };
     document.getElementById("denied").innerHTML =
-      '<div class="msg err">That area is for admins only.</div>';
+      `<div class="msg err">You don't currently have access to ${labels[denied] || "that area"}. Ask an administrator to enable it for your account.</div>`;
   }
 
   document.getElementById("greeting").textContent =
     "Welcome, " + (prof.full_name ? prof.full_name.split(" ")[0] : "member");
-  if (prof.role === "admin") { ["admin-card","builder-card","people-card","analytics-card"].forEach(id=>document.getElementById(id).style.display="flex"); }
   NNCC.mountUserChip(document.getElementById("user-chip"));
 
-  // My certificates
-  const { data: certs } = await NNCC.client.from("certificates").select("*, courses(title)").order("issued_at",{ascending:false});
-  const cl = document.getElementById("certs-list");
-  if (!certs || !certs.length) { cl.innerHTML = '<div class="empty">Finish a course to earn a certificate.</div>'; }
-  else { cl.innerHTML = '<table class="tbl"><thead><tr><th>Course</th><th>Issued</th><th></th></tr></thead><tbody>' +
-    certs.map(c=>`<tr><td>${esc(c.courses?c.courses.title:'')}</td><td>${new Date(c.issued_at).toLocaleDateString()}</td>
-      <td><a class="btn outline" style="padding:5px 12px;font-size:13px" href="certificate.html?course=${c.course_id}">View</a></td></tr>`).join("") + '</tbody></table>'; }
+  // Member-area cards, shown only if the member has access
+  const show = (id) => { const el = document.getElementById(id); if (el) el.style.display = "flex"; };
+  if (can("modules"))   { show("card-modules"); show("card-certs"); }
+  if (can("forum"))     show("card-forum");
+  if (can("resources")) show("card-resources");
+  if (can("directory")) show("card-directory");
+  // Admin tools
+  if (admin) ["admin-card","builder-card","people-card","analytics-card"].forEach(show);
 
-  // Resources
-  const { data: res } = await NNCC.client
-    .from("resources").select("*").order("category").order("title");
-  const rl = document.getElementById("resources-list");
-  if (!res || !res.length) {
-    rl.innerHTML = '<div class="empty">No resources have been added yet.</div>';
-  } else {
-    rl.innerHTML = '<table class="tbl"><thead><tr><th>Resource</th><th>Category</th></tr></thead><tbody>' +
-      res.map(r => `<tr><td><a href="${r.url||'#'}" target="_blank" rel="noopener"><b>${esc(r.title)}</b></a>${
-        r.description ? `<br><span class="small-link">${esc(r.description)}</span>` : ""}</td>
-        <td><span class="badge member">${esc(r.category||'General')}</span></td></tr>`).join("") +
-      '</tbody></table>';
+  // My certificates (modules access)
+  if (can("modules")) {
+    document.getElementById("sec-certs").style.display = "block";
+    const { data: certs } = await NNCC.client.from("certificates").select("*, courses(title)").order("issued_at",{ascending:false});
+    const cl = document.getElementById("certs-list");
+    if (!certs || !certs.length) { cl.innerHTML = '<div class="empty">Finish a course to earn a certificate.</div>'; }
+    else { cl.innerHTML = '<table class="tbl"><thead><tr><th>Course</th><th>Issued</th><th></th></tr></thead><tbody>' +
+      certs.map(c=>`<tr><td>${esc(c.courses?c.courses.title:'')}</td><td>${new Date(c.issued_at).toLocaleDateString()}</td>
+        <td><a class="btn outline" style="padding:5px 12px;font-size:13px" href="certificate.html?course=${c.course_id}">View</a></td></tr>`).join("") + '</tbody></table>'; }
   }
 
-  // Directory
-  const { data: mem } = await NNCC.members();
-  const dl = document.getElementById("directory-list");
-  dl.innerHTML = '<table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead><tbody>' +
-    (mem||[]).map(m => `<tr><td>${esc(m.full_name||'-')}</td><td>${esc(m.email||'')}</td>
-      <td><span class="badge ${m.role}">${m.role}</span></td></tr>`).join("") +
-    '</tbody></table>';
+  // Private resources (resources access)
+  if (can("resources")) {
+    document.getElementById("sec-resources").style.display = "block";
+    const { data: res } = await NNCC.client.from("resources").select("*").order("category").order("title");
+    const rl = document.getElementById("resources-list");
+    if (!res || !res.length) {
+      rl.innerHTML = '<div class="empty">No resources have been added yet.</div>';
+    } else {
+      rl.innerHTML = '<table class="tbl"><thead><tr><th>Resource</th><th>Category</th></tr></thead><tbody>' +
+        res.map(r => `<tr><td><a href="${r.url||'#'}" target="_blank" rel="noopener"><b>${esc(r.title)}</b></a>${
+          r.description ? `<br><span class="small-link">${esc(r.description)}</span>` : ""}</td>
+          <td><span class="badge member">${esc(r.category||'General')}</span></td></tr>`).join("") +
+        '</tbody></table>';
+    }
+  }
+
+  // Member directory (directory access) — name, role, institution, email
+  if (can("directory")) {
+    document.getElementById("sec-directory").style.display = "block";
+    const { data: mem } = await NNCC.client.rpc("directory_list");
+    const dl = document.getElementById("directory-list");
+    if (!mem || !mem.length) { dl.innerHTML = '<div class="empty">No members to show yet.</div>'; }
+    else dl.innerHTML = '<table class="tbl"><thead><tr><th>Name</th><th>Role</th><th>Institution</th><th>Email</th></tr></thead><tbody>' +
+      mem.map(m => `<tr><td>${esc(m.full_name||'-')}</td><td><span class="badge ${m.role}">${m.role}</span></td>
+        <td>${esc(m.institution||'-')}</td><td><a href="mailto:${esc(m.email||'')}">${esc(m.email||'')}</a></td></tr>`).join("") +
+      '</tbody></table>';
+  }
 
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => (
     {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }

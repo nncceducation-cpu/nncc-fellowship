@@ -82,6 +82,24 @@
       }
       return p;
     },
+    /* area-level access: 'modules' | 'forum' | 'resources' | 'directory'.
+       Admins pass automatically. Lacking members are sent back to the
+       dashboard with a friendly note. Returns the profile on success. */
+    hasAccess(p, area) {
+      if (!p) return false;
+      if (p.role === "admin") return true;
+      return !!p["acc_" + area];
+    },
+    async requireAccess(area) {
+      const u = await this.requireAuth();
+      if (!u) return null;
+      const p = await this.profile();
+      if (!this.hasAccess(p, area)) {
+        location.replace("portal.html?denied=" + encodeURIComponent(area));
+        return null;
+      }
+      return p;
+    },
 
     /* ---- auth actions ---- */
     signIn(email, password) {

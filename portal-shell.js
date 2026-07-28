@@ -9,13 +9,13 @@
   if (!window.NNCC || !NNCC.configured) return; // skip on login / unconfigured
 
   const ITEMS = [
-    ["portal.html",    "🏠", "Dashboard",      false],
-    ["learning.html",  "▶",  "Courses",         false],
-    ["forum.html",     "💬", "Forum",           false],
-    ["authoring.html", "🏗", "Course Builder",  true],
-    ["people.html",    "👤", "People",          true],
-    ["analytics.html", "📊", "Analytics",       true],
-    ["admin.html",     "⚙",  "Admin",           true],
+    ["portal.html",    "🏠", "Dashboard",      false, null],
+    ["learning.html",  "▶",  "Courses",         false, "modules"],
+    ["forum.html",     "💬", "Forum",           false, "forum"],
+    ["authoring.html", "🏗", "Course Builder",  true,  null],
+    ["people.html",    "👤", "People",          true,  null],
+    ["analytics.html", "📊", "Analytics",       true,  null],
+    ["admin.html",     "⚙",  "Admin",           true,  null],
   ];
 
   document.addEventListener("DOMContentLoaded", async () => {
@@ -25,8 +25,8 @@
     rail.className = "side-rail";
     rail.innerHTML =
       `<a class="rail-brand" href="portal.html"><img class="mark" src="logo-nncc.png" alt="NNCC" style="border-radius:50%;object-fit:cover;background:none;padding:0"><b>Member Portal</b></a>
-       <nav>${ITEMS.map(([h, ic, l, adm]) =>
-         `<a href="${h}" data-adm="${adm}" class="${h === here ? "active" : ""}"><span class="ri">${ic}</span>${l}</a>`
+       <nav>${ITEMS.map(([h, ic, l, adm, acc]) =>
+         `<a href="${h}" data-adm="${adm}" data-acc="${acc || ""}" class="${h === here ? "active" : ""}"><span class="ri">${ic}</span>${l}</a>`
        ).join("")}</nav>
        <div class="rail-foot">
          <div class="rail-user" id="rail-user"></div>
@@ -52,6 +52,11 @@
         rail.querySelector("#rail-user").textContent = p.full_name || p.email || "";
         const admin = p.role === "admin";
         rail.querySelectorAll('[data-adm="true"]').forEach(a => { if (!admin) a.remove(); });
+        // hide member areas the person doesn't have access to
+        if (!admin) rail.querySelectorAll('[data-acc]').forEach(a => {
+          const area = a.getAttribute("data-acc");
+          if (area && !p["acc_" + area]) a.remove();
+        });
       }
     } catch (_) {}
   });

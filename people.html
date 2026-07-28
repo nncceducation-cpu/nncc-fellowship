@@ -72,6 +72,13 @@
   const flash=(t,k)=>{ $("#msg").innerHTML=t?`<div class="msg ${k||'ok'}">${t}</div>`:""; if(t) setTimeout(()=>$("#msg").innerHTML="",4000); };
   const fmtDate=(d)=> d? new Date(d).toLocaleDateString() : "-";
   const toIso=(v)=> v? new Date(v+"T23:59:59").toISOString() : null;
+  // ---- portal access levels ----
+  const ACCESS=[["modules","Modules + My Certificates"],["forum","Forum"],["resources","Private resources"],["directory","Member directory"]];
+  const accessBoxes=(prefix,cur={modules:true})=>`<div class="field" style="grid-column:1/-1"><label>Portal access</label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px 16px;padding-top:4px">${ACCESS.map(([k,l])=>
+        `<label style="display:inline-flex;gap:6px;align-items:center;font-size:13.5px;font-weight:500;color:var(--ink)"><input type="checkbox" id="${prefix}-${k}" ${cur[k]?'checked':''}> ${l}</label>`).join("")}</div></div>`;
+  const readBoxes=(prefix)=>({ modules:!!$("#"+prefix+"-modules")?.checked, forum:!!$("#"+prefix+"-forum")?.checked, resources:!!$("#"+prefix+"-resources")?.checked, directory:!!$("#"+prefix+"-directory")?.checked });
+  const setAccess=(email,uid,b,inst)=> sb.rpc("admin_set_access",{p_user:uid||null,p_email:email||null,p_modules:b.modules,p_forum:b.forum,p_resources:b.resources,p_directory:b.directory,p_institution:(inst===undefined?null:inst)});
   function downloadCSV(filename, rows){
     const csv=rows.map(r=>r.map(c=>{ const s=String(c==null?'':c); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }).join(",")).join("\n");
     const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=filename; a.click();
@@ -125,13 +132,15 @@
           <div class="field"><label>Full name</label><input id="am-name" placeholder="Dr. Jane Smith"></div>
           <div class="field"><label>Email</label><input id="am-email" type="email" placeholder="jane@example.com"></div>
           <div class="field"><label>Password (optional)</label><input id="am-pass" placeholder="blank = auto-generate"></div>
+          ${accessBoxes("am")}
           <button class="btn" id="am-go">Add member</button>
         </div>
       </section>
       <section class="panel"><h2>Invite members by email</h2>
-        <p class="sub">Sends an email invite so each person sets their own password. One per line as <b>Full Name, email</b>.</p>
+        <p class="sub">Sends an email invite so each person sets their own password. One per line as <b>Full Name, email</b>. The access levels below apply to everyone in this batch.</p>
         <div id="inv-msg"></div>
         <textarea id="bulk" rows="4" class="" style="width:100%;padding:10px;border:1.5px solid var(--line);border-radius:10px" placeholder="Dr. Jane Smith, jane@example.com&#10;Dr. Omar Ali, omar@example.com"></textarea>
+        <div class="inline-form" style="margin-top:10px">${accessBoxes("inv")}</div>
         <button class="btn" id="bulk-go" style="margin-top:10px">Send invites</button>
       </section>
       <section class="panel"><div style="display:flex;justify-content:space-between;align-items:center"><h2>Members (${S.members.length})</h2>
@@ -168,8 +177,10 @@
     const name=$("#am-name").value.trim(), email=$("#am-email").value.trim(), pass=$("#am-pass").value;
     if(!email) return $("#add-msg").innerHTML='<div class="msg err">Email is required.</div>';
     $("#add-msg").innerHTML='<span class="small-link">Creating…</span>';
+    const acc=readBoxes("am");
     try{
       const r=await NNCC.addMember(name,email,pass);
+      try{ await setAccess(email,null,acc); }catch(_){}
       const cred = r.password
         ? `Auto-generated password: <b>${esc(r.password)}</b>, share it now; it won't be shown again.`
         : `They can sign in with the password you set.`;
@@ -185,7 +196,7 @@
     let ok=0, fail=[];
     for(const line of lines){
       const idx=line.lastIndexOf(","); const name=idx>=0?line.slice(0,idx).trim():""; const email=(idx>=0?line.slice(idx+1):line).trim();
-      try{ await NNCC.inviteMember(name,email); ok++; }catch(e){ fail.push(email+": "+e.message); }
+      try{ await NNCC.inviteMember(name,email); try{ await setAccess(email,null,readBoxes("inv")); }catch(_){} ok++; }catch(e){ fail.push(email+": "+e.message); }
     }
     $("#inv-msg").innerHTML=`<div class="msg ${fail.length?'info':'ok'}">Invited ${ok}. ${fail.length?('Failed: '+esc(fail.join("; "))):''}</div>`;
     $("#bulk").value=""; await loadCore(); renderMembers();
@@ -243,12 +254,28 @@
         <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
           ${P.role==='admin'?`<button class="btn outline" data-uact="demote" ${uid===me.id?'disabled':''}>Make member</button>`:`<button class="btn outline" data-uact="promote">Make admin</button>`}
           ${P.status==='active'?`<button class="btn outline" data-uact="suspend" ${uid===me.id?'disabled':''}>Suspend</button>`:`<button class="btn outline" data-uact="activate">Reactivate</button>`}
-        </div></section>`;
+        </div></section>
+        <section class="panel"><h2>Portal access</h2>
+          <p class="sub">Choose which areas of the portal this member can use. Admins always have full access.</p>
+          <div id="ua-msg"></div>
+          <div class="inline-form">
+            ${accessBoxes("ua",{})}
+            <div class="field" style="grid-column:1/-1"><label>Institution (shown in the member directory)</label><input id="ua-inst" placeholder="e.g. University of Calgary" style="max-width:340px"></div>
+            <button class="btn" id="ua-save">Save access</button>
+          </div>
+        </section>`;
       body.querySelectorAll("[data-uact]").forEach(b=>b.addEventListener("click", async()=>{ const a=b.dataset.uact;
         if(a==='promote') await NNCC.setRole(uid,'admin'); if(a==='demote') await NNCC.setRole(uid,'member');
         if(a==='suspend') await sb.from("profiles").update({status:'suspended'}).eq("id",uid);
         if(a==='activate') await sb.from("profiles").update({status:'active'}).eq("id",uid);
         flash("Updated."); openUser(uid); }));
+      (async()=>{ const {data:acc}=await sb.rpc("admin_get_access",{p_user:uid}); const a=(acc&&acc[0])||{};
+        ["modules","forum","resources","directory"].forEach(k=>{ const cb=$("#ua-"+k); if(cb) cb.checked=!!a["acc_"+k]; });
+        const inst=$("#ua-inst"); if(inst) inst.value=a.institution||"";
+      })();
+      $("#ua-save")?.addEventListener("click", async()=>{ $("#ua-msg").innerHTML='<span class="small-link">Saving…</span>';
+        try{ await setAccess(null, uid, readBoxes("ua"), $("#ua-inst").value.trim()); $("#ua-msg").innerHTML='<div class="msg ok">Access updated.</div>'; }
+        catch(e){ $("#ua-msg").innerHTML='<div class="msg err">'+esc(e.message)+'</div>'; } });
     } else if(i===1 || i===2){
       const list = i===2 ? enr.filter(e=>e.starts_at && new Date(e.starts_at)>new Date()) : enr;
       const rows=list.map(e=>`<tr>

@@ -48,7 +48,7 @@
 <script src="portal-media.js"></script>
 <script>
 (async function () {
-  const me = await NNCC.requireAuth(); if(!me) return;
+  const me = await NNCC.requireAccess("modules"); if(!me) return;
   const prof = await NNCC.profile();
   NNCC.mountUserChip(document.getElementById("user-chip"));
   const sb = NNCC.client, PM = window.PortalMedia;
