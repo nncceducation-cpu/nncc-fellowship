@@ -104,13 +104,14 @@
   // ================= MEMBERS =================
   function renderMembers(){
     const rows=S.members.map(m=>`<tr>
-      <td>${esc(m.full_name||'—')}</td><td>${esc(m.email||'')}</td>
+      <td><a href="#" data-open="${m.id}" style="color:var(--brand,#144e8c);font-weight:600;text-decoration:none">${esc(m.full_name||'—')}</a></td>
+      <td><a href="#" data-open="${m.id}" style="color:var(--brand,#144e8c);text-decoration:none">${esc(m.email||'')}</a></td>
       <td><span class="badge ${m.role}">${m.role}</span> ${m.status==='suspended'?'<span class="badge" style="background:#fdecec;color:#8a1f1f">suspended</span>':''}</td>
       <td>${m.enrollments}</td><td>${m.lessons_done}</td>
       <td class="row-actions">
         ${m.role==='admin'?`<button data-demote="${m.id}" ${m.id===me.id?'disabled':''}>Make member</button>`:`<button data-promote="${m.id}">Make admin</button>`}
         ${m.status==='active'?`<button data-suspend="${m.id}" ${m.id===me.id?'disabled':''}>Suspend</button>`:`<button data-activate="${m.id}">Reactivate</button>`}
-        <button data-detail="${m.id}">Enrollments</button>
+        <button data-detail="${m.id}">Open profile</button>
         ${m.id===me.id?'':`<button data-del="${m.id}">Remove</button>`}
       </td></tr>`).join("");
     $("#tab-members").innerHTML=`
@@ -190,37 +191,95 @@
     $("#bulk").value=""; await loadCore(); renderMembers();
   }
   async function membersActions(e){
+    const opener=e.target.closest("[data-open]"); if(opener){ e.preventDefault(); return openUser(opener.dataset.open); }
     const b=e.target.closest("button"); if(!b) return; const id=b.dataset;
     if(id.promote){ await NNCC.setRole(id.promote,"admin"); }
     else if(id.demote){ await NNCC.setRole(id.demote,"member"); }
     else if(id.suspend){ await sb.from("profiles").update({status:"suspended"}).eq("id",id.suspend); }
     else if(id.activate){ await sb.from("profiles").update({status:"active"}).eq("id",id.activate); }
     else if(id.del){ if(!confirm("Remove this member's profile? (Their login still exists in Supabase Auth.)"))return; await sb.from("profiles").delete().eq("id",id.del); }
-    else if(id.detail){ return memberDetail(id.detail); }
+    else if(id.detail){ return openUser(id.detail); }
     else return;
     await loadCore(); renderMembers();
   }
-  async function memberDetail(uid){
-    const m=S.members.find(x=>x.id===uid)||{};
-    const { data:enr } = await sb.from("course_enrollments").select("*").eq("user_id",uid);
-    const emap={}; (enr||[]).forEach(e=>emap[e.course_id]=e);
-    const acc=e=>{ if(!e) return '—'; const s=e.starts_at?('from '+fmtDate(e.starts_at)):''; const x=e.expires_at?('until '+fmtDate(e.expires_at)):(e.starts_at?'':'no expiry'); const label=[s,x].filter(Boolean).join(' · ')||'active'; const pending=e.starts_at && new Date(e.starts_at)>new Date(); return pending?('<span class="small-link">⏳ scheduled</span> '+label):label; };
-    const rows=S.courses.map(c=>{ const e=emap[c.id];
-      return `<tr><td>${esc(c.title)}</td>
-        <td>${acc(e)}</td>
-        <td class="row-actions">${e?`<button data-dates="${c.id}">Dates</button><button data-unenroll="${c.id}">Unenroll</button>`:`<button data-enroll="${c.id}">Enroll</button>`}</td></tr>`;}).join("");
-    openModal(`Enrollments — ${esc(m.full_name||m.email)}`, `
-      <table class="tbl"><thead><tr><th>Course</th><th>Access window</th><th></th></tr></thead><tbody>${rows}</tbody></table>
-      <div class="row2" style="margin-top:12px">
-        <div class="field"><label>Start date for new enrollment (optional)</label><input type="date" id="md-start"></div>
-        <div class="field"><label>Expiry date for new enrollment (optional)</label><input type="date" id="md-exp"></div>
-      </div>
-      <p class="muted-note">Blank start = access begins immediately. Blank expiry = never expires. Use “Dates” to change an existing enrollment.</p>`,
-      (root)=>{ root.addEventListener("click", async (e)=>{ const b=e.target.closest("button"); if(!b)return;
-        if(b.dataset.enroll){ await sb.from("course_enrollments").upsert({course_id:b.dataset.enroll,user_id:uid,starts_at:toIso(root.querySelector("#md-start").value),expires_at:toIso(root.querySelector("#md-exp").value),enrolled_by:me.id},{onConflict:"course_id,user_id"}); memberDetail(uid); }
-        if(b.dataset.unenroll){ await sb.from("course_enrollments").delete().eq("course_id",b.dataset.unenroll).eq("user_id",uid); memberDetail(uid); }
-        if(b.dataset.dates){ const cur=emap[b.dataset.dates]||{}; const s=prompt("Start date (YYYY-MM-DD) — blank = begins immediately:", cur.starts_at?cur.starts_at.slice(0,10):''); if(s===null)return; const x=prompt("Expiry date (YYYY-MM-DD) — blank = never expires:", cur.expires_at?cur.expires_at.slice(0,10):''); if(x===null)return; await sb.from("course_enrollments").update({starts_at:s?toIso(s):null,expires_at:x?toIso(x):null}).eq("course_id",b.dataset.dates).eq("user_id",uid); memberDetail(uid); }
-      }); });
+  // ---------- Full user profile (Thinkific-style, tabbed) ----------
+  function uStatus(e){ const now=Date.now();
+    if(e.starts_at && new Date(e.starts_at).getTime()>now) return '<span class="badge" style="background:#fff4e5;color:#8a5a00">Scheduled</span>';
+    if(e.expires_at && new Date(e.expires_at).getTime()<=now) return '<span class="badge" style="background:#fdecec;color:#8a1f1f">Expired</span>';
+    return '<span class="badge" style="background:#e6f4ea;color:#1e7a3a">Active</span>'; }
+  function uBar(done,total){ const pct=total?Math.round(done/total*100):0;
+    return `<div style="min-width:130px"><div style="height:8px;background:#e8eef6;border-radius:6px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--brand,#144e8c)"></div></div><span class="small-link">${pct}% · ${done}/${total}</span></div>`; }
+  async function openUser(uid){
+    const host=$("#tab-members"); host.innerHTML='<p class="muted-note">Loading profile…</p>';
+    const { data:d, error } = await sb.rpc("admin_user_detail",{p_user:uid});
+    if(error){ host.innerHTML=`<p><a href="#" id="u-back" class="small-link">← Back to members</a></p><div class="msg err">${esc(error.message)}</div>`; host.querySelector("#u-back").addEventListener("click",e=>{e.preventDefault();renderMembers();}); return; }
+    window.__U=d; window.__Uid=uid; const P=d.profile||{};
+    const tabs=['Details','Enrollments','Scheduled','Groups','Quiz & Survey'];
+    host.innerHTML=`
+      <p><a href="#" id="u-back" class="small-link">← Back to members</a></p>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <h1 style="margin:2px 0">${esc(P.full_name||P.email||'User')}</h1>
+        <span class="badge ${esc(P.role||'')}">${esc(P.role||'')}</span>
+        ${P.status==='suspended'?'<span class="badge" style="background:#fdecec;color:#8a1f1f">suspended</span>':''}</div>
+      <div style="display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin:12px 0 16px">
+        ${tabs.map((t,i)=>`<button class="u-tab" data-ut="${i}" style="background:none;border:none;padding:9px 13px;cursor:pointer;font-weight:600;color:${i===0?'var(--brand,#144e8c)':'#5b6673'};border-bottom:2px solid ${i===0?'var(--brand,#144e8c)':'transparent'}">${t}</button>`).join('')}</div>
+      <div id="u-body"></div>`;
+    host.querySelector("#u-back").addEventListener("click",e=>{e.preventDefault(); renderMembers();});
+    const tb=[...host.querySelectorAll(".u-tab")];
+    tb.forEach(b=>b.addEventListener("click",()=>{ tb.forEach(x=>{x.style.color='#5b6673';x.style.borderBottom='2px solid transparent';}); b.style.color='var(--brand,#144e8c)'; b.style.borderBottom='2px solid var(--brand,#144e8c)'; renderUTab(+b.dataset.ut); }));
+    renderUTab(0);
+  }
+  function renderUTab(i){
+    const d=window.__U, uid=window.__Uid, P=d.profile||{}, body=$("#u-body");
+    const enr=d.enrollments||[], groups=d.groups||[], quizzes=d.quizzes||[];
+    if(i===0){
+      body.innerHTML=`<section class="panel"><h2>User info</h2>
+        <div class="row2">
+          <div class="field"><label>Email</label><div>${esc(P.email||'—')}</div></div>
+          <div class="field"><label>Status</label><div>${esc(P.status||'active')}</div></div>
+          <div class="field"><label>Joined</label><div>${P.created_at?fmtDate(P.created_at):'—'}</div></div>
+          <div class="field"><label>Last login</label><div>${P.last_login?fmtDate(P.last_login):'never'}</div></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          ${P.role==='admin'?`<button class="btn outline" data-uact="demote" ${uid===me.id?'disabled':''}>Make member</button>`:`<button class="btn outline" data-uact="promote">Make admin</button>`}
+          ${P.status==='active'?`<button class="btn outline" data-uact="suspend" ${uid===me.id?'disabled':''}>Suspend</button>`:`<button class="btn outline" data-uact="activate">Reactivate</button>`}
+        </div></section>`;
+      body.querySelectorAll("[data-uact]").forEach(b=>b.addEventListener("click", async()=>{ const a=b.dataset.uact;
+        if(a==='promote') await NNCC.setRole(uid,'admin'); if(a==='demote') await NNCC.setRole(uid,'member');
+        if(a==='suspend') await sb.from("profiles").update({status:'suspended'}).eq("id",uid);
+        if(a==='activate') await sb.from("profiles").update({status:'active'}).eq("id",uid);
+        flash("Updated."); openUser(uid); }));
+    } else if(i===1 || i===2){
+      const list = i===2 ? enr.filter(e=>e.starts_at && new Date(e.starts_at)>new Date()) : enr;
+      const rows=list.map(e=>`<tr>
+        <td>${esc(e.title)}</td><td>${uBar(e.done,e.total)}</td><td>${uStatus(e)}</td>
+        <td>${e.certificate?('✓ '+esc(e.certificate)):'—'}</td>
+        <td>${e.starts_at?fmtDate(e.starts_at):'immediate'}</td>
+        <td>${e.expires_at?fmtDate(e.expires_at):'no expiry'}</td>
+        <td class="row-actions"><button data-edates="${e.course_id}">Dates</button><button data-unen="${e.course_id}">Unenroll</button></td></tr>`).join("");
+      const enrolledIds=new Set(enr.map(e=>e.course_id));
+      const addOpts=S.courses.filter(c=>!enrolledIds.has(c.id)).map(c=>`<option value="${c.id}">${esc(c.title)}</option>`).join("");
+      body.innerHTML=`<section class="panel">
+        <h2>${i===2?'Scheduled enrollments':'Enrollments'} (${list.length})</h2>
+        ${list.length?`<table class="tbl"><thead><tr><th>Course</th><th>Progress</th><th>Status</th><th>Certificate</th><th>Start</th><th>Expiry</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<p class="muted-note">'+(i===2?'No scheduled (future-start) enrollments.':'Not enrolled in anything yet.')+'</p>'}
+        ${i===1?`<h3 style="margin:16px 0 6px">Enroll in a course</h3>
+          <div class="row2"><div class="field"><label>Course</label><select id="u-newc">${addOpts||'<option value="">— already in every course —</option>'}</select></div>
+            <div class="field"><label>Start (optional)</label><input type="date" id="u-news"></div>
+            <div class="field"><label>Expiry (optional)</label><input type="date" id="u-newx"></div></div>
+          <button class="btn" id="u-enroll" style="margin-top:8px">Enroll</button>`:''}
+      </section>`;
+      body.querySelectorAll("[data-edates]").forEach(b=>b.addEventListener("click", async()=>{ const cid=b.dataset.edates; const cur=enr.find(e=>e.course_id===cid)||{};
+        const s=prompt("Start date (YYYY-MM-DD) — blank = immediately:", cur.starts_at?cur.starts_at.slice(0,10):''); if(s===null)return;
+        const x=prompt("Expiry date (YYYY-MM-DD) — blank = never:", cur.expires_at?cur.expires_at.slice(0,10):''); if(x===null)return;
+        await sb.from("course_enrollments").update({starts_at:s?toIso(s):null,expires_at:x?toIso(x):null}).eq("course_id",cid).eq("user_id",uid); openUser(uid); }));
+      body.querySelectorAll("[data-unen]").forEach(b=>b.addEventListener("click", async()=>{ if(!confirm("Unenroll from this course?"))return; await sb.from("course_enrollments").delete().eq("course_id",b.dataset.unen).eq("user_id",uid); openUser(uid); }));
+      const eb=body.querySelector("#u-enroll"); if(eb) eb.addEventListener("click", async()=>{ const cid=body.querySelector("#u-newc").value; if(!cid){flash("Pick a course.","err");return;} await sb.from("course_enrollments").upsert({course_id:cid,user_id:uid,starts_at:toIso(body.querySelector("#u-news").value),expires_at:toIso(body.querySelector("#u-newx").value),enrolled_by:me.id},{onConflict:"course_id,user_id"}); flash("Enrolled."); openUser(uid); });
+    } else if(i===3){
+      body.innerHTML=`<section class="panel"><h2>Groups (${groups.length})</h2>${groups.length?('<ul style="margin:6px 0 0 18px">'+groups.map(g=>`<li>${esc(g)}</li>`).join('')+'</ul>'):'<p class="muted-note">Not in any group.</p>'}</section>`;
+    } else if(i===4){
+      const rows=quizzes.map(q=>`<tr><td>${esc(q.quiz)}</td><td>${esc(q.course)}</td><td>${q.score}/${q.total} (${q.total?Math.round(q.score/q.total*100):0}%)</td><td>${q.passed?'<span class="badge" style="background:#e6f4ea;color:#1e7a3a">Passed</span>':'<span class="badge" style="background:#fdecec;color:#8a1f1f">No</span>'}</td><td>${fmtDate(q.at)}</td></tr>`).join("");
+      body.innerHTML=`<section class="panel"><h2>Quiz &amp; Survey attempts (${quizzes.length})</h2>${quizzes.length?`<table class="tbl"><thead><tr><th>Quiz</th><th>Course</th><th>Score</th><th>Passed</th><th>Date</th></tr></thead><tbody>${rows}</tbody></table>`:'<p class="muted-note">No quiz attempts recorded yet.</p>'}</section>`;
+    }
   }
 
   // ================= ENROLLMENTS =================
