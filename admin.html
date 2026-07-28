@@ -74,6 +74,26 @@
       </form>
       <div id="res-list"></div>
     </section>
+
+    <!-- Certificate design -->
+    <section class="panel">
+      <h2>Certificate design</h2>
+      <p class="sub">Upload your own certificate template so completion certificates use your branding instead of the built-in layout. Use a <b>landscape</b> image (about 1.4:1, e.g. 1600×1130) and leave the centre clear for the recipient's name and details. This applies to every certificate.</p>
+      <div id="cd-msg"></div>
+      <div class="inline-form">
+        <div class="field" style="flex-basis:100%"><label>Background / template image</label>
+          <input type="file" id="cd-bg-file" accept="image/*">
+          <div id="cd-bg-prev" style="margin-top:8px"></div></div>
+        <div class="field" style="flex-basis:100%"><label>Signature image (PNG with a transparent background works best)</label>
+          <input type="file" id="cd-sig-file" accept="image/*">
+          <div id="cd-sig-prev" style="margin-top:8px"></div></div>
+        <div class="field"><label>Signatory name</label><input id="cd-sig-name" placeholder="Dr. Khorshid Mohammad"></div>
+        <div class="field"><label>Signatory title</label><input id="cd-sig-title" placeholder="Program Director"></div>
+        <div class="field" style="flex-basis:100%"><label style="font-weight:500"><input type="checkbox" id="cd-dark"> My template has a dark background (use light text)</label></div>
+        <button class="btn" id="cd-save" type="button">Save certificate design</button>
+        <button class="btn outline" id="cd-reset" type="button">Remove template (revert to built-in)</button>
+      </div>
+    </section>
   </div>
 </main>
 
@@ -160,7 +180,45 @@
     await NNCC.client.from("resources").delete().eq("id",b.dataset.del); loadRes();
   });
 
-  loadMembers(); loadRes();
+  // ---- Certificate design ----
+  async function uploadBranding(file, kind){
+    const ext=(file.name.split(".").pop()||"png").toLowerCase();
+    const path=`certificate/${kind}-${Date.now()}.${ext}`;
+    const { error }=await NNCC.client.storage.from("course-media").upload(path,file,{upsert:true,contentType:file.type||undefined});
+    if(error) throw error;
+    return NNCC.client.storage.from("course-media").getPublicUrl(path).data.publicUrl;
+  }
+  let cd={};
+  async function loadCert(){
+    const { data } = await NNCC.client.from("site_settings").select("*").eq("id",1).maybeSingle();
+    cd=data||{};
+    $("#cd-sig-name").value=cd.cert_sig_name||""; $("#cd-sig-title").value=cd.cert_sig_title||"";
+    $("#cd-dark").checked=!!cd.cert_text_dark;
+    $("#cd-bg-prev").innerHTML=cd.cert_bg_url?`<img src="${esc(cd.cert_bg_url)}" style="max-width:340px;border:1px solid var(--line);border-radius:8px">`:'<span class="small-link">Currently using the built-in design.</span>';
+    $("#cd-sig-prev").innerHTML=cd.cert_sig_url?`<img src="${esc(cd.cert_sig_url)}" style="height:54px;background:#f5f8fc;padding:5px;border-radius:6px">`:'<span class="small-link">No signature uploaded.</span>';
+  }
+  $("#cd-save").addEventListener("click", async ()=>{
+    say("#cd-msg","Saving…","info"); const btn=$("#cd-save"); btn.disabled=true;
+    try{
+      let bg=cd.cert_bg_url||null, sig=cd.cert_sig_url||null;
+      const bf=$("#cd-bg-file").files[0]; if(bf) bg=await uploadBranding(bf,"bg");
+      const sf=$("#cd-sig-file").files[0]; if(sf) sig=await uploadBranding(sf,"sig");
+      const { error }=await NNCC.client.from("site_settings").upsert({ id:1, cert_bg_url:bg, cert_sig_url:sig,
+        cert_sig_name:$("#cd-sig-name").value.trim()||null, cert_sig_title:$("#cd-sig-title").value.trim()||null,
+        cert_text_dark:$("#cd-dark").checked, updated_at:new Date().toISOString() });
+      if(error) throw error;
+      $("#cd-bg-file").value=""; $("#cd-sig-file").value="";
+      say("#cd-msg","Saved. Completion certificates now use your design.","ok"); loadCert();
+    }catch(e){ say("#cd-msg", esc(e.message||e), "err"); }
+    btn.disabled=false;
+  });
+  $("#cd-reset").addEventListener("click", async ()=>{
+    if(!confirm("Remove the custom template and revert to the built-in certificate layout? (Your signature and names are kept.)")) return;
+    await NNCC.client.from("site_settings").upsert({ id:1, cert_bg_url:null, updated_at:new Date().toISOString() });
+    say("#cd-msg","Reverted to the built-in design.","ok"); loadCert();
+  });
+
+  loadMembers(); loadRes(); loadCert();
 })();
 </script>
 </body>

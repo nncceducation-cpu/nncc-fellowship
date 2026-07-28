@@ -26,6 +26,20 @@
   .cert .sig{border-top:1.5px solid var(--line);padding-top:6px;min-width:200px}
   .noprint{margin:16px auto;max-width:900px;padding:0 16px;display:flex;gap:10px;justify-content:flex-end}
   @media print{ .topbar.noprint{display:none!important} body{background:#fff} .cert{box-shadow:none;border:0} }
+  /* custom uploaded template */
+  .cert-custom{position:relative;aspect-ratio:1.414/1;background-size:cover;background-position:center;border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+  .cert-custom .cert-body{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:7% 11%}
+  .cert-custom .eyebrow{letter-spacing:2px;text-transform:uppercase;font-size:12px;color:var(--muted);font-weight:600}
+  .cert-custom .line{color:var(--muted);margin:4px auto;max-width:60ch}
+  .cert-custom .name{font-family:var(--font-serif);font-size:clamp(1.5rem,3.4vw,2.4rem);color:var(--teal-600);margin:10px 0 6px}
+  .cert-custom .course{font-weight:700;color:var(--navy);font-size:1.2rem;margin:6px 0 14px}
+  .cert-custom .cert-foot2{display:flex;gap:28px;align-items:flex-end;justify-content:center;flex-wrap:wrap;margin-top:22px;font-size:12.5px;color:var(--muted)}
+  .cert-custom .sigcol{text-align:center}
+  .cert-custom .sig-img{height:44px;object-fit:contain;display:block;margin:0 auto 4px}
+  .cert-custom .sigline{border-top:1.5px solid rgba(0,0,0,.28);padding-top:5px;min-width:150px}
+  .cert-custom.cert-dark .eyebrow,.cert-custom.cert-dark .line,.cert-custom.cert-dark .course,.cert-custom.cert-dark .name,.cert-custom.cert-dark .sigline{color:#fff}
+  .cert-custom.cert-dark .sigline{border-top-color:rgba(255,255,255,.5)}
+  @media print{ .cert-custom{box-shadow:none} }
 </style>
 </head>
 <body>
@@ -65,21 +79,51 @@
   }
   if(!cert){ $("#cert").innerHTML='<div class="empty">You haven’t completed this course yet, so no certificate is available.</div>'; return; }
   const dt=new Date(cert.issued_at).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
-  $("#cert").innerHTML=`<div class="cert"><div class="cert-inner">
-    <img class="mark" src="logo-nncc.png" alt="NNCC" style="border-radius:50%;object-fit:cover;background:none;padding:0">
-    <div class="eyebrow">Certificate of Completion</div>
-    <h1>Harvey Sarnat NNCC Fellowship</h1>
-    <p class="line">This certifies that</p>
-    <div class="name">${esc(prof.full_name||prof.email)}</div>
-    <p class="line">has successfully completed</p>
-    <div class="course">${esc(course?course.title:'')}</div>
-    ${course&&course.pass_note?`<p class="line">${esc(course.pass_note)}</p>`:''}
-    <div class="foot">
-      <div class="sig">Dr. Khorshid Mohammad<br><span>Program Director</span></div>
-      <div class="sig">${esc(dt)}<br><span>Date issued</span></div>
-      <div class="sig">${esc(cert.serial)}<br><span>Certificate ID</span></div>
-    </div>
-  </div></div>`;
+
+  // Custom branding (uploaded by admin in Admin → Certificate design)
+  const { data:ss } = await sb.from("site_settings").select("*").eq("id",1).maybeSingle();
+  const sigName = (ss&&ss.cert_sig_name) || "Dr. Khorshid Mohammad";
+  const sigTitle= (ss&&ss.cert_sig_title) || "Program Director";
+  const sigImg  = ss&&ss.cert_sig_url;
+  const name = esc(prof.full_name||prof.email);
+  const title = esc(course?course.title:'');
+  const note = course&&course.pass_note?`<p class="line">${esc(course.pass_note)}</p>`:'';
+  const sigImgHtml = sigImg?`<img class="sig-img" src="${esc(sigImg)}" alt="Signature">`:'';
+
+  if(ss && ss.cert_bg_url){
+    // Custom uploaded template: overlay recipient details in the centre
+    $("#cert").innerHTML=`<div class="cert-custom ${ss.cert_text_dark?'cert-dark':''}" style="background-image:url('${esc(ss.cert_bg_url)}')">
+      <div class="cert-body">
+        <div class="eyebrow">Certificate of Completion</div>
+        <p class="line">This certifies that</p>
+        <div class="name">${name}</div>
+        <p class="line">has successfully completed</p>
+        <div class="course">${title}</div>
+        ${note}
+        <div class="cert-foot2">
+          <div class="sigcol">${sigImgHtml}<div class="sigline">${esc(sigName)}<br><span>${esc(sigTitle)}</span></div></div>
+          <div class="sigcol"><div class="sigline">${esc(dt)}<br><span>Date issued</span></div></div>
+          <div class="sigcol"><div class="sigline">${esc(cert.serial)}<br><span>Certificate ID</span></div></div>
+        </div>
+      </div></div>`;
+  } else {
+    // Built-in layout
+    $("#cert").innerHTML=`<div class="cert"><div class="cert-inner">
+      <img class="mark" src="logo-nncc.png" alt="NNCC" style="border-radius:50%;object-fit:cover;background:none;padding:0">
+      <div class="eyebrow">Certificate of Completion</div>
+      <h1>Harvey Sarnat NNCC Fellowship</h1>
+      <p class="line">This certifies that</p>
+      <div class="name">${name}</div>
+      <p class="line">has successfully completed</p>
+      <div class="course">${title}</div>
+      ${note}
+      <div class="foot">
+        <div class="sig">${sigImg?`<img src="${esc(sigImg)}" alt="Signature" style="height:42px;display:block;margin:0 auto 4px">`:''}${esc(sigName)}<br><span>${esc(sigTitle)}</span></div>
+        <div class="sig">${esc(dt)}<br><span>Date issued</span></div>
+        <div class="sig">${esc(cert.serial)}<br><span>Certificate ID</span></div>
+      </div>
+    </div></div>`;
+  }
 })();
 </script>
 </body>
