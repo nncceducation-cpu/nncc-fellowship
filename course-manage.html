@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manage course, Harvey Sarnat NNCC Fellowship</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="portal.css">
+<link rel="icon" href="favicon.ico" sizes="any">
+<style>
+  .tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin:6px 0 22px;flex-wrap:wrap}
+  .tabs button{background:none;border:0;padding:11px 15px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+  .tabs button.active{color:var(--navy);border-bottom-color:var(--teal)}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin-bottom:22px}
+  .kpi{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px 24px;box-shadow:var(--shadow)}
+  .kpi b{display:block;font-family:var(--font-serif);font-size:2.6rem;color:var(--navy);line-height:1}
+  .kpi span{color:var(--muted);font-size:14px;font-weight:600}
+  .det-row{display:flex;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line)}
+  .det-row:last-child{border-bottom:none}
+  .pbar{min-width:130px;display:inline-block}
+  .pbar i{display:block;height:8px;background:#e8eef6;border-radius:6px;overflow:hidden}
+  .pbar i > span{display:block;height:100%;background:var(--teal)}
+</style>
+</head>
+<body>
+<header class="topbar"><div class="container">
+  <a class="brand" href="portal.html"><img class="mark" src="logo-nncc.png" alt="NNCC" style="border-radius:50%;object-fit:cover;background:none;padding:0">
+    <span class="brand-text"><b>Harvey Sarnat NNCC Fellowship</b><span>Manage course</span></span></a>
+  <nav class="nav"><a href="authoring.html">Builder</a><a href="analytics.html">Analytics</a><span class="user-chip" id="user-chip"></span></nav>
+</div></header>
+<main class="portal-wrap"><div class="container">
+  <p class="crumbs" style="font-size:13px;color:var(--muted)"><a href="authoring.html">← Course builder</a></p>
+  <div class="p-head" style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+    <div><h1 id="c-title">Course</h1><p id="c-sub">Overview, learners and settings.</p></div>
+    <div style="display:flex;gap:8px"><a class="btn outline" id="edit-link" href="authoring.html">✎ Edit</a></div>
+  </div>
+  <div class="tabs"><button data-t="overview" class="active">Overview</button><button data-t="learners">Learners</button><button data-t="settings">Settings</button></div>
+  <div id="tab-overview"></div>
+  <div id="tab-learners" style="display:none"></div>
+  <div id="tab-settings" style="display:none"></div>
+</div></main>
+<script src="portal-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="portal-auth.js"></script>
+<script src="portal-shell.js"></script>
+<script>
+(async function(){
+  const me=await NNCC.requireAdmin(); if(!me) return;
+  NNCC.mountUserChip(document.getElementById("user-chip"));
+  const sb=NNCC.client, $=(s)=>document.querySelector(s);
+  const esc=(s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmt=(d)=> d? new Date(d).toLocaleDateString() : "—";
+  const cid=new URLSearchParams(location.search).get("course");
+  if(!cid){ $("#tab-overview").innerHTML='<div class="empty">No course specified. <a href="authoring.html">Open the builder</a>.</div>'; return; }
+
+  const [{data:course},{data:enr},{data:certs},{data:members},prog] = await Promise.all([
+    sb.from("courses").select("*").eq("id",cid).maybeSingle(),
+    sb.from("course_enrollments").select("*").eq("course_id",cid),
+    sb.from("certificates").select("user_id,issued_at").eq("course_id",cid),
+    sb.from("members_overview").select("id,full_name,email"),
+    sb.rpc("admin_course_progress",{p_course:cid}).then(r=>r.data).catch(()=>({})),
+  ]);
+  if(!course){ $("#tab-overview").innerHTML='<div class="empty">Course not found.</div>'; return; }
+  $("#c-title").textContent=course.title||"Course"; document.title="Manage: "+(course.title||"");
+  $("#edit-link").href="authoring.html?course="+cid;
+  const nameById={}; (members||[]).forEach(m=>nameById[m.id]={n:m.full_name||m.email,e:m.email});
+  const P=prog||{}; const certSet=new Set((certs||[]).map(c=>c.user_id));
+  const enrolls=(enr||[]);
+  const nEnr=enrolls.length;
+  const completed=enrolls.filter(e=>certSet.has(e.user_id)).length;
+  const compRate = nEnr? Math.round(completed/nEnr*100):0;
+  const pcts = enrolls.map(e=>{ const p=P[e.user_id]||{done:0,total:0}; return p.total? p.done/p.total : 0; });
+  const avgProg = pcts.length? Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length*100):0;
+
+  $("#tab-overview").innerHTML=`
+    <div class="kpis">
+      <div class="kpi"><b>${nEnr}</b><span>Enrollments</span></div>
+      <div class="kpi"><b>${compRate}%</b><span>Completion rate</span></div>
+      <div class="kpi"><b>${avgProg}%</b><span>Average progress</span></div>
+    </div>
+    <section class="panel"><h2>Course details</h2>
+      <p class="sub">Configuration for ${esc(course.title||'')}</p>
+      <div class="det-row"><span>Instructor</span><b>${esc(course.instructor||'khorshid mohammad')}</b></div>
+      <div class="det-row"><span>Status</span><b>${course.enrollment_required?'Enrollment required':'Open to all members'}</b></div>
+      <div class="det-row"><span>Certificate</span><b>${course.certificate_enabled!==false?'Issued on completion':'Off'}</b></div>
+      <div class="det-row"><span>Completed learners</span><b>${completed}</b></div>
+    </section>`;
+
+  function learners(){
+    const rows=enrolls.map(e=>{ const m=nameById[e.user_id]||{}; const p=P[e.user_id]||{done:0,total:0};
+      const pct=p.total?Math.round(p.done/p.total*100):0;
+      const pending=e.starts_at && new Date(e.starts_at)>new Date();
+      const expired=e.expires_at && new Date(e.expires_at)<=new Date();
+      const status=certSet.has(e.user_id)?'<span class="badge" style="background:#e6f4f4;color:#0c7373">Completed</span>':(pending?'<span class="badge">Scheduled</span>':expired?'<span class="badge" style="background:#fdecec;color:#8a1f1f">Expired</span>':'<span class="badge member">Active</span>');
+      return `<tr><td>${esc(m.n||e.user_id)}</td><td>${esc(m.e||'')}</td>
+        <td><span class="pbar"><i><span style="width:${pct}%"></span></i></span> <span class="small-link">${pct}% · ${p.done}/${p.total}</span></td>
+        <td>${status}</td><td>${e.starts_at?fmt(e.starts_at):'immediate'}</td><td>${e.expires_at?fmt(e.expires_at):'no expiry'}</td></tr>`;
+    }).join("");
+    $("#tab-learners").innerHTML=`<section class="panel"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">Learners (${nEnr})</h2>
+        <a class="chip-btn" href="people.html">Manage enrollments →</a></div>
+      ${nEnr?`<table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>Progress</th><th>Status</th><th>Enrolled</th><th>Expiry</th></tr></thead><tbody>${rows}</tbody></table>`:'<p class="muted-note">No one is enrolled yet. Enrol members from the People console.</p>'}</section>`;
+  }
+  function settings(){
+    $("#tab-settings").innerHTML=`<section class="panel"><h2>Settings</h2>
+      <p class="sub">Course structure, access mode, certificate and drip are edited in the course builder.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="authoring.html?course=${cid}">Open course builder</a>
+        <a class="btn outline" href="people.html">Enrollments & access</a></div></section>`;
+  }
+  learners(); settings();
+  document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{
+    document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("active",x===b));
+    ["overview","learners","settings"].forEach(t=>$("#tab-"+t).style.display=t===b.dataset.t?'block':'none');
+  }));
+})();
+</script>
+</body>
+</html>

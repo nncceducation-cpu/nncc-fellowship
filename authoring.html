@@ -173,6 +173,7 @@
         <button class="chip-btn" data-up="${c.id}" title="Move up">▲</button>
         <button class="chip-btn" data-dn="${c.id}" title="Move down">▼</button>
         <button class="chip-btn" data-edc="${c.id}" title="Rename">✎</button>
+        <a class="chip-btn" href="course-manage.html?course=${c.id}" title="Manage / stats" style="text-decoration:none">📊</a>
         <button class="chip-btn" data-delc="${c.id}" title="Delete">🗑</button>
       </div>`).join("") || '<div class="muted-note">No courses yet.</div>';
     if(!state.curCourse && state.courses[0]) state.curCourse=state.courses[0].id;
@@ -216,7 +217,7 @@
           <span class="badge ${course.visibility==='published'?'admin':'member'}">${esc(course.visibility||'published')}</span>
           ${course.enrollment_required?`<span class="badge member">${course.self_enroll?'self sign-up':'private'}</span>`:'<span class="badge member">open</span>'}
         </div>
-        <div style="display:flex;gap:8px"><button class="btn outline" id="course-settings">⚙ Settings</button><button class="btn" id="add-ch">+ Add chapter</button></div>
+        <div style="display:flex;gap:8px"><a class="btn outline" href="course-manage.html?course=${course.id}">📊 Manage</a><button class="btn outline" id="course-settings">⚙ Settings</button><button class="btn" id="add-ch">+ Add chapter</button></div>
       </div>
       ${course.description?`<p class="muted-note" style="margin:-6px 0 14px">${esc(course.description)}</p>`:''}
       <div id="chapters">${state.chapters.map(chHTML).join("")||'<div class="empty">No chapters yet, add one.</div>'}</div>`;
