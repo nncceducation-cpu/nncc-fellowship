@@ -107,9 +107,9 @@ window.PortalMedia = (function () {
     // caption / instructions
     if (l.caption) h += `<p style="color:var(--muted);margin-top:12px">${esc(l.caption)}</p>`;
 
-    // interactive web app (survey / assignment checker): embed inline in the SAME window
+    // embed an external link inline (survey/app lessons, or any lesson with "embed" ticked)
     let embeddedApp = false;
-    if (t === "survey" && ext) {
+    if (ext && (t === "survey" || l.embed_external)) {
       h += `<div class="embed-wrap" style="margin-top:14px">
         <iframe src="${esc(ext)}" title="${esc(l.title || "Interactive")}" loading="lazy"
           style="width:100%;height:80vh;min-height:560px;border:1px solid var(--line,#e3e8ee);border-radius:12px"

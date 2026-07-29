@@ -121,7 +121,8 @@
         <div id="f-editor-wrap"><div id="f-editor"></div></div>
         <textarea id="f-content" rows="6" style="display:none" placeholder="Paste raw HTML / embed code (e.g. an iframe) here."></textarea>
         <p class="small-link" id="f-embed-note" style="display:none;margin-top:6px">Paste raw HTML or embed code (such as an &lt;iframe&gt;) above.</p></div>
-      <div class="field"><label>External link (optional), e.g. Thinkific, a Google Form quiz, etc.</label><input id="f-ext" placeholder="https://..."></div>
+      <div class="field"><label>External link (optional), e.g. an app, a Google Form, a website.</label><input id="f-ext" placeholder="https://..."></div>
+      <div class="field"><label style="font-weight:500"><input type="checkbox" id="f-embed"> Embed this link inside the lesson (show it in a frame instead of an "Open link" button)</label></div>
 
       <!-- Quiz builder (type = quiz) -->
       <div id="quiz-block" style="display:none;margin-top:18px;border-top:1px solid var(--line);padding-top:16px">
@@ -461,6 +462,7 @@
     $("#f-caption").value=l.caption||"";
     $("#f-content").value=l.content||"";
     $("#f-ext").value=l.external_url||"";
+    $("#f-embed").checked=!!l.embed_external;
     $("#dz-status").textContent="";
     $("#preview").style.display="none";
     updEditorUI(); modal.classList.add("open");
@@ -471,7 +473,7 @@
   function draftFromForm(){
     const type=$("#f-type").value;
     const d={ title:$("#f-title").value.trim(), lesson_type:type, sort_order:parseInt($("#f-order").value||"0",10),
-      caption:$("#f-caption").value.trim()||null, content:$("#f-content").value.trim()||null, external_url:$("#f-ext").value.trim()||null };
+      caption:$("#f-caption").value.trim()||null, content:$("#f-content").value.trim()||null, external_url:$("#f-ext").value.trim()||null, embed_external:$("#f-embed").checked };
     const mv=$("#f-media").value.trim()||null;
     d.video_url = type==='video'? mv : (state.editing.video_url||null);
     d.file_url  = type==='video'? (state.editing.file_url||null) : mv;
