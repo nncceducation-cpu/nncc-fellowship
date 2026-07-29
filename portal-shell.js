@@ -9,13 +9,18 @@
   if (!window.NNCC || !NNCC.configured) return; // skip on login / unconfigured
 
   const ITEMS = [
-    ["portal.html",    "🏠", "Dashboard",      false, null],
-    ["learning.html",  "▶",  "Courses",         false, "modules"],
-    ["forum.html",     "💬", "Forum",           false, "forum"],
-    ["authoring.html", "🏗", "Course Builder",  true,  null],
-    ["people.html",    "👤", "People",          true,  null],
-    ["analytics.html", "📊", "Analytics",       true,  null],
-    ["admin.html",     "⚙",  "Admin",           true,  null],
+    ["portal.html",    "🏠", "Dashboard",           false, null],
+    ["learning.html",  "▶",  "Courses",              false, "modules"],
+    ["events.html",    "📅", "Coaching & Webinars",  false, null],
+    ["forum.html",     "💬", "Forum",                false, "forum"],
+    ["assistant.html", "🤖", "Teaching Assistant",   false, null],
+    ["authoring.html", "🏗", "Course Builder",       true,  null],
+    ["people.html",    "👤", "People",               true,  null],
+    ["memberships.html","🎟","Memberships",          true,  null],
+    ["team.html",      "🧑‍🤝‍🧑", "Team & Roles",     true,  null],
+    ["analytics.html", "📊", "Analytics",            true,  null],
+    ["admin.html",     "⚙",  "Admin",                true,  null],
+    ["settings.html",  "🛠", "Settings",             true,  null],
   ];
 
   document.addEventListener("DOMContentLoaded", async () => {

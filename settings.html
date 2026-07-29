@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings, Harvey Sarnat NNCC Fellowship</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="portal.css">
+<link rel="icon" href="favicon.ico" sizes="any">
+<style>.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:620px){.row2{grid-template-columns:1fr}}</style>
+</head>
+<body>
+<header class="topbar"><div class="container">
+  <a class="brand" href="portal.html"><img class="mark" src="logo-nncc.png" alt="NNCC" style="border-radius:50%;object-fit:cover;background:none;padding:0">
+    <span class="brand-text"><b>Harvey Sarnat NNCC Fellowship</b><span>Settings</span></span></a>
+  <nav class="nav"><a href="portal.html">Portal</a><a href="admin.html">Admin</a><a href="settings.html" class="active">Settings</a><span class="user-chip" id="user-chip"></span></nav>
+</div></header>
+<main class="portal-wrap"><div class="container">
+  <div class="p-head"><h1>Settings</h1><p>Site details, contact emails and portal options.</p></div>
+  <div id="msg"></div>
+  <section class="panel"><h2>Site details</h2>
+    <div class="field"><label>Site name (used in page titles and certificates)</label><input id="s-name" style="max-width:460px"></div>
+  </section>
+  <section class="panel"><h2>Contact emails</h2>
+    <div class="row2">
+      <div class="field"><label>Reply-to email</label><input id="s-reply" type="email" placeholder="nncceducation@gmail.com"></div>
+      <div class="field"><label>Support email</label><input id="s-support" type="email" placeholder="support@…"></div>
+    </div>
+    <p class="small-link">Shown to members who reply to portal emails or click support links.</p>
+  </section>
+  <section class="panel"><h2>Learner hub</h2>
+    <div class="field"><label>Welcome message (shown on the member dashboard)</label><textarea id="s-welcome" rows="2" placeholder="Welcome to the Harvey Sarnat NNCC Fellowship portal…"></textarea></div>
+    <div class="field"><label style="font-weight:500"><input type="checkbox" id="s-catalog"> Show a public course catalog to non-members</label></div>
+  </section>
+  <section class="panel"><h2>Branding</h2>
+    <p class="sub">The site logo and certificate design are managed in the Admin panel.</p>
+    <a class="btn outline" href="admin.html#cd">Open certificate design →</a>
+  </section>
+  <div style="margin:6px 0 30px"><button class="btn" id="s-save">Save settings</button></div>
+</div></main>
+<script src="portal-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="portal-auth.js"></script>
+<script src="portal-shell.js"></script>
+<script>
+(async function(){
+  const me=await NNCC.requireAdmin(); if(!me) return;
+  NNCC.mountUserChip(document.getElementById("user-chip"));
+  const sb=NNCC.client, $=(s)=>document.querySelector(s);
+  const esc=(s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const flash=(t,k)=>{ $("#msg").innerHTML=t?`<div class="msg ${k||'ok'}">${t}</div>`:""; if(t) setTimeout(()=>$("#msg").innerHTML="",4000); };
+  async function load(){
+    const { data } = await sb.from("site_settings").select("*").eq("id",1).maybeSingle(); const s=data||{};
+    $("#s-name").value=s.site_name||""; $("#s-reply").value=s.reply_to_email||""; $("#s-support").value=s.support_email||"";
+    $("#s-welcome").value=s.welcome_message||""; $("#s-catalog").checked=s.public_catalog!==false;
+  }
+  $("#s-save").addEventListener("click", async ()=>{
+    const { error }=await sb.from("site_settings").upsert({ id:1,
+      site_name:$("#s-name").value.trim()||null, reply_to_email:$("#s-reply").value.trim()||null,
+      support_email:$("#s-support").value.trim()||null, welcome_message:$("#s-welcome").value.trim()||null,
+      public_catalog:$("#s-catalog").checked, updated_at:new Date().toISOString() });
+    if(error){ flash(esc(error.message),"err"); return; }
+    flash("Settings saved.");
+  });
+  load();
+})();
+</script>
+</body>
+</html>

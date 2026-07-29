@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Team & Roles, Harvey Sarnat NNCC Fellowship</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="portal.css">
+<link rel="icon" href="favicon.ico" sizes="any">
+<style>
+  .tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin:8px 0 22px}
+  .tabs button{background:none;border:0;padding:11px 15px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+  .tabs button.active{color:var(--navy);border-bottom-color:var(--teal)}
+  .rchip{display:inline-flex;align-items:center;gap:5px;background:var(--navy-50);color:var(--navy);border-radius:999px;padding:3px 9px;font-size:12px;margin:2px 3px 2px 0}
+  .rchip button{border:0;background:none;cursor:pointer;color:var(--muted);font-size:13px;line-height:1}
+</style>
+</head>
+<body>
+<header class="topbar"><div class="container">
+  <a class="brand" href="portal.html"><img class="mark" src="logo-nncc.png" alt="NNCC" style="border-radius:50%;object-fit:cover;background:none;padding:0">
+    <span class="brand-text"><b>Harvey Sarnat NNCC Fellowship</b><span>Team &amp; Roles</span></span></a>
+  <nav class="nav"><a href="portal.html">Portal</a><a href="people.html">People</a><a href="team.html" class="active">Team</a><span class="user-chip" id="user-chip"></span></nav>
+</div></header>
+<main class="portal-wrap"><div class="container">
+  <div class="p-head"><h1>Team &amp; Roles</h1><p>Assign staff roles to the people who help run the program.</p></div>
+  <div id="msg"></div>
+  <div class="tabs"><button data-t="members" class="active">Team members</button><button data-t="roles">Roles</button></div>
+  <div id="tab-members"></div>
+  <div id="tab-roles" style="display:none"></div>
+</div></main>
+<script src="portal-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="portal-auth.js"></script>
+<script src="portal-shell.js"></script>
+<script>
+(async function(){
+  const me=await NNCC.requireAdmin(); if(!me) return;
+  NNCC.mountUserChip(document.getElementById("user-chip"));
+  const sb=NNCC.client, $=(s)=>document.querySelector(s);
+  const esc=(s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const flash=(t,k)=>{ $("#msg").innerHTML=t?`<div class="msg ${k||'ok'}">${t}</div>`:""; if(t) setTimeout(()=>$("#msg").innerHTML="",4000); };
+  const ROLES=[
+    ["site_admin","Site admin","Full access except ownership transfer and payment integrations","Courses, Users, Groups, Community, Financial, Analytics"],
+    ["course_admin","Course admin","Create and edit courses and instructors, manage content","Courses, Users, Media & Content"],
+    ["group_analyst","Group analyst","View student names, emails and progress for assigned groups","Groups"],
+    ["community_moderator","Community moderator","Moderate posts and manage events in assigned communities","Community"],
+    ["affiliate","Affiliate","View affiliate dashboard and edit their payment email","Financial"],
+    ["revenue_partner","Revenue partner","View revenue reports and affiliate dashboard","Financial, Analytics & Reports"],
+  ];
+  const roleName=(k)=>{ const r=ROLES.find(x=>x[0]===k); return r?r[1]:k; };
+  let TEAM=[];
+  async function load(){ const { data } = await sb.rpc("admin_team"); TEAM=data||[]; renderMembers(); renderRoles(); }
+
+  document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{
+    document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("active",x===b));
+    $("#tab-members").style.display=b.dataset.t==='members'?'block':'none';
+    $("#tab-roles").style.display=b.dataset.t==='roles'?'block':'none';
+  }));
+
+  function renderMembers(){
+    const opts=ROLES.map(r=>`<option value="${r[0]}">${r[1]}</option>`).join("");
+    const rows=TEAM.map(m=>{
+      const chips=(m.roles||[]).map(rk=>`<span class="rchip">${esc(roleName(rk))} <button data-rmrole="${m.id}|${rk}" title="Remove">✕</button></span>`).join("")||'<span class="small-link">No team role</span>';
+      return `<tr><td>${esc(m.full_name||'—')}<br><span class="small-link">${esc(m.email||'')}</span></td>
+        <td><span class="badge ${m.role}">${m.role}</span></td>
+        <td>${chips}<br><select data-addrole="${m.id}" style="margin-top:6px;max-width:200px"><option value="">＋ add role…</option>${opts}</select></td>
+        <td class="row-actions">${m.role==='admin'?`<button data-demote="${m.id}" ${m.id===me.id?'disabled':''}>Make member</button>`:`<button data-promote="${m.id}">Make admin</button>`}</td></tr>`;
+    }).join("");
+    $("#tab-members").innerHTML=`<section class="panel"><h2>Team members (${TEAM.length})</h2>
+      <p class="sub">Platform role controls portal admin access. Team roles below are organisational labels (Site Admin maps to full admin access).</p>
+      <table class="tbl"><thead><tr><th>Name</th><th>Platform role</th><th>Team roles</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></section>`;
+    document.querySelectorAll("[data-addrole]").forEach(s=>s.addEventListener("change",async()=>{ if(!s.value)return;
+      const uid=s.dataset.addrole, rk=s.value;
+      await sb.from("team_roles").upsert({user_id:uid,role_key:rk});
+      if(rk==='site_admin') await NNCC.setRole(uid,'admin');
+      flash("Role assigned."); load(); }));
+    document.querySelectorAll("[data-rmrole]").forEach(b=>b.addEventListener("click",async()=>{ const [uid,rk]=b.dataset.rmrole.split("|");
+      await sb.from("team_roles").delete().eq("user_id",uid).eq("role_key",rk); flash("Role removed."); load(); }));
+    document.querySelectorAll("[data-promote]").forEach(b=>b.addEventListener("click",async()=>{ await NNCC.setRole(b.dataset.promote,'admin'); flash("Now an admin."); load(); }));
+    document.querySelectorAll("[data-demote]").forEach(b=>b.addEventListener("click",async()=>{ await NNCC.setRole(b.dataset.demote,'member'); await sb.from("team_roles").delete().eq("user_id",b.dataset.demote).eq("role_key","site_admin"); flash("Now a member."); load(); }));
+  }
+  function renderRoles(){
+    const count=(k)=>TEAM.filter(m=>(m.roles||[]).includes(k)).length + (k==='site_admin'?TEAM.filter(m=>m.role==='admin'&&!(m.roles||[]).includes('site_admin')).length:0);
+    const rows=ROLES.map(r=>`<tr><td><b>${r[1]}</b></td><td>${r[2]}</td><td>${count(r[0])}</td><td class="small-link">${r[3]}</td></tr>`).join("");
+    $("#tab-roles").innerHTML=`<section class="panel"><h2>Default roles</h2>
+      <p class="sub">Pre-defined roles you can assign to team members from the Team members tab.</p>
+      <table class="tbl"><thead><tr><th>Role</th><th>Description</th><th>Members</th><th>Permissions</th></tr></thead><tbody>${rows}</tbody></table></section>`;
+  }
+  load();
+})();
+</script>
+</body>
+</html>

@@ -62,6 +62,14 @@
         <div class="ic">🎓</div><h3>My Certificates</h3>
         <p>Download completion certificates for courses you've finished.</p>
       </a>
+      <a class="p-card" href="events.html">
+        <div class="ic">📅</div><h3>Coaching &amp; Webinars</h3>
+        <p>Register for live one-on-one coaching and group webinars with faculty.</p>
+      </a>
+      <a class="p-card" href="assistant.html">
+        <div class="ic">🤖</div><h3>Teaching Assistant</h3>
+        <p>Ask the AI assistant to explain concepts and help you study the curriculum.</p>
+      </a>
       <a class="p-card" id="analytics-card" href="analytics.html" style="display:none">
         <div class="ic">📊</div><h3>Analytics</h3>
         <p>Engagement, enrollments, completions and quiz performance.</p>
@@ -78,7 +86,32 @@
         <div class="ic">⚙</div><h3>Admin</h3>
         <p>Invite members by name and email, and manage roles.</p>
       </a>
+      <a class="p-card" id="memberships-card" href="memberships.html" style="display:none">
+        <div class="ic">🎟</div><h3>Memberships</h3>
+        <p>Bundle courses into memberships and grant them to members.</p>
+      </a>
+      <a class="p-card" id="team-card" href="team.html" style="display:none">
+        <div class="ic">🧑‍🤝‍🧑</div><h3>Team &amp; Roles</h3>
+        <p>Assign staff roles to the people who help run the program.</p>
+      </a>
+      <a class="p-card" id="settings-card" href="settings.html" style="display:none">
+        <div class="ic">🛠</div><h3>Settings</h3>
+        <p>Site details, contact emails and portal options.</p>
+      </a>
     </div>
+
+    <!-- Upcoming events -->
+    <section id="sec-events" style="display:none">
+      <h2 style="margin-top:26px">Upcoming events</h2>
+      <div id="events-list" style="margin-top:12px"></div>
+    </section>
+    <!-- Learning goal -->
+    <section class="panel" id="sec-goal" style="margin-top:22px;display:none">
+      <h2>Your learning goal</h2>
+      <p class="sub">Set a personal objective to stay motivated.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><input id="goal-in" placeholder="e.g. Finish the HIE modules this month" style="flex:1;min-width:240px"><button class="btn" id="goal-save">Save goal</button></div>
+      <div id="goal-msg"></div>
+    </section>
 
     <!-- Private resources -->
     <section id="sec-resources" style="display:none">
@@ -131,7 +164,34 @@
   if (can("resources")) show("card-resources");
   if (can("directory")) show("card-directory");
   // Admin tools
-  if (admin) ["admin-card","builder-card","people-card","analytics-card"].forEach(show);
+  if (admin) ["admin-card","builder-card","people-card","analytics-card","memberships-card","team-card","settings-card"].forEach(show);
+
+  // Learner hub: welcome message, upcoming events, learning goal
+  try {
+    const { data: st } = await NNCC.client.from("site_settings").select("welcome_message").eq("id",1).maybeSingle();
+    if (st && st.welcome_message) { const p = document.querySelector(".p-head p"); if (p) p.textContent = st.welcome_message; }
+  } catch(_){}
+  try {
+    const { data: evs } = await NNCC.client.from("events").select("*").eq("status","published").order("starts_at",{ascending:true});
+    const up = (evs||[]).filter(e=>!e.starts_at || new Date(e.starts_at).getTime() > Date.now()-3600e3).slice(0,3);
+    if (up.length) {
+      document.getElementById("sec-events").style.display="block";
+      document.getElementById("events-list").innerHTML = '<table class="tbl"><tbody>' + up.map(e=>{
+        const w = e.starts_at ? new Date(e.starts_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : 'Date TBA';
+        return `<tr><td style="width:40px">${e.kind==='coaching'?'🧑‍🏫':'📡'}</td><td><b>${esc(e.title)}</b><br><span class="small-link">${esc(w)}${e.host?' · '+esc(e.host):''}</span></td>
+          <td class="row-actions"><a class="btn outline" style="padding:5px 12px;font-size:13px" href="events.html">View</a></td></tr>`;
+      }).join('') + '</tbody></table>';
+    }
+  } catch(_){}
+  // learning goal
+  document.getElementById("sec-goal").style.display="block";
+  document.getElementById("goal-in").value = prof.learning_goal || "";
+  document.getElementById("goal-save").addEventListener("click", async ()=>{
+    const g = document.getElementById("goal-in").value.trim();
+    const { error } = await NNCC.client.from("profiles").update({ learning_goal: g||null }).eq("id", me.id);
+    document.getElementById("goal-msg").innerHTML = error ? `<div class="msg err">${esc(error.message)}</div>` : '<div class="msg ok">Goal saved.</div>';
+    setTimeout(()=>{ const m=document.getElementById("goal-msg"); if(m) m.innerHTML=""; }, 3000);
+  });
 
   // My certificates (modules access)
   if (can("modules")) {

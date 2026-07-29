@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coaching & Webinars, Harvey Sarnat NNCC Fellowship</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="portal.css">
+<link rel="icon" href="favicon.ico" sizes="any">
+<style>
+  .ev{display:flex;gap:16px;align-items:flex-start;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:14px;background:#fff;box-shadow:var(--shadow)}
+  .ev .when{min-width:74px;text-align:center;background:var(--navy-50);border-radius:10px;padding:8px 6px}
+  .ev .when b{display:block;font-family:var(--font-serif);font-size:1.5rem;color:var(--navy);line-height:1}
+  .ev .when span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .ev-tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:3px 9px;border-radius:999px}
+  .ev-coaching{background:var(--teal-50);color:var(--teal-600)} .ev-webinar{background:var(--navy-50);color:var(--navy)}
+  .ev .body{flex:1} .ev h3{margin:2px 0 4px;font-size:1.1rem}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:620px){.row2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="topbar"><div class="container">
+  <a class="brand" href="portal.html"><img class="mark" src="logo-nncc.png" alt="NNCC" style="border-radius:50%;object-fit:cover;background:none;padding:0">
+    <span class="brand-text"><b>Harvey Sarnat NNCC Fellowship</b><span>Coaching &amp; Webinars</span></span></a>
+  <nav class="nav"><a href="portal.html">Portal</a><a href="events.html" class="active">Events</a><span class="user-chip" id="user-chip"></span></nav>
+</div></header>
+<main class="portal-wrap"><div class="container">
+  <div class="p-head"><h1>Coaching &amp; Webinars</h1><p>Live one-on-one coaching and group webinars with the program faculty.</p></div>
+  <div id="msg"></div>
+  <div id="admin-area"></div>
+  <h2 style="margin-top:26px">Upcoming</h2>
+  <div id="upcoming"><div class="empty">Loading…</div></div>
+  <h2 style="margin-top:30px">Past events</h2>
+  <div id="past"></div>
+</div></main>
+<script src="portal-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="portal-auth.js"></script>
+<script src="portal-shell.js"></script>
+<script>
+(async function(){
+  const me=await NNCC.requireAuth(); if(!me) return;
+  const prof=await NNCC.profile(); const isAdmin=prof.role==='admin';
+  NNCC.mountUserChip(document.getElementById("user-chip"));
+  const sb=NNCC.client, $=(s)=>document.querySelector(s);
+  const esc=(s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const flash=(t,k)=>{ $("#msg").innerHTML=t?`<div class="msg ${k||'ok'}">${t}</div>`:""; if(t) setTimeout(()=>$("#msg").innerHTML="",4000); };
+  const dParts=(d)=>{ const x=new Date(d); return {day:x.getDate(), mon:x.toLocaleDateString(undefined,{month:'short'}), time:x.toLocaleString(undefined,{weekday:'short',hour:'numeric',minute:'2-digit'})}; };
+
+  if(isAdmin){
+    $("#admin-area").innerHTML=`<section class="panel"><h2 id="ev-formtitle">New event</h2>
+      <input type="hidden" id="e-id">
+      <div class="row2">
+        <div class="field"><label>Type</label><select id="e-kind"><option value="webinar">Webinar (group)</option><option value="coaching">Coaching (1:1)</option></select></div>
+        <div class="field"><label>Title</label><input id="e-title" placeholder="e.g. Cranial ultrasound case review"></div>
+      </div>
+      <div class="field"><label>Description</label><textarea id="e-desc" rows="2"></textarea></div>
+      <div class="row2">
+        <div class="field"><label>Host</label><input id="e-host" placeholder="Dr. …"></div>
+        <div class="field"><label>Join link (Zoom / Meet / Teams)</label><input id="e-loc" placeholder="https://…"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Starts</label><input type="datetime-local" id="e-start"></div>
+        <div class="field"><label>Ends (optional)</label><input type="datetime-local" id="e-end"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Capacity (optional)</label><input type="number" id="e-cap" min="1"></div>
+        <div class="field"><label>Status</label><select id="e-status"><option value="published">Published</option><option value="draft">Draft</option></select></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px"><button class="btn" id="e-save">Save event</button><button class="btn outline" id="e-reset" type="button">Clear</button></div>
+    </section>`;
+    $("#e-save").addEventListener("click", saveEvent);
+    $("#e-reset").addEventListener("click", resetForm);
+  }
+  function resetForm(){ ["e-id","e-title","e-desc","e-host","e-loc","e-start","e-end","e-cap"].forEach(i=>{const el=$("#"+i); if(el) el.value="";}); $("#ev-formtitle").textContent="New event"; }
+  const toLocal=(iso)=>{ if(!iso) return ""; const d=new Date(iso); const p=(n)=>String(n).padStart(2,"0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
+  async function saveEvent(){
+    const rec={ kind:$("#e-kind").value, title:$("#e-title").value.trim(), description:$("#e-desc").value.trim()||null,
+      host:$("#e-host").value.trim()||null, location:$("#e-loc").value.trim()||null,
+      starts_at:$("#e-start").value?new Date($("#e-start").value).toISOString():null,
+      ends_at:$("#e-end").value?new Date($("#e-end").value).toISOString():null,
+      capacity:$("#e-cap").value?parseInt($("#e-cap").value,10):null, status:$("#e-status").value };
+    if(!rec.title){ flash("Title is required.","err"); return; }
+    const id=$("#e-id").value;
+    const { error } = id ? await sb.from("events").update(rec).eq("id",id) : await sb.from("events").insert({...rec, created_by:me.id});
+    if(error){ flash(esc(error.message),"err"); return; }
+    flash("Event saved."); resetForm(); load();
+  }
+  function editEvent(ev){ $("#e-id").value=ev.id; $("#e-kind").value=ev.kind; $("#e-title").value=ev.title||""; $("#e-desc").value=ev.description||"";
+    $("#e-host").value=ev.host||""; $("#e-loc").value=ev.location||""; $("#e-start").value=toLocal(ev.starts_at); $("#e-end").value=toLocal(ev.ends_at);
+    $("#e-cap").value=ev.capacity||""; $("#e-status").value=ev.status||"published"; $("#ev-formtitle").textContent="Edit event"; window.scrollTo({top:0,behavior:"smooth"}); }
+
+  let myRegs=new Set();
+  async function load(){
+    const [{data:evs},{data:regs}] = await Promise.all([
+      sb.from("events").select("*").order("starts_at",{ascending:true}),
+      sb.from("event_registrations").select("event_id").eq("user_id",me.id)
+    ]);
+    myRegs=new Set((regs||[]).map(r=>r.event_id));
+    const now=Date.now();
+    const up=(evs||[]).filter(e=>!e.starts_at || new Date(e.starts_at).getTime()>=now-3600e3);
+    const past=(evs||[]).filter(e=>e.starts_at && new Date(e.starts_at).getTime()<now-3600e3).reverse();
+    $("#upcoming").innerHTML = up.length? up.map(card).join("") : '<div class="empty">No upcoming events yet.</div>';
+    $("#past").innerHTML = past.length? past.map(e=>card(e,true)).join("") : '<div class="empty">No past events.</div>';
+    document.querySelectorAll("[data-reg]").forEach(b=>b.addEventListener("click",()=>toggleReg(b.dataset.reg)));
+    document.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>editEvent((evs||[]).find(x=>x.id===b.dataset.edit))));
+    document.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",async()=>{ if(!confirm("Delete this event?"))return; await sb.from("events").delete().eq("id",b.dataset.del); load(); }));
+  }
+  function card(e, isPast){
+    const w=e.starts_at?dParts(e.starts_at):{day:'—',mon:'',time:'Time TBA'};
+    const reg=myRegs.has(e.id);
+    const joinable=e.location && (!isPast);
+    return `<div class="ev">
+      <div class="when"><b>${w.day}</b><span>${esc(w.mon)}</span></div>
+      <div class="body">
+        <span class="ev-tag ${e.kind==='coaching'?'ev-coaching':'ev-webinar'}">${e.kind==='coaching'?'Coaching':'Webinar'}</span>
+        ${e.status==='draft'?'<span class="ev-tag" style="background:#fdecec;color:#8a1f1f">Draft</span>':''}
+        <h3>${esc(e.title)}</h3>
+        <div class="small-link">${esc(w.time)}${e.host?' · '+esc(e.host):''}</div>
+        ${e.description?`<p style="margin:8px 0;color:var(--muted)">${esc(e.description)}</p>`:''}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          ${joinable?`<a class="btn" href="${esc(e.location)}" target="_self" rel="noopener">Join</a>`:''}
+          ${!isPast?`<button class="btn outline" data-reg="${e.id}">${reg?'✓ Registered':'Register'}</button>`:''}
+          ${isAdmin?`<button class="chip-btn" data-edit="${e.id}">Edit</button><button class="chip-btn" data-del="${e.id}">Delete</button>`:''}
+        </div>
+      </div></div>`;
+  }
+  async function toggleReg(id){
+    if(myRegs.has(id)){ await sb.from("event_registrations").delete().eq("event_id",id).eq("user_id",me.id); }
+    else { await sb.from("event_registrations").insert({event_id:id,user_id:me.id}); }
+    load();
+  }
+  load();
+})();
+</script>
+</body>
+</html>

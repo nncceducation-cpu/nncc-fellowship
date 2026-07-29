@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teaching Assistant, Harvey Sarnat NNCC Fellowship</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="portal.css">
+<link rel="icon" href="favicon.ico" sizes="any">
+<style>
+  .chat{max-width:820px;margin:0 auto;display:flex;flex-direction:column;height:calc(100vh - 200px);min-height:420px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:var(--shadow);overflow:hidden}
+  .chat-log{flex:1;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:14px}
+  .bub{max-width:82%;padding:11px 15px;border-radius:14px;line-height:1.55;font-size:15px;white-space:pre-wrap}
+  .bub.user{align-self:flex-end;background:var(--navy);color:#fff;border-bottom-right-radius:4px}
+  .bub.ai{align-self:flex-start;background:var(--bg-soft);color:var(--ink);border-bottom-left-radius:4px}
+  .bub.ai b{color:var(--navy)}
+  .chat-in{display:flex;gap:10px;padding:14px;border-top:1px solid var(--line);background:#fff}
+  .chat-in textarea{flex:1;resize:none;border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;font:inherit;font-size:15px;max-height:120px}
+  .starter{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 13px;font-size:13px;cursor:pointer;color:var(--navy)}
+  .starter:hover{border-color:var(--teal);color:var(--teal-600)}
+</style>
+</head>
+<body>
+<header class="topbar"><div class="container">
+  <a class="brand" href="portal.html"><img class="mark" src="logo-nncc.png" alt="NNCC" style="border-radius:50%;object-fit:cover;background:none;padding:0">
+    <span class="brand-text"><b>Harvey Sarnat NNCC Fellowship</b><span>Teaching Assistant</span></span></a>
+  <nav class="nav"><a href="portal.html">Portal</a><a href="learning.html">Courses</a><a href="assistant.html" class="active">Assistant</a><span class="user-chip" id="user-chip"></span></nav>
+</div></header>
+<main class="portal-wrap"><div class="container">
+  <div class="p-head"><h1>Teaching Assistant</h1><p>Ask questions about the NNCC curriculum and get help understanding the material. Powered by AI, always verify against primary sources.</p></div>
+  <div class="chat">
+    <div class="chat-log" id="log"></div>
+    <div style="padding:10px 14px 0;display:flex;gap:8px;flex-wrap:wrap" id="starters"></div>
+    <div class="chat-in"><textarea id="q" rows="1" placeholder="Ask about a topic, e.g. 'Explain aEEG background patterns'"></textarea><button class="btn" id="send">Send</button></div>
+  </div>
+</div></main>
+<script src="portal-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="portal-auth.js"></script>
+<script src="portal-shell.js"></script>
+<script>
+(async function(){
+  const me=await NNCC.requireAuth(); if(!me) return;
+  NNCC.mountUserChip(document.getElementById("user-chip"));
+  const sb=NNCC.client, $=(s)=>document.querySelector(s), cfg=window.PORTAL_CONFIG||window.NNCC_CONFIG||{};
+  const esc=(s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmt=(s)=>esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');
+  const log=$("#log"); let history=[];
+  function add(role,text){ const d=document.createElement("div"); d.className="bub "+(role==='user'?'user':'ai'); d.innerHTML=role==='user'?esc(text):fmt(text); log.appendChild(d); log.scrollTop=log.scrollHeight; return d; }
+  add("ai","Hi! I'm your teaching assistant for the Harvey Sarnat NNCC Fellowship. Ask me to explain a concept, summarise a module, or quiz you on a topic.");
+  const starters=["Explain the Sarnat staging of HIE","What are the key aEEG background patterns?","Summarise cranial ultrasound for IVH grading","Give me 3 quiz questions on neonatal seizures"];
+  $("#starters").innerHTML=starters.map(s=>`<button class="starter">${esc(s)}</button>`).join("");
+  document.querySelectorAll(".starter").forEach(b=>b.addEventListener("click",()=>{ $("#q").value=b.textContent; send(); }));
+
+  async function send(){
+    const q=$("#q").value.trim(); if(!q) return; $("#q").value="";
+    add("user",q); history.push({role:"user",content:q});
+    const thinking=add("ai","…"); const btn=$("#send"); btn.disabled=true;
+    try{
+      const { data:s }=await sb.auth.getSession(); const token=s&&s.session&&s.session.access_token;
+      const r=await fetch(`${cfg.SUPABASE_URL}/functions/v1/ai-assistant`,{ method:"POST",
+        headers:{ "Content-Type":"application/json", apikey:cfg.SUPABASE_ANON_KEY, Authorization:"Bearer "+token },
+        body:JSON.stringify({ messages:history }) });
+      const b=await r.json().catch(()=>({}));
+      const reply=b.reply||b.error||"Sorry, I couldn't answer that.";
+      thinking.innerHTML=fmt(reply); history.push({role:"assistant",content:reply});
+    }catch(e){ thinking.innerHTML="Network error: "+esc(e.message); }
+    btn.disabled=false; log.scrollTop=log.scrollHeight;
+  }
+  $("#send").addEventListener("click", send);
+  $("#q").addEventListener("keydown",(e)=>{ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); send(); } });
+})();
+</script>
+</body>
+</html>

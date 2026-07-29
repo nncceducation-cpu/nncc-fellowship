@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Course Catalog — Harvey Sarnat NNCC Fellowship</title>
+<meta name="description" content="Browse the neonatal neuro-critical care courses offered through the Harvey Sarnat NNCC Fellowship portal.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="favicon.ico" sizes="any">
+<style>
+  .cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;margin:26px 0}
+  .cat-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:var(--shadow);display:flex;flex-direction:column}
+  .cat-card h3{font-family:var(--font-serif);color:var(--navy);margin:0 0 8px}
+  .cat-card p{color:var(--muted);font-size:14.5px;line-height:1.55;flex:1}
+  .cat-hero{background:linear-gradient(160deg,var(--navy),var(--navy-700) 60%,var(--teal-600));color:#fff;text-align:center;padding:56px 20px}
+  .cat-hero h1{color:#fff;font-family:var(--font-serif);font-size:clamp(26px,4vw,40px);margin:0 0 10px}
+  .cat-hero p{color:#dbe8f4;max-width:60ch;margin:0 auto}
+</style>
+</head>
+<body>
+<header class="topbar"><div class="container">
+  <a class="brand" href="index.html"><img class="mark" src="logo-nncc.png" alt="NNCC" style="border-radius:50%;object-fit:cover;background:none;padding:0">
+    <span class="brand-text"><b>Harvey Sarnat NNCC Fellowship</b><span>University of Calgary</span></span></a>
+  <nav class="nav"><a href="index.html">Home</a><a href="fellowship.html">Program</a><a href="catalog.html" class="active">Catalog</a><a href="login.html" class="btn">Sign in</a></nav>
+</div></header>
+<section class="cat-hero"><div class="container">
+  <h1>Course Catalog</h1>
+  <p>The neonatal neuro-critical care curriculum. Sign in to your member portal to enrol and start learning.</p>
+</div></section>
+<main class="portal-wrap"><div class="container">
+  <div id="cat"><div class="empty">Loading catalog…</div></div>
+</div></main>
+<footer class="footer"><div class="container"><div class="bottom">
+  <span>© 2026 Calgary Newborn Neuro-Intensive Care Program · University of Calgary</span>
+  <span><a href="login.html">Member sign in</a></span>
+</div></div></footer>
+<script src="portal-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(async function(){
+  const cfg=window.PORTAL_CONFIG||window.NNCC_CONFIG||{};
+  const esc=(s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const el=document.getElementById("cat");
+  if(!cfg.SUPABASE_URL){ el.innerHTML='<div class="empty">Catalog is not available right now.</div>'; return; }
+  const sb=window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+  const { data, error }=await sb.rpc("public_catalog");
+  if(error){ el.innerHTML='<div class="empty">Catalog is currently private. Please sign in.</div>'; return; }
+  if(!data || !data.length){ el.innerHTML='<div class="empty">No courses are published in the public catalog yet.</div>'; return; }
+  el.innerHTML='<div class="cat-grid">'+data.map(c=>`<div class="cat-card"><h3>${esc(c.title)}</h3>
+    <p>${esc(c.description||'A course in the NNCC curriculum.')}</p>
+    <a class="btn" style="margin-top:14px;align-self:flex-start" href="login.html">Sign in to enrol</a></div>`).join('')+'</div>';
+})();
+</script>
+</body>
+</html>
