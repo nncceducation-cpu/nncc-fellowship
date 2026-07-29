@@ -140,6 +140,7 @@
           <div class="field"><label>Password (optional)</label><input id="am-pass" placeholder="blank = auto-generate"></div>
           ${cpFields("am")}
           ${accessBoxes("am")}
+          <div class="field" style="grid-column:1/-1"><label style="font-weight:500"><input type="checkbox" id="am-welcome" checked> Send a welcome email (sign-in link + instructions, from Dr. Khorshid Mohammad)</label></div>
           <button class="btn" id="am-go">Add member</button>
         </div>
       </section>
@@ -163,6 +164,7 @@
           <div class="field" style="margin-top:8px"><label>Also enrol every imported user in these courses</label>
             <div class="checklist" id="imp-courses"></div></div>
           <label style="display:block;margin-top:8px;font-size:13.5px;font-weight:500"><input type="checkbox" id="imp-auto"> Also try to auto-enrol from the "modules interested" column (matched to course titles)</label>
+          <label style="display:block;margin-top:8px;font-size:13.5px;font-weight:500"><input type="checkbox" id="imp-welcome" checked> Email each new member a welcome message with a sign-in link (from Dr. Khorshid Mohammad)</label>
           <button class="btn" id="imp-go" style="margin-top:12px">Import users</button>
         </div>
       </section>
@@ -207,10 +209,12 @@
     try{
       const r=await NNCC.addMember(name,email,pass);
       try{ await setAccess(email,null,acc,null,amCountry,amProf); }catch(_){}
+      let welcomeNote="";
+      if($("#am-welcome") && $("#am-welcome").checked){ const w=await welcomeEmail(email,name); welcomeNote = (w&&w.ok&&w.sent) ? '<br><span class="small-link">✓ Welcome email sent.</span>' : '<br><span class="small-link">Welcome email not sent'+((w&&w.error)?' ('+esc(w.error)+')':'')+'. Configure Resend to enable emails.</span>'; }
       const cred = r.password
         ? `Auto-generated password: <b>${esc(r.password)}</b>, share it now; it won't be shown again.`
         : `They can sign in with the password you set.`;
-      const msg=`<div class="msg ok">✓ Created <b>${esc(email)}</b>. ${cred}<br><span class="small-link">They can also use “Forgot password” on the login page to reset it.</span></div>`;
+      const msg=`<div class="msg ok">✓ Created <b>${esc(email)}</b>. ${cred}<br><span class="small-link">They can also use “Forgot password” on the login page to reset it.</span>${welcomeNote}</div>`;
       await loadCore(); renderMembers();
       $("#add-msg").innerHTML=msg;   // re-set after re-render so the credential stays visible
     }catch(e){ $("#add-msg").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; }
@@ -278,7 +282,8 @@
     if(!records || !records.length) return;
     const mode=$("#imp-mode").value, acc=readBoxes("imp"), auto=$("#imp-auto").checked;
     const chosen=[...document.querySelectorAll(".imp-c:checked")].map(c=>c.value);
-    const go=$("#imp-go"); go.disabled=true; let ok=0; const fails=[], creds=[];
+    const doWelcome=$("#imp-welcome") && $("#imp-welcome").checked;
+    const go=$("#imp-go"); go.disabled=true; let ok=0, emailed=0; const fails=[], creds=[];
     for(let n=0;n<records.length;n++){ const r=records[n];
       $("#imp-msg").innerHTML=`<span class="small-link">Importing ${n+1} / ${records.length}…</span>`;
       try{
@@ -292,10 +297,12 @@
         if(cids.length){ const { data:pr }=await sb.from("profiles").select("id").ilike("email",r.email).maybeSingle();
           if(pr&&pr.id) await sb.from("course_enrollments").upsert(cids.map(cid=>({course_id:cid,user_id:pr.id,enrolled_by:me.id})),{onConflict:"course_id,user_id"}); }
         ok++;
+        if(doWelcome && mode!=='invite'){ try{ const w=await welcomeEmail(r.email, r.name); if(w&&w.ok&&w.sent) emailed++; }catch(_){} }
       }catch(e){ fails.push(r.email+": "+(e.message||e)); }
     }
     go.disabled=false;
-    let html=`<div class="msg ${fails.length?'info':'ok'}">Imported ${ok} user(s).${fails.length?' Failed: '+fails.length:''}</div>`;
+    let html=`<div class="msg ${fails.length?'info':'ok'}">Imported ${ok} user(s).${doWelcome&&mode!=='invite'?' Welcome emails sent: '+emailed+'.':''}${fails.length?' Failed: '+fails.length:''}</div>`;
+    if(doWelcome && mode!=='invite' && ok>0 && emailed===0) html+=`<div class="small-link" style="margin-top:6px">No welcome emails went out. This usually means email (Resend) is not configured yet — accounts were still created.</div>`;
     if(fails.length) html+=`<div class="small-link" style="margin-top:6px">${fails.slice(0,10).map(esc).join('<br>')}</div>`;
     if(creds.length){ const blobUrl=URL.createObjectURL(new Blob([["Email,Name,Password"].concat(creds.map(c=>c.map(x=>/[",]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x).join(","))).join("\n")],{type:"text/csv"}));
       html+=`<p style="margin-top:8px"><a class="btn outline" href="${blobUrl}" download="imported-credentials.csv">⬇ Download logins (${creds.length})</a> <span class="small-link">Share each person's password with them.</span></p>`; }
@@ -325,12 +332,32 @@
       body:JSON.stringify({ email, redirectTo: location.origin+"/portal.html" }) });
     const b=await r.json().catch(()=>({})); if(!r.ok || !b.link) throw new Error(b.error||"Could not create a sign-in link."); return b.link;
   }
-  async function sendEmailTo(subject, htmlBody, recipients){
-    const cfg=window.PORTAL_CONFIG||{}; const { data:s }=await sb.auth.getSession(); const token=s&&s.session&&s.session.access_token;
+  async function sendEmailTo(subject, htmlBody, recipients, opts){
+    opts=opts||{}; const cfg=window.PORTAL_CONFIG||{}; const { data:s }=await sb.auth.getSession(); const token=s&&s.session&&s.session.access_token;
     const r=await fetch(`${cfg.SUPABASE_URL}/functions/v1/send-email`,{ method:"POST",
       headers:{ "Content-Type":"application/json", apikey:cfg.SUPABASE_ANON_KEY, Authorization:"Bearer "+token },
-      body:JSON.stringify({ subject, body:htmlBody, recipients }) });
+      body:JSON.stringify({ subject, body:htmlBody, recipients, fromName:opts.fromName, replyTo:opts.replyTo }) });
     return await r.json().catch(()=>({}));
+  }
+  // Automatic welcome email (sign-in link + instructions) from Dr. Khorshid Mohammad
+  let __supportEmail=null;
+  async function welcomeEmail(email, name){
+    if(!email) return {error:"no email"};
+    try{
+      if(__supportEmail===null){ try{ const { data:st }=await sb.from("site_settings").select("support_email,reply_to_email").eq("id",1).maybeSingle(); __supportEmail=(st&&(st.support_email||st.reply_to_email))||""; }catch(_){ __supportEmail=""; } }
+      const link=await getSigninLink(email);
+      const first=((name||"").trim().split(/\s+/)[0])||"there";
+      const html='Dear '+esc(first)+',<br><br>'+
+        'Welcome to the <b>Harvey Sarnat Neonatal Neuro-Critical Care Fellowship</b> education portal. Your account is ready and you have been enrolled in your course(s).<br><br>'+
+        '<b>Getting started</b><br>'+
+        '1. Click the button below to sign in — no password needed the first time.<br>'+
+        '2. Once inside, you can set a password from your account, or keep using sign-in links.<br>'+
+        '3. Open the <b>Courses</b> area to begin your modules.<br><br>'+
+        '<a href="'+link+'" style="background:#0f8a8a;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;display:inline-block;font-weight:600">Sign in to the portal</a><br><br>'+
+        'This sign-in link expires within the hour. If it does, use “Forgot password” on the sign-in page, or simply reply to this email and we will send you a new one.<br><br>'+
+        'Warm regards,<br><b>Dr. Khorshid Mohammad</b><br><span style="color:#54616e">Program Director, Harvey Sarnat NNCC Fellowship</span>';
+      return await sendEmailTo("Welcome to the Harvey Sarnat NNCC Fellowship portal", html, [{email}], { fromName:"Dr. Khorshid Mohammad", replyTo:__supportEmail||undefined });
+    }catch(e){ return {error:String(e&&e.message||e)}; }
   }
   async function expressSignin(email, btn){   // copy link to clipboard
     if(!email){ flash("This member has no email on file.","err"); return; }
