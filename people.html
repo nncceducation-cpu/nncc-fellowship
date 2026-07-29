@@ -148,6 +148,22 @@
         <div class="inline-form" style="margin-top:10px">${accessBoxes("inv")}</div>
         <button class="btn" id="bulk-go" style="margin-top:10px">Send invites</button>
       </section>
+      <section class="panel"><h2>Import users from a file (bulk)</h2>
+        <p class="sub">Upload a spreadsheet (CSV) with columns <b>Email, First Name, Last Name</b> and optionally a "modules interested" column. We create each account and can enrol everyone in the courses you choose. <a href="#" id="imp-tpl" class="small-link">Download the template</a>.</p>
+        <div id="imp-msg"></div>
+        <input type="file" id="imp-file" accept=".csv,.tsv,.txt">
+        <div id="imp-preview" style="margin-top:12px"></div>
+        <div id="imp-opts" style="display:none;margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
+          <div class="field" style="max-width:420px"><label>How to create accounts</label>
+            <select id="imp-mode"><option value="create">Create accounts with auto-generated passwords</option>
+              <option value="invite">Send email invites (each person sets their own password)</option></select></div>
+          <div class="inline-form" style="margin-top:6px">${accessBoxes("imp")}</div>
+          <div class="field" style="margin-top:8px"><label>Also enrol every imported user in these courses</label>
+            <div class="checklist" id="imp-courses"></div></div>
+          <label style="display:block;margin-top:8px;font-size:13.5px;font-weight:500"><input type="checkbox" id="imp-auto"> Also try to auto-enrol from the "modules interested" column (matched to course titles)</label>
+          <button class="btn" id="imp-go" style="margin-top:12px">Import users</button>
+        </div>
+      </section>
       <section class="panel"><div style="display:flex;justify-content:space-between;align-items:center"><h2>Members (${S.members.length})</h2>
         <button class="chip-btn" id="exp-members">⬇ Export CSV</button></div>
         <table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Enrollments</th><th>Lessons done</th><th>Actions</th></tr></thead>
@@ -155,6 +171,7 @@
     $("#bulk-go").addEventListener("click", bulkInvite);
     $("#am-go").addEventListener("click", addMemberDirect);
     fillCP("am");
+    setupImport();
     $("#exp-members").addEventListener("click", ()=>downloadCSV("members.csv",
       [["Name","Email","Role","Status","Enrollments","Lessons done","Joined"],
        ...S.members.map(m=>[m.full_name,m.email,m.role,m.status,m.enrollments,m.lessons_done,new Date(m.created_at).toISOString().slice(0,10)])]));
@@ -208,6 +225,81 @@
     $("#inv-msg").innerHTML=`<div class="msg ${fail.length?'info':'ok'}">Invited ${ok}. ${fail.length?('Failed: '+esc(fail.join("; "))):''}</div>`;
     $("#bulk").value=""; await loadCore(); renderMembers();
   }
+  // ---------- Bulk CSV import ----------
+  function parseCSV(text){
+    text=String(text).replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+    const first=text.split("\n")[0]||""; const delim=(first.indexOf("\t")>=0 && first.indexOf(",")<0)?"\t":",";
+    const rows=[]; let i=0, field="", row=[], inq=false;
+    while(i<text.length){ const c=text[i];
+      if(inq){ if(c==='"'){ if(text[i+1]==='"'){field+='"';i+=2;continue;} inq=false;i++;continue;} field+=c;i++;continue; }
+      if(c==='"'){ inq=true;i++;continue; }
+      if(c===delim){ row.push(field);field="";i++;continue; }
+      if(c==="\n"){ row.push(field);field="";rows.push(row);row=[];i++;continue; }
+      field+=c;i++; }
+    if(field.length||row.length){ row.push(field); rows.push(row); }
+    if(!rows.length) return {records:[]};
+    const headers=rows[0].map(h=>String(h||"").trim());
+    const col=(...keys)=>headers.findIndex(h=>keys.some(k=>h.toLowerCase().includes(k)));
+    const ei=col("email"), fi=col("first"), li=col("last"), ni=col("full name","name"), mi=col("module","interest","course");
+    const records=rows.slice(1).filter(r=>r.some(x=>x&&String(x).trim())).map(r=>{
+      const g=(idx)=>idx>=0?String(r[idx]||"").trim():"";
+      const full=g(ni) || (g(fi)+" "+g(li)).trim();
+      return { email:g(ei), name:full, modules:g(mi) };
+    }).filter(x=>x.email);
+    return { records };
+  }
+  function setupImport(){
+    const box=$("#imp-courses"); if(box) box.innerHTML=S.courses.map(c=>`<label><input type="checkbox" class="imp-c" value="${c.id}"> ${esc(c.title)}</label>`).join("")||'<span class="small-link">No courses yet.</span>';
+    const tpl=$("#imp-tpl"); if(tpl) tpl.addEventListener("click",(e)=>{ e.preventDefault();
+      downloadCSV("users-import-template.csv",[["Email","First Name","Last Name","Please indicate modules you are interested in"],["jane@example.com","Jane","Smith","Fetal Monitoring; Neonatal Brain MRI"]]); });
+    let parsed={records:[]};
+    const file=$("#imp-file");
+    if(file) file.addEventListener("change", async ()=>{ const f=file.files[0]; if(!f){ return; }
+      try{ parsed=parseCSV(await f.text()); }catch(err){ $("#imp-msg").innerHTML='<div class="msg err">Could not read that file.</div>'; return; }
+      const recs=parsed.records;
+      if(!recs.length){ $("#imp-preview").innerHTML='<div class="msg err">No rows with an email were found. Check the file has an <b>Email</b> column.</div>'; $("#imp-opts").style.display="none"; return; }
+      $("#imp-preview").innerHTML='<div class="msg ok">Found '+recs.length+' user(s).</div><table class="tbl"><thead><tr><th>Email</th><th>Name</th><th>Modules interested</th></tr></thead><tbody>'+
+        recs.slice(0,6).map(r=>`<tr><td>${esc(r.email)}</td><td>${esc(r.name||'—')}</td><td>${esc(r.modules||'—')}</td></tr>`).join("")+
+        (recs.length>6?`<tr><td colspan="3" class="small-link">…and ${recs.length-6} more</td></tr>`:'')+'</tbody></table>';
+      $("#imp-opts").style.display="block"; $("#imp-go").textContent="Import "+recs.length+" user(s)";
+    });
+    const go=$("#imp-go"); if(go) go.addEventListener("click", ()=>runImport(parsed.records));
+  }
+  function matchCourses(modulesText){
+    if(!modulesText) return [];
+    const toks=modulesText.split(/[;,\/|]+/).map(s=>s.trim().toLowerCase()).filter(Boolean);
+    const ids=[];
+    S.courses.forEach(c=>{ const t=(c.title||"").toLowerCase(); if(toks.some(tk=>tk.length>3 && (t.includes(tk)||tk.includes(t)))) ids.push(c.id); });
+    return ids;
+  }
+  async function runImport(records){
+    if(!records || !records.length) return;
+    const mode=$("#imp-mode").value, acc=readBoxes("imp"), auto=$("#imp-auto").checked;
+    const chosen=[...document.querySelectorAll(".imp-c:checked")].map(c=>c.value);
+    const go=$("#imp-go"); go.disabled=true; let ok=0; const fails=[], creds=[];
+    for(let n=0;n<records.length;n++){ const r=records[n];
+      $("#imp-msg").innerHTML=`<span class="small-link">Importing ${n+1} / ${records.length}…</span>`;
+      try{
+        if(mode==='invite'){ await NNCC.inviteMember(r.name, r.email); }
+        else { const res=await NNCC.addMember(r.name, r.email); if(res&&res.password) creds.push([r.email, r.name, res.password]); }
+        try{ await setAccess(r.email,null,acc); }catch(_){}
+        if(r.modules){ try{ await sb.from("profiles").update({interests:r.modules}).ilike("email",r.email); }catch(_){} }
+        // enrol
+        let cids=[...chosen]; if(auto) cids=cids.concat(matchCourses(r.modules));
+        cids=[...new Set(cids)];
+        if(cids.length){ const { data:pr }=await sb.from("profiles").select("id").ilike("email",r.email).maybeSingle();
+          if(pr&&pr.id) await sb.from("course_enrollments").upsert(cids.map(cid=>({course_id:cid,user_id:pr.id,enrolled_by:me.id})),{onConflict:"course_id,user_id"}); }
+        ok++;
+      }catch(e){ fails.push(r.email+": "+(e.message||e)); }
+    }
+    go.disabled=false;
+    let html=`<div class="msg ${fails.length?'info':'ok'}">Imported ${ok} user(s).${fails.length?' Failed: '+fails.length:''}</div>`;
+    if(fails.length) html+=`<div class="small-link" style="margin-top:6px">${fails.slice(0,10).map(esc).join('<br>')}</div>`;
+    if(creds.length){ const blobUrl=URL.createObjectURL(new Blob([["Email,Name,Password"].concat(creds.map(c=>c.map(x=>/[",]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x).join(","))).join("\n")],{type:"text/csv"}));
+      html+=`<p style="margin-top:8px"><a class="btn outline" href="${blobUrl}" download="imported-credentials.csv">⬇ Download logins (${creds.length})</a> <span class="small-link">Share each person's password with them.</span></p>`; }
+    $("#imp-msg").innerHTML=html; await loadCore(); renderMembers();
+  }
+
   async function membersActions(e){
     const opener=e.target.closest("[data-open]"); if(opener){ e.preventDefault(); return openUser(opener.dataset.open); }
     const b=e.target.closest("button"); if(!b) return; const id=b.dataset;
