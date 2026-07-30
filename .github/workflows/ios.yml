@@ -14,9 +14,16 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+
+      - name: Use the newest installed Xcode (iOS 26 SDK)
+        run: |
+          LATEST=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Selecting $LATEST"
+          sudo xcode-select -s "$LATEST/Contents/Developer"
+          xcodebuild -version
 
       - uses: actions/setup-node@v4
         with:
@@ -66,7 +73,6 @@ jobs:
           </dict></plist>
           PLIST
 
-          # Archive WITHOUT signing (avoids needing a development profile / registered devices).
           xcodebuild -workspace App.xcworkspace -scheme App \
             -configuration Release -archivePath "$RUNNER_TEMP/App.xcarchive" \
             -destination 'generic/platform=iOS' \
@@ -74,7 +80,6 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             clean archive
 
-          # Export + sign for the App Store using the API key (creates the distribution profile).
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
             -exportOptionsPlist ExportOptions.plist \
