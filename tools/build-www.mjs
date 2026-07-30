@@ -1,6 +1,6 @@
 /* Assemble the web bundle Capacitor ships as the native app.
    Copies the portal's HTML/CSS/JS/images into www/. The native app's
-   index.html is replaced with a launcher that opens the member login,
+   index.html is replaced with a launcher that opens the app home screen,
    so the app opens to the app - NOT the public marketing website. */
 import { readdirSync, mkdirSync, copyFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join, extname } from "node:path";
@@ -31,12 +31,12 @@ for (const name of readdirSync(".")) {
 
 // The real marketing homepage was copied as index.html; in the APP we don't
 // want the public website. Replace the app's entry point with a launcher that
-// jumps straight to the member sign-in (which itself forwards to the portal
-// if already signed in). The website's own index.html is untouched.
+// jumps straight to the app home screen (home.html), which shows the member
+// menu and routes to sign-in on tap. The website's own index.html is untouched.
 const LAUNCH = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">' +
   '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">' +
   '<title>NNCC Portal</title><style>html,body{margin:0;height:100%;background:#0c2a4d}</style>' +
-  '<script>location.replace("login.html");</script></head><body></body></html>';
+  '<script>location.replace("home.html");</script></head><body></body></html>';
 writeFileSync(join(OUT, "index.html"), LAUNCH);
 
 console.log(`build-www: copied ${n} files into ${OUT}/ (+ app launcher index.html)`);
