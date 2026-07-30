@@ -48,7 +48,7 @@ jobs:
           mkdir -p ~/private_keys
           echo "$ASC_KEY_P8_BASE64" | base64 -d > ~/private_keys/AuthKey_${ASC_KEY_ID}.p8
 
-      - name: Archive & export signed IPA (automatic signing)
+      - name: Archive (unsigned) & export signed IPA for App Store
         working-directory: ios/App
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -66,16 +66,15 @@ jobs:
           </dict></plist>
           PLIST
 
+          # Archive WITHOUT signing (avoids needing a development profile / registered devices).
           xcodebuild -workspace App.xcworkspace -scheme App \
             -configuration Release -archivePath "$RUNNER_TEMP/App.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            -authenticationKeyPath ~/private_keys/AuthKey_${ASC_KEY_ID}.p8 \
+            -destination 'generic/platform=iOS' \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-            CODE_SIGN_STYLE=Automatic \
+            CODE_SIGNING_ALLOWED=NO \
             clean archive
 
+          # Export + sign for the App Store using the API key (creates the distribution profile).
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
             -exportOptionsPlist ExportOptions.plist \
