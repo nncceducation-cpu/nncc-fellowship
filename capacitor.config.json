@@ -3,7 +3,7 @@
   "appName": "NNCC Portal",
   "webDir": "www",
   "backgroundColor": "#ffffff",
-  "server": { "androidScheme": "https", "iosScheme": "https", "hostname": "app.sarnatnncc.ca" },
+  "server": { "androidScheme": "https", "iosScheme": "https" },
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 900,
