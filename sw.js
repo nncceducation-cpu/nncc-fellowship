@@ -1,6 +1,6 @@
 /* NNCC Portal service worker — offline shell + fast static assets.
    Bump CACHE_VERSION on every release so clients pick up new files. */
-const CACHE_VERSION = "nncc-v1";
+const CACHE_VERSION = "nncc-v2";
 const SHELL = [
   "login.html", "portal.html", "learning.html", "events.html", "forum.html",
   "assistant.html", "certificate.html",
@@ -28,16 +28,11 @@ self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-
-  // Never intercept Supabase / auth / API or cross-origin video players.
   if (url.origin !== self.location.origin) return;
   if (url.pathname.includes("/functions/") || url.pathname.includes("/rest/") ||
       url.pathname.includes("/auth/")) return;
-
   const isHTML = req.mode === "navigate" || req.headers.get("accept")?.includes("text/html");
-
   if (isHTML) {
-    // Network-first for pages so members always get the latest shell.
     e.respondWith(
       fetch(req).then((res) => {
         const copy = res.clone();
@@ -47,8 +42,6 @@ self.addEventListener("fetch", (e) => {
     );
     return;
   }
-
-  // Cache-first for static assets (css/js/images/fonts).
   e.respondWith(
     caches.match(req).then((hit) => hit || fetch(req).then((res) => {
       if (res.ok && (res.type === "basic")) {

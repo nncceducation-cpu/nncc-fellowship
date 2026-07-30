@@ -3,16 +3,13 @@
    Loaded on every portal page after portal.css.
    ===================================================================== */
 
-/* Respect notches / home indicator on iOS + Android gesture bars. */
 :root { --safe-top: env(safe-area-inset-top, 0px);
         --safe-bottom: env(safe-area-inset-bottom, 0px); }
 
-/* Native app: give the fixed top bar room under the status bar. */
 html.is-native .topbar { padding-top: var(--safe-top); }
 html.is-native body { -webkit-user-select: none; user-select: none; }
 html.is-native input, html.is-native textarea, html.is-native select,
 html.is-native .lesson-text, html.is-native [contenteditable] { -webkit-user-select: text; user-select: text; }
-/* Kill the pull-to-refresh bounce / horizontal drift inside the app. */
 html.is-native, html.is-native body { overscroll-behavior-y: contain; }
 
 /* ---- Bottom tab bar (mobile only) --------------------------------- */
@@ -35,27 +32,46 @@ html.is-native, html.is-native body { overscroll-behavior-y: contain; }
   .tabbar .tab.active { color: var(--teal-600, #0c7373); }
   .tabbar .tab:active { background: var(--navy-50); }
 
-  /* Make space so content isn't hidden behind the bar. */
   body.has-tabbar { padding-bottom: calc(64px + var(--safe-bottom)); }
   body.has-tabbar.has-rail { padding-left: 0; }
 
-  /* The desktop hamburger rail is redundant with the tab bar on phones
-     for the four core areas, but keep it for admin/extra links. */
   .rail-toggle { top: calc(10px + var(--safe-top)); }
 
-  /* Bigger, thumb-friendly controls. */
   .btn, .btn.block { min-height: 46px; }
-  input, select, textarea { font-size: 16px; } /* stops iOS zoom-on-focus */
+  input, select, textarea { font-size: 16px; }
   .p-card { padding: 18px; }
   .card-grid { grid-template-columns: 1fr; gap: 12px; }
   .container { padding-left: 16px; padding-right: 16px; }
-
-  /* Tables scroll instead of overflowing on small screens. */
   .tbl { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 }
 
-/* Keep embedded videos and PDFs fluid on any screen. */
 .video-embed { max-width: 100%; }
 @media (max-width: 620px) {
   .lesson-text iframe, .embed-wrap iframe { max-width: 100%; }
+}
+
+/* =====================================================================
+   APP CHROME — when running as the installed app (standalone PWA /
+   native shell), strip the website chrome so it feels like a simple,
+   focused app: no desktop side menu, no hamburger, no top nav links,
+   no links back to the marketing site. Just the header + bottom tabs.
+   The normal website (in a browser tab) is unaffected.
+   ===================================================================== */
+html.app-chrome .side-rail,
+html.app-chrome .rail-toggle { display: none !important; }
+html.app-chrome body.has-rail { padding-left: 0 !important; }
+
+/* Top bar: keep the brand + the user/sign-out chip, drop the text nav links */
+html.app-chrome .topbar .nav > a { display: none !important; }
+html.app-chrome .topbar { box-shadow: 0 1px 0 var(--line); }
+html.app-chrome .topbar .brand { pointer-events: none; }
+html.app-chrome .topbar .brand .brand-text span { display: none; } /* subtitle line */
+
+/* Login screen: hide the "back to the main site" links */
+html.app-chrome .small-link,
+html.app-chrome a[href="index.html"] { display: none !important; }
+
+/* A touch more breathing room now that the rail is gone */
+@media (max-width: 900px) {
+  html.app-chrome .portal-wrap .container { padding-top: 8px; }
 }
