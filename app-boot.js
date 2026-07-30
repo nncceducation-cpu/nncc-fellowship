@@ -1,21 +1,26 @@
 /* =====================================================================
    app-boot.js - mobile/native layer for the NNCC portal.
-   Include on every page (in <head>, defer). It:
-     - links the PWA manifest + theme color + iOS meta
-     - registers the service worker (web PWA only)
-     - flags the app as "installed" (standalone / native) so the CSS can
-       strip the website chrome for a simple, focused app experience
-     - adds a thumb-reachable bottom tab bar on member pages
+   Detects when running as the installed app (Capacitor native OR an
+   installed/standalone PWA) and flags <html class="app-chrome"> so the
+   CSS strips the website chrome. Also adds the bottom tab bar.
    ===================================================================== */
 (function () {
   var isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform &&
                     window.Capacitor.isNativePlatform());
-  var standalone = isNative ||
-                   (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
-                   window.navigator.standalone === true;
+
+  // Robust "is this the installed app?" test. Capacitor serves the bundle
+  // from capacitor://localhost (iOS) or https://localhost (Android), so the
+  // hostname/scheme is a reliable signal even before the Capacitor JS bridge
+  // has attached. Installed PWAs report display-mode: standalone.
+  var host = location.hostname;
+  var isApp = isNative ||
+              location.protocol === "capacitor:" ||
+              host === "localhost" || host === "127.0.0.1" || host === "" ||
+              (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+              window.navigator.standalone === true;
 
   document.documentElement.classList.add(isNative ? "is-native" : "is-web");
-  if (standalone) document.documentElement.classList.add("app-chrome");
+  if (isApp) document.documentElement.classList.add("app-chrome");
 
   function addHead() {
     var head = document.head;
@@ -60,9 +65,8 @@
     return "portal.html";
   }
 
-  // In installed-app mode, retarget/remove links that lead to the marketing site
   function simplifyChrome() {
-    if (!standalone) return;
+    if (!isApp) return;
     document.querySelectorAll('a[href="index.html"]').forEach(function (a) {
       if (a.classList.contains("brand")) { a.setAttribute("href", "portal.html"); }
       else { a.style.display = "none"; }
@@ -71,10 +75,8 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     simplifyChrome();
-
     var here = (location.pathname.split("/").pop() || "").toLowerCase();
     if (HIDE.indexOf(here) !== -1) return;
-
     var active = activeFor(here);
     var bar = document.createElement("nav");
     bar.className = "tabbar";
