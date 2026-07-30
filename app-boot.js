@@ -10,14 +10,15 @@
   var isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform &&
                     window.Capacitor.isNativePlatform());
 
-  // Robust "is this the installed app?" test. Capacitor serves the bundle
-  // from capacitor://localhost (iOS) or https://localhost (Android), so the
-  // hostname/scheme is a reliable signal even before the Capacitor JS bridge
-  // has attached. Installed PWAs report display-mode: standalone.
+  // Capacitor serves the bundle from capacitor://localhost (iOS) or
+  // https://localhost (Android). Detect the app by its ADDRESS, which is
+  // reliable even before the Capacitor JS bridge attaches.
   var host = location.hostname;
-  var isApp = isNative ||
-              location.protocol === "capacitor:" ||
-              host === "localhost" || host === "127.0.0.1" || host === "" ||
+  var appOrigin = isNative ||
+                  location.protocol === "capacitor:" ||
+                  host === "localhost" || host === "127.0.0.1" || host === "";
+
+  var isApp = appOrigin ||
               (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
               window.navigator.standalone === true;
 
@@ -50,14 +51,15 @@
     });
   }
 
-  // ---- Native-only: YouTube embeds error out (153) inside the app web view
-  //      because the app origin isn't a normal web origin. Re-point each embed
-  //      at a tiny player page hosted on the real site, so YouTube sees a
-  //      legitimate https://sarnatnncc.ca origin and plays INLINE. The website
-  //      and PWA are untouched (they already have a valid origin).
+  // ---- In the app, YouTube embeds error out (153) because the app origin
+  //      isn't a normal web origin. Re-point each embed at a tiny player page
+  //      hosted on the real site, so YouTube sees a legitimate
+  //      https://sarnatnncc.ca origin and plays INLINE. Guarded on the app
+  //      ADDRESS (not the JS bridge) so it always runs in the shell; the
+  //      public website is left untouched.
   var PLAYER = "https://sarnatnncc.ca/player.html?v=";
   function fixVideos() {
-    if (!isNative) return;
+    if (!appOrigin) return;
     var sel = 'iframe[src*="youtube.com"],iframe[src*="youtu.be"],iframe[src*="youtube-nocookie.com"]';
     var frames = document.querySelectorAll(sel);
     Array.prototype.forEach.call(frames, function (f) {
@@ -74,16 +76,18 @@
     });
   }
   function watchVideos() {
-    if (!isNative) return;
+    if (!appOrigin) return;
     fixVideos();
-    // Lesson content is injected asynchronously, so keep watching the DOM.
+    // Lesson content is injected asynchronously, so keep watching the DOM
+    // (plus a timed sweep as a belt-and-braces fallback).
     try {
       var mo = new MutationObserver(function () { fixVideos(); });
       mo.observe(document.documentElement, { childList: true, subtree: true });
-    } catch (e) {
-      var n = 0, t = setInterval(function () { fixVideos(); if (++n > 20) clearInterval(t); }, 500);
-    }
+    } catch (e) {}
+    var n = 0, t = setInterval(function () { fixVideos(); if (++n > 30) clearInterval(t); }, 400);
   }
+  if (document.readyState !== "loading") watchVideos();
+  else document.addEventListener("DOMContentLoaded", watchVideos);
 
   var TABS = [
     ["portal.html",   "M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z", "Home"],
@@ -111,7 +115,6 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
-    watchVideos();
     simplifyChrome();
     var here = (location.pathname.split("/").pop() || "").toLowerCase();
     if (HIDE.indexOf(here) !== -1) return;
