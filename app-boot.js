@@ -2,7 +2,9 @@
    app-boot.js - mobile/native layer for the NNCC portal.
    Detects when running as the installed app (Capacitor native OR an
    installed/standalone PWA) and flags <html class="app-chrome"> so the
-   CSS strips the website chrome. Also adds the bottom tab bar.
+   CSS strips the website chrome. Also adds the bottom tab bar and, inside
+   the native app, converts YouTube embeds to tap-to-open (embeds are
+   blocked in the app's web view -> "Error 153").
    ===================================================================== */
 (function () {
   var isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform &&
@@ -48,6 +50,36 @@
     });
   }
 
+  // ---- Native-only: YouTube embeds don't play inside the app web view
+  //      (config error 153). Swap each embed for a button that opens the
+  //      video in the YouTube app / browser. The website + PWA keep the
+  //      inline player, so this only runs in the native shell.
+  function fixVideos() {
+    if (!isNative) return;
+    var sel = 'iframe[src*="youtube.com"],iframe[src*="youtu.be"],iframe[src*="youtube-nocookie.com"]';
+    var frames = document.querySelectorAll(sel);
+    Array.prototype.forEach.call(frames, function (f) {
+      try {
+        var src = f.getAttribute("src") || "";
+        var m = src.match(/(?:embed\/|v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+        var url = m ? "https://www.youtube.com/watch?v=" + m[1] : src;
+        var a = document.createElement("a");
+        a.href = url; a.target = "_blank"; a.rel = "noopener";
+        a.setAttribute("aria-label", "Watch video on YouTube");
+        a.style.cssText = "display:flex;flex-direction:column;align-items:center;" +
+          "justify-content:center;gap:12px;width:100%;aspect-ratio:16/9;min-height:200px;" +
+          "background:#0c2a4d;color:#fff;border-radius:12px;text-decoration:none;" +
+          "font-family:Inter,-apple-system,sans-serif;box-sizing:border-box;padding:16px;";
+        a.innerHTML =
+          '<span style="width:64px;height:64px;border-radius:50%;background:#e11d2a;' +
+          'display:flex;align-items:center;justify-content:center;font-size:28px;line-height:1;">▶</span>' +
+          '<span style="font-size:15px;font-weight:600;">Watch video on YouTube</span>' +
+          '<span style="font-size:13px;opacity:.75;">Opens in the YouTube app</span>';
+        if (f.parentNode) f.parentNode.replaceChild(a, f);
+      } catch (e) {}
+    });
+  }
+
   var TABS = [
     ["portal.html",   "M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z", "Home"],
     ["learning.html", "M4 5h16v11H4zM2 19h20", "Courses"],
@@ -74,6 +106,7 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
+    fixVideos();
     simplifyChrome();
     var here = (location.pathname.split("/").pop() || "").toLowerCase();
     if (HIDE.indexOf(here) !== -1) return;
