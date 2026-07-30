@@ -3,8 +3,8 @@
    Detects when running as the installed app (Capacitor native OR an
    installed/standalone PWA) and flags <html class="app-chrome"> so the
    CSS strips the website chrome. Also adds the bottom tab bar and, inside
-   the native app, converts YouTube embeds to tap-to-open (embeds are
-   blocked in the app's web view -> "Error 153").
+   the native app, routes YouTube embeds through a hosted player page so
+   they play inline (the app's own origin is rejected by YouTube -> 153).
    ===================================================================== */
 (function () {
   var isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform &&
@@ -50,34 +50,39 @@
     });
   }
 
-  // ---- Native-only: YouTube embeds don't play inside the app web view
-  //      (config error 153). Swap each embed for a button that opens the
-  //      video in the YouTube app / browser. The website + PWA keep the
-  //      inline player, so this only runs in the native shell.
+  // ---- Native-only: YouTube embeds error out (153) inside the app web view
+  //      because the app origin isn't a normal web origin. Re-point each embed
+  //      at a tiny player page hosted on the real site, so YouTube sees a
+  //      legitimate https://sarnatnncc.ca origin and plays INLINE. The website
+  //      and PWA are untouched (they already have a valid origin).
+  var PLAYER = "https://sarnatnncc.ca/player.html?v=";
   function fixVideos() {
     if (!isNative) return;
     var sel = 'iframe[src*="youtube.com"],iframe[src*="youtu.be"],iframe[src*="youtube-nocookie.com"]';
     var frames = document.querySelectorAll(sel);
     Array.prototype.forEach.call(frames, function (f) {
+      if (f.getAttribute("data-nncc-video")) return;   // already handled
       try {
         var src = f.getAttribute("src") || "";
         var m = src.match(/(?:embed\/|v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
-        var url = m ? "https://www.youtube.com/watch?v=" + m[1] : src;
-        var a = document.createElement("a");
-        a.href = url; a.target = "_blank"; a.rel = "noopener";
-        a.setAttribute("aria-label", "Watch video on YouTube");
-        a.style.cssText = "display:flex;flex-direction:column;align-items:center;" +
-          "justify-content:center;gap:12px;width:100%;aspect-ratio:16/9;min-height:200px;" +
-          "background:#0c2a4d;color:#fff;border-radius:12px;text-decoration:none;" +
-          "font-family:Inter,-apple-system,sans-serif;box-sizing:border-box;padding:16px;";
-        a.innerHTML =
-          '<span style="width:64px;height:64px;border-radius:50%;background:#e11d2a;' +
-          'display:flex;align-items:center;justify-content:center;font-size:28px;line-height:1;">▶</span>' +
-          '<span style="font-size:15px;font-weight:600;">Watch video on YouTube</span>' +
-          '<span style="font-size:13px;opacity:.75;">Opens in the YouTube app</span>';
-        if (f.parentNode) f.parentNode.replaceChild(a, f);
+        if (!m) return;
+        f.setAttribute("data-nncc-video", "1");
+        f.setAttribute("allow", "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen");
+        f.setAttribute("allowfullscreen", "");
+        f.setAttribute("src", PLAYER + m[1]);
       } catch (e) {}
     });
+  }
+  function watchVideos() {
+    if (!isNative) return;
+    fixVideos();
+    // Lesson content is injected asynchronously, so keep watching the DOM.
+    try {
+      var mo = new MutationObserver(function () { fixVideos(); });
+      mo.observe(document.documentElement, { childList: true, subtree: true });
+    } catch (e) {
+      var n = 0, t = setInterval(function () { fixVideos(); if (++n > 20) clearInterval(t); }, 500);
+    }
   }
 
   var TABS = [
@@ -106,7 +111,7 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
-    fixVideos();
+    watchVideos();
     simplifyChrome();
     var here = (location.pathname.split("/").pop() || "").toLowerCase();
     if (HIDE.indexOf(here) !== -1) return;
