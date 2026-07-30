@@ -1,0 +1,17 @@
+{
+  "appId": "ca.sarnatnncc.portal",
+  "appName": "NNCC Portal",
+  "webDir": "www",
+  "backgroundColor": "#ffffff",
+  "server": { "androidScheme": "https", "iosScheme": "https" },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 900,
+      "backgroundColor": "#ffffff",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP"
+    }
+  },
+  "ios": { "contentInset": "always", "limitsNavigationsToAppBoundDomains": false },
+  "android": { "allowMixedContent": false }
+}
