@@ -628,5 +628,43 @@
   await loadCourses(); renderCourse();
 })();
 </script>
+<!-- ============================================================
+     DRAG-AND-DROP REORDERING for chapters and lessons (additive).
+     Drag a lesson or chapter by its  ⋮⋮  handle to reorder;
+     the new order saves to sort_order in Supabase automatically.
+     ============================================================ -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+<style>
+  .dnd-h,.dnd-ch{cursor:grab;color:#9aa6b2;font-weight:700;user-select:none;padding:0 4px;line-height:1}
+  .dnd-h:active,.dnd-ch:active{cursor:grabbing}
+  .les-row.dnd-ghost,.chapter.dnd-ghost{opacity:.45;background:#e8f5f0}
+</style>
+<script>
+(function(){
+  const SB = () => (window.NNCC && window.NNCC.client) || null;
+  const handle = cls => { const s=document.createElement('span'); s.className=cls; s.title='Drag to reorder'; s.textContent='⋮⋮'; return s; };
+  async function persist(table, ids){ const c = SB(); if(!c) return; for(let i=0;i<ids.length;i++){ await c.from(table).update({ sort_order:(i+1)*10 }).eq('id', ids[i]); } }
+  function refresh(){ const o = document.querySelector('.course-item.active [data-open]') || document.querySelector('.course-item [data-open]'); if(o) o.click(); }
+  function initLessons(chapter){
+    if(chapter.querySelector(':scope > .dnd-list')) return;
+    const rows = [...chapter.children].filter(el => el.classList && el.classList.contains('les-row') && el.querySelector('[data-lup]'));
+    if(!rows.length) return;
+    const list = document.createElement('div'); list.className = 'dnd-list';
+    chapter.insertBefore(list, rows[0]);
+    rows.forEach(r => { if(!r.querySelector('.dnd-h')) r.insertBefore(handle('dnd-h'), r.firstChild); list.appendChild(r); });
+    Sortable.create(list, { handle:'.dnd-h', draggable:'.les-row', animation:150, ghostClass:'dnd-ghost',
+      onEnd: async () => { const ids = [...list.querySelectorAll('.les-row')].map(r => { const b=r.querySelector('[data-lup]'); return b && b.getAttribute('data-lup'); }).filter(Boolean); await persist('lessons', ids); refresh(); }});
+  }
+  function initChapters(){
+    const cont = document.getElementById('chapters'); if(!cont || cont._dnd) return; cont._dnd = 1;
+    cont.querySelectorAll(':scope > .chapter .chapter-head').forEach(h => { if(!h.querySelector('.dnd-ch')) h.insertBefore(handle('dnd-ch'), h.firstChild); });
+    Sortable.create(cont, { handle:'.dnd-ch', draggable:'.chapter', animation:150, ghostClass:'dnd-ghost',
+      onEnd: async () => { const ids = [...cont.querySelectorAll(':scope > .chapter')].map(ch => { const b=ch.querySelector('[data-chup]'); return b && b.getAttribute('data-chup'); }).filter(Boolean); await persist('modules', ids); refresh(); }});
+  }
+  function enhance(){ if(!window.Sortable || !SB()) return; document.querySelectorAll('.chapter').forEach(initLessons); initChapters(); }
+  let t; new MutationObserver(() => { clearTimeout(t); t = setTimeout(enhance, 250); }).observe(document.body, { childList:true, subtree:true });
+  setTimeout(enhance, 1500);
+})();
+</script>
 </body>
 </html>
