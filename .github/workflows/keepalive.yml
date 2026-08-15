@@ -1,0 +1,21 @@
+name: Supabase Keep-Alive
+
+# Pings the nncc-portal Supabase project on a schedule so the free tier
+# does not auto-pause it after 7 days of inactivity.
+# Needs ONE repository secret: SUPABASE_KEY  (your project's anon/public API key)
+
+on:
+  schedule:
+    - cron: '23 7 */3 * *'
+  workflow_dispatch:
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        run: |
+          curl --fail --silent --show-error \
+            "https://hdesexrwpmeorfjtywic.supabase.co/rest/v1/keepalive?select=id&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}"
