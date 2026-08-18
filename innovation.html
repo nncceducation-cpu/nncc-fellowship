@@ -13,6 +13,29 @@
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+  /* Hero lockup: portrait beside the lab name */
+  .hero-lockup{ display:grid; grid-template-columns:1.12fr .88fr; gap:52px; align-items:center; }
+  .hero-brand{ display:inline-block; background:#fff; border-radius:16px; padding:16px 22px; margin-bottom:24px; box-shadow:0 14px 38px rgba(0,0,0,.28); }
+  .hero-brand img{ display:block; width:250px; height:auto; }
+  .hero-lockup h1{ margin-top:20px; max-width:none; }
+  .hero-portrait{ margin:0; }
+  .hero-portrait img{ display:block; width:100%; height:auto; border-radius:20px; border:1px solid rgba(255,255,255,.2); box-shadow:0 26px 70px rgba(0,0,0,.45); }
+  .hero-portrait figcaption{ margin-top:14px; text-align:center; font-family:var(--font-sans); font-size:.92rem; color:#dbe8f5; }
+  .hero-portrait figcaption span{ display:block; font-size:.8rem; color:#9fb8d0; margin-top:4px; letter-spacing:.04em; }
+  @media(max-width:900px){
+    .hero-lockup{ grid-template-columns:1fr; gap:36px; }
+    .hero-portrait{ max-width:360px; margin:0 auto; }
+    .hero-brand img{ width:210px; }
+  }
+  /* Inline citations in the memorial section */
+  sup.cite{ font-size:.68em; line-height:0; }
+  sup.cite a{ color:var(--teal-600); font-weight:600; text-decoration:none; padding:0 1px; }
+  sup.cite a:hover{ text-decoration:underline; }
+  ol.refs{ margin:22px 0 0; padding-left:20px; font-size:.88rem; color:var(--muted); }
+  ol.refs li{ margin:0 0 9px; line-height:1.55; }
+  ol.refs a{ color:var(--teal-600); font-weight:500; white-space:nowrap; }
+</style>
 </head>
 <body>
 
@@ -46,12 +69,21 @@
 <!-- ===== Hero ===== -->
 <section class="hero">
   <div class="container">
-    <span class="eyebrow">In memory of Dr. Luis Bello-Espinosa, 1957 to 2026</span>
-    <h1>Dr. Luis Bello-Espinosa Innovation in Neonatal Neuro-Critical Care Education Lab</h1>
-    <p class="sub">Democratizing access to innovative, affordable brain-health education for trainees worldwide, combining clinical expertise with the latest technology and cross-disciplinary collaboration.</p>
-    <div class="actions">
-      <a href="governance.html#apply" class="btn light">Apply to Train With Us</a>
-      <a href="https://scaneducation.thinkific.com/" target="_blank" rel="noopener" class="btn ghost-light">Learn about the SCAN Program</a>
+    <div class="hero-lockup">
+      <div class="hero-copy">
+        <span class="hero-brand"><img src="bello-lab-logo.png" alt="Luis Bello Espinosa Innovation in Neonatal NeuroCritical Care Lab"></span>
+        <span class="eyebrow">In memory of Dr. Luis Bello-Espinosa, 1957 to 2026</span>
+        <h1>Dr. Luis Bello-Espinosa Innovation in Neonatal Neuro-Critical Care Education Lab</h1>
+        <p class="sub">Democratizing access to innovative, affordable brain-health education for trainees worldwide, combining clinical expertise with the latest technology and cross-disciplinary collaboration.</p>
+        <div class="actions">
+          <a href="governance.html#apply" class="btn light">Apply to Train With Us</a>
+          <a href="https://scaneducation.thinkific.com/" target="_blank" rel="noopener" class="btn ghost-light">Learn about the SCAN Program</a>
+        </div>
+      </div>
+      <figure class="hero-portrait">
+        <img src="bello-portrait.jpg" alt="Painted portrait of Dr. Luis Bello-Espinosa">
+        <figcaption>Dr. Luis Bello-Espinosa<span>1957 to 2026</span></figcaption>
+      </figure>
     </div>
     <div class="hero-badges">
       <div class="stat"><b>1,000+</b><span>Workshop participants worldwide</span></div>
@@ -74,9 +106,14 @@
       <div class="prose" style="margin:0">
         <p>Luis Bello-Espinosa was a pediatric neurologist and epileptologist. He died suddenly on July 11, 2026, in Orlando, Florida, at the age of 68. He was born in Cartagena, Colombia, and took his medical degree at the Universidad Metropolitana de Barranquilla. Training in pediatric neurology and epilepsy followed in New Jersey and New York, then at the Mayo Clinic. He practised for ten years in Canada, and afterwards joined Orlando Health Arnold Palmer Hospital for Children, where he cared for children with epilepsy until his death.</p>
 
-        <p>In Calgary he worked in the Section of Pediatric Neurology at the University of Calgary and the Alberta Children's Hospital Research Institute. He was instrumental in establishing the Calgary neonatal neuro-critical care program. With Dr. Juan Pablo Appendino he took on round-the-clock reading of the continuous video EEG studies that NICU nurses were setting up at the perinatal centre. That commitment, made long before remote neurophysiology coverage was routine anywhere, is what turned nurse-initiated brain monitoring from an idea into a working service.</p>
+        <p>In Calgary he worked in the Section of Pediatric Neurology at the University of Calgary and the Alberta Children's Hospital Research Institute. He was instrumental in establishing the Calgary neonatal neuro-critical care program. With Dr. Juan Pablo Appendino he took on round-the-clock reading of the continuous video EEG studies that NICU nurses were setting up at the perinatal centre. That commitment, made long before remote neurophysiology coverage was routine anywhere, is what turned nurse-initiated brain monitoring from an idea into a working service.<sup class="cite"><a href="https://pubmed.ncbi.nlm.nih.gov/27647155/" target="_blank" rel="noopener">1</a>,<a href="https://pubmed.ncbi.nlm.nih.gov/29889725/" target="_blank" rel="noopener">2</a></sup></p>
 
         <p>Families remembered his bow ties, and they remembered that he gave them his whole attention. At his service on July 18, 2026, mourners were asked to wear bow ties or dark blue in his honour.</p>
+
+        <ol class="refs">
+          <li>Bashir RA, Espinoza L, Vayalthrikkovil S, Buchhalter J, Irvine L, Bello-Espinosa L, Mohammad K. Implementation of a neurocritical care program: improved seizure detection and decreased antiseizure medication at discharge in neonates with hypoxic-ischemic encephalopathy. Pediatr Neurol. 2016;64:38&ndash;43. <a href="https://pubmed.ncbi.nlm.nih.gov/27647155/" target="_blank" rel="noopener">PubMed</a></li>
+          <li>Goswami I, Bello-Espinosa L, Buchhalter J, Amin H, Howlett A, Esser M, Thomas S, Metcalfe C, Lind J, Oliver N, Kozlik S, Mohammad K. Introduction of continuous video EEG monitoring into 2 different NICU models by training neonatal nurses. Adv Neonatal Care. 2018;18(4):250&ndash;259. <a href="https://pubmed.ncbi.nlm.nih.gov/29889725/" target="_blank" rel="noopener">PubMed</a></li>
+        </ol>
 
         <div class="callout gold">A newborn's seizures do not wait for daytime, and neither did he. Everything this lab now teaches about neonatal brain monitoring rests on that willingness.</div>
 
