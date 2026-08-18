@@ -32,6 +32,14 @@
   sup.cite{ font-size:.68em; line-height:0; }
   sup.cite a{ color:var(--teal-600); font-weight:600; text-decoration:none; padding:0 1px; }
   sup.cite a:hover{ text-decoration:underline; }
+  /* Bow tie block and autoplaying video */
+  .bowtie{ margin-top:44px; padding-top:36px; border-top:1px solid var(--line); }
+  .bowtie .prose h3{ margin-top:0; }
+  .video-figure{ max-width:820px; margin:26px auto 0; }
+  .video-frame{ position:relative; padding-top:56.25%; border-radius:var(--radius); overflow:hidden; background:#0b1f33; box-shadow:var(--shadow-lg); border:1px solid var(--line); }
+  .video-frame iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; }
+  .video-figure figcaption{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin-top:14px; color:var(--muted); font-size:.9rem; }
+  .video-figure figcaption button{ cursor:pointer; font-family:var(--font-sans); }
   ol.refs{ margin:22px 0 0; padding-left:20px; font-size:.88rem; color:var(--muted); }
   ol.refs li{ margin:0 0 9px; line-height:1.55; }
   ol.refs a{ color:var(--teal-600); font-weight:500; white-space:nowrap; }
@@ -129,8 +137,24 @@
         <p style="color:var(--muted);font-size:.88rem;margin:12px 2px 0">Dr. Luis Bello-Espinosa, right, with Dr. Khorshid Mohammad.</p>
       </div>
     </div>
+
+    <div class="bowtie">
+      <div class="prose">
+        <h3>The bow tie</h3>
+        <p>The bow tie was not an affectation, or not only one. It is an old marker of the bedside physician, part care for appearance and part practicality, since a bow tie does not swing forward onto a patient or a cot rail when you lean in to examine a baby. Neurologists took to it as readily as anyone, and Dr. Bello-Espinosa wore his everywhere. Colleagues who could not immediately place his name could always place the tie.</p>
+      </div>
+
+      <figure class="video-figure">
+        <div class="video-frame"><div id="belloVideo"></div></div>
+        <figcaption>
+          <span>Dr. Luis Bello-Espinosa on NNCC membership. Plays muted.</span>
+          <button type="button" id="belloSound" class="chip">Turn on sound</button>
+        </figcaption>
+      </figure>
+    </div>
   </div>
 </section>
+
 
 <!-- ===== The work behind the name ===== -->
 <section class="block" id="legacy">
@@ -579,5 +603,57 @@
   </div>
 </footer>
 
+
+<!-- Autoplaying (muted) memorial video -->
+<script>
+(function(){
+  var VIDEO_ID = 'gZJesZ3tjW4';
+  var holder = document.getElementById('belloVideo');
+  if (!holder) return;
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var player = null, ready = false;
+
+  window.onYouTubeIframeAPIReady = function(){
+    player = new YT.Player('belloVideo', {
+      videoId: VIDEO_ID,
+      host: 'https://www.youtube-nocookie.com',
+      playerVars: { autoplay: reduce ? 0 : 1, mute: 1, playsinline: 1, rel: 0, modestbranding: 1 },
+      events: {
+        onReady: function(e){
+          ready = true;
+          e.target.mute();
+          if (!reduce) e.target.playVideo();
+          observe();
+        }
+      }
+    });
+  };
+
+  function observe(){
+    if (reduce || !('IntersectionObserver' in window)) return;
+    var target = document.querySelector('.video-figure');
+    if (!target) return;
+    new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if (!ready || !player) return;
+        if (en.isIntersecting) { player.playVideo(); }
+        else { player.pauseVideo(); }
+      });
+    }, { threshold: 0.35 }).observe(target);
+  }
+
+  var btn = document.getElementById('belloSound');
+  if (btn) btn.addEventListener('click', function(){
+    if (!ready || !player) return;
+    if (player.isMuted()) { player.unMute(); player.setVolume(80); btn.textContent = 'Mute'; }
+    else { player.mute(); btn.textContent = 'Turn on sound'; }
+    player.playVideo();
+  });
+
+  var tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+})();
+</script>
 </body>
 </html>
