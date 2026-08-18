@@ -53,6 +53,8 @@
   sup.cite{ font-size:.68em; line-height:0; }
   sup.cite a{ color:var(--teal-600); font-weight:600; text-decoration:none; padding:0 1px; }
   sup.cite a:hover{ text-decoration:underline; }
+  .app-block{ margin-top:46px; padding-top:38px; border-top:1px solid var(--line); }
+  .app-block .prose h3{ margin-top:0; }
   /* Bow tie block and autoplaying video */
   .bowtie{ margin-top:44px; padding-top:36px; border-top:1px solid var(--line); }
   .bowtie .prose h3{ margin-top:0; }
@@ -116,7 +118,7 @@
     </div>
     <div class="hero-badges">
       <div class="stat"><b>1,000+</b><span>Workshop participants worldwide</span></div>
-      <div class="stat"><b>9 countries</b><span>India, China, US, UK, Kuwait, Oman, Colombia &amp; Quito</span></div>
+      <div class="stat"><b>16 countries</b><span style="display:block;max-width:32ch">India, China, US, UK, Canada, Netherlands, Ireland, Italy, Saudi Arabia, UAE, Kuwait, Oman, Morocco, Brazil, Colombia &amp; Ecuador</span></div>
       <div class="stat"><b>28% → 7%</b><span>Reduction in missed HIE cases</span></div>
     </div>
   </div>
@@ -312,7 +314,7 @@
     <div class="grid cols-2" style="margin-top:52px">
       <div class="card">
         <h4>Global implementation</h4>
-        <p>Used in conferences and hands-on workshops across India, China, the US, UK, Kuwait, Oman, Colombia and Quito, with more than 1,000 participants in total. We follow up with centres afterward to help them build their programs and sustain learned skills.</p>
+        <p>Used in conferences and hands-on workshops across sixteen countries, India, China, the US, the UK, Canada, the Netherlands, Ireland, Italy, Saudi Arabia, the UAE, Kuwait, Oman, Morocco, Brazil, Colombia and Ecuador, with more than 1,000 participants in total. We follow up with centres afterward to help them build their programs and sustain learned skills.</p>
       </div>
       <div class="card">
         <h4>Clinical skills &amp; education</h4>
@@ -404,9 +406,11 @@
   <div class="container">
     <div class="section-head left">
       <div class="kicker">Digital Tools</div>
-      <h2>Smartphone App for Preterm Brain-Injury Diagnosis</h2>
+      <h2>Smartphone Apps</h2>
+      <p>Free bedside tools for newborn brain health, on Google Play and the App Store.</p>
     </div>
     <div class="prose wide">
+      <h3 style="margin-top:0">HUS Diagnostic and NeuroSono</h3>
       <p>We converted the consensus viewpoint developed between Neonatology and Radiology into a smartphone application, made free on Google Play and the App Store, to improve compliance and decrease variability. Using AI, we then developed an all-in-one tool for GMH-IVH prevention, management and diagnosis.</p>
     </div>
     <div class="tool-grid" style="margin-top:24px">
@@ -425,6 +429,62 @@
     </div>
     <div class="prose" style="margin-top:22px">
       <p><a class="chip" href="https://pubmed.ncbi.nlm.nih.gov/31876319/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15Z"/></svg>Related publication on PubMed</a></p>
+    </div>
+
+    <div class="app-block">
+      <div class="prose wide">
+        <h3>HIE Cooling Calculator</h3>
+        <p>The updated version is now live on both stores. Eligibility follows the 2026 American Academy of Pediatrics clinical report on therapeutic hypothermia for neonatal hypoxic-ischemic encephalopathy. The calculator also supports the aEEG-based eligibility criteria used in the UK and across Europe, and it is aligned with the Canadian Paediatric Society update currently in preparation.</p>
+        <ul>
+          <li>Eligibility updated to the 2026 AAP clinical report</li>
+          <li>Supports aEEG-based eligibility criteria used in the UK, Europe and elsewhere</li>
+          <li>Aligned with the Canadian Paediatric Society update in preparation</li>
+          <li>Free on both stores. It supports clinical judgement, it does not replace it</li>
+        </ul>
+      </div>
+      <div class="tool-grid" style="margin-top:22px">
+        <a class="tool" href="https://apps.apple.com/us/app/hie-calculator/id1275901770" target="_blank" rel="noopener">
+          <span class="ti"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 12.04c-.02-2.05 1.68-3.03 1.75-3.08-.95-1.4-2.43-1.59-2.96-1.61-1.26-.13-2.46.74-3.1.74-.64 0-1.62-.72-2.67-.7-1.37.02-2.64.8-3.35 2.03-1.43 2.48-.37 6.15 1.03 8.16.68.98 1.49 2.08 2.55 2.04 1.02-.04 1.41-.66 2.65-.66 1.23 0 1.58.66 2.66.64 1.1-.02 1.79-1 2.46-1.98.78-1.14 1.1-2.24 1.12-2.3-.02-.01-2.15-.83-2.17-3.27ZM15.1 6.13c.56-.68.94-1.62.83-2.56-.81.03-1.79.54-2.37 1.21-.52.6-.98 1.56-.86 2.48.9.07 1.83-.46 2.4-1.13Z"/></svg></span>
+          <span><b>HIE Calculator, App Store</b><span>Therapeutic hypothermia eligibility</span></span>
+        </a>
+        <a class="tool" href="https://play.google.com/store/apps/details?id=com.hiecalc" target="_blank" rel="noopener">
+          <span class="ti"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.6 2.3 13 11.7l-9.4 9.4c-.3-.2-.5-.5-.5-1V3.3c0-.4.2-.8.5-1ZM14.4 12.6l2.5 2.5-3 1.7-2.1-2.1 2.6-2.1Zm0-1.8L11.8 8.7l2.1-2.1 3 1.7-2.5 2.5ZM17.7 9.6l2.6 1.5c.6.4.6 1.4 0 1.8l-2.6 1.5-2.7-2.4 2.7-2.4Z"/></svg></span>
+          <span><b>HIE Calculator, Google Play</b><span>Therapeutic hypothermia eligibility</span></span>
+        </a>
+      </div>
+      <div class="prose" style="margin-top:18px">
+        <ol class="refs">
+          <li>Committee on Fetus and Newborn. Therapeutic hypothermia for neonatal hypoxic-ischemic encephalopathy: clinical report. Pediatrics. 2026;157(2):e2025073627. <a href="https://doi.org/10.1542/peds.2025-073627" target="_blank" rel="noopener">DOI</a></li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="app-block">
+      <div class="prose wide">
+        <h3>PHVD App</h3>
+        <p>A bedside tool for measuring and following cerebral ventricular size in newborn infants. It standardizes how ventricular indices are recorded, so that serial measurements can be compared over time rather than read in isolation. The reference charts and management thresholds clinicians already rely on become something reachable in seconds at the incubator.</p>
+        <h4>Grounded in evidence</h4>
+        <ol class="refs">
+          <li>El-Dib M, Limbrick DD, Inder T, Whitelaw A, Kulkarni AV, Warf B, Volpe JJ, de Vries LS. Management of post-hemorrhagic ventricular dilatation in the infant born preterm. J Pediatr. 2020;226:16&ndash;27.e3. <a href="https://pubmed.ncbi.nlm.nih.gov/32739263/" target="_blank" rel="noopener">PubMed</a></li>
+          <li>Brouwer MJ, de Vries LS, Groenendaal F, Koopman C, Pistorius LR, Mulder EJH, Benders MJNL. New reference values for the neonatal cerebral ventricles. Radiology. 2011;262(1):224&ndash;233. <a href="https://pubmed.ncbi.nlm.nih.gov/22084208/" target="_blank" rel="noopener">PubMed</a></li>
+        </ol>
+        <h4>Work from our group</h4>
+        <ol class="refs">
+          <li>Leijser LM, Scott JN, Roychoudhury S, Zein H, Murthy P, Thomas SP, Mohammad K. Post-hemorrhagic ventricular dilatation: inter-observer reliability of ventricular size measurements in extremely preterm infants. Pediatr Res. 2020;90(2):403&ndash;410. <a href="https://pubmed.ncbi.nlm.nih.gov/33184496/" target="_blank" rel="noopener">PubMed</a></li>
+          <li>Musiime GM, Mohammad K, Momin S, Kwong GPS, Riva-Cambrin J, Scott J, Zein H, Hendson L, Leijser LM. Prediction of post-hemorrhagic ventricular dilatation trajectory using a growth mixture model in preterm infants. Pediatr Res. 2024;97(1):213&ndash;221. <a href="https://pubmed.ncbi.nlm.nih.gov/38982166/" target="_blank" rel="noopener">PubMed</a></li>
+          <li>Musiime GM, Hendson L, Mohammad K, Kwong GPS, Riva-Cambrin J, Benlamri A, Tang S, Scott JN, Momin S, Zein H, Leijser LM. Neurodevelopmental impairment in preterm infants following progressive post-hemorrhagic ventricular dilatation. J Perinatol. 2026;46(6):986&ndash;992. <a href="https://pubmed.ncbi.nlm.nih.gov/41826662/" target="_blank" rel="noopener">PubMed</a></li>
+        </ol>
+      </div>
+      <div class="tool-grid" style="margin-top:22px">
+        <a class="tool" href="https://apps.apple.com/ca/app/phvd/id6790541119" target="_blank" rel="noopener">
+          <span class="ti"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 12.04c-.02-2.05 1.68-3.03 1.75-3.08-.95-1.4-2.43-1.59-2.96-1.61-1.26-.13-2.46.74-3.1.74-.64 0-1.62-.72-2.67-.7-1.37.02-2.64.8-3.35 2.03-1.43 2.48-.37 6.15 1.03 8.16.68.98 1.49 2.08 2.55 2.04 1.02-.04 1.41-.66 2.65-.66 1.23 0 1.58.66 2.66.64 1.1-.02 1.79-1 2.46-1.98.78-1.14 1.1-2.24 1.12-2.3-.02-.01-2.15-.83-2.17-3.27ZM15.1 6.13c.56-.68.94-1.62.83-2.56-.81.03-1.79.54-2.37 1.21-.52.6-.98 1.56-.86 2.48.9.07 1.83-.46 2.4-1.13Z"/></svg></span>
+          <span><b>PHVD, App Store</b><span>Ventricular measurement and monitoring</span></span>
+        </a>
+        <a class="tool" href="https://play.google.com/store/apps/details?id=com.khorshidmohammad.phvd" target="_blank" rel="noopener">
+          <span class="ti"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.6 2.3 13 11.7l-9.4 9.4c-.3-.2-.5-.5-.5-1V3.3c0-.4.2-.8.5-1ZM14.4 12.6l2.5 2.5-3 1.7-2.1-2.1 2.6-2.1Zm0-1.8L11.8 8.7l2.1-2.1 3 1.7-2.5 2.5ZM17.7 9.6l2.6 1.5c.6.4.6 1.4 0 1.8l-2.6 1.5-2.7-2.4 2.7-2.4Z"/></svg></span>
+          <span><b>PHVD, Google Play</b><span>Ventricular measurement and monitoring</span></span>
+        </a>
+      </div>
     </div>
   </div>
 </section>
