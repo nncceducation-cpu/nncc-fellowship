@@ -8,7 +8,9 @@ Self-verifies and prints every change so CI fails loudly on a miss.
 import os, re, sys, pathlib
 
 ROOT = pathlib.Path("android")
-SDK = "36"                      # Android 16; required for Play updates from 31 Aug 2026\nAGP_VERSION = "8.9.1"\nGRADLE_VERSION = "8.11.1"
+SDK = "36"                      # Android 16; required for Play updates from 31 Aug 2026
+AGP_VERSION = "8.9.1"
+GRADLE_VERSION = "8.11.1"
 changes = []
 
 def edit(path, subs, label):
