@@ -8,7 +8,7 @@ Self-verifies and prints every change so CI fails loudly on a miss.
 import os, re, sys, pathlib
 
 ROOT = pathlib.Path("android")
-SDK = "35"                      # Play requires API 35 (bump to 36 before 31 Aug 2026)
+SDK = "36"                      # Android 16; required for Play updates from 31 Aug 2026\nAGP_VERSION = "8.9.1"\nGRADLE_VERSION = "8.11.1"
 changes = []
 
 def edit(path, subs, label):
@@ -29,14 +29,14 @@ edit("variables.gradle", [
 ], f"compile/target SDK -> {SDK}")
 
 # 2) version code / name
-vc = os.environ.get("ANDROID_VERSION_CODE", "1")
-vn = os.environ.get("ANDROID_VERSION_NAME", "1.0.0")
+vc = os.environ.get("ANDROID_VERSION_CODE", "9")
+vn = os.environ.get("ANDROID_VERSION_NAME", "1.0.8")
 edit("app/build.gradle", [
     (r"versionCode\s+\d+",         f"versionCode {vc}"),
     (r'versionName\s+"[^"]*"',      f'versionName "{vn}"'),
 ], f"version {vn} ({vc})")
 
-# 3) release signing config injected from env
+# 4) release signing config injected from env
 ks   = os.environ.get("KEYSTORE_PATH")
 kspw = os.environ.get("KEYSTORE_PASSWORD")
 al   = os.environ.get("KEY_ALIAS")
