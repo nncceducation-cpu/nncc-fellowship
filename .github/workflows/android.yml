@@ -1,6 +1,8 @@
 name: Build Android (.aab)
 
 on:
+  push:
+    branches: [api36-release]
   workflow_dispatch:
     inputs:
       version_name:
@@ -49,8 +51,8 @@ jobs:
 
       - name: Apply Android settings + signing
         env:
-          ANDROID_VERSION_CODE: ${{ github.event.inputs.version_code }}
-          ANDROID_VERSION_NAME: ${{ github.event.inputs.version_name }}
+          ANDROID_VERSION_CODE: ${{ github.event.inputs.version_code || '9' }}
+          ANDROID_VERSION_NAME: ${{ github.event.inputs.version_name || '1.0.8' }}
           KEYSTORE_PATH: ${{ runner.temp }}/upload.jks
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
