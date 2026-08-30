@@ -28,7 +28,15 @@ edit("variables.gradle", [
     (r"targetSdkVersion\s*=\s*\d+",  f"targetSdkVersion = {SDK}"),
 ], f"compile/target SDK -> {SDK}")
 
-# 2) Android Gradle Plugin + Gradle wrapper (required for compileSdk 36)\nedit("build.gradle", [\n    (r"com\\.android\\.tools\\.build:gradle:[\\d.]+", f"com.android.tools.build:gradle:{AGP_VERSION}"),\n], f"Android Gradle Plugin -> {AGP_VERSION}")\nedit("gradle/wrapper/gradle-wrapper.properties", [\n    (r"gradle-[\\d.]+-all\\.zip", f"gradle-{GRADLE_VERSION}-all.zip"),\n], f"Gradle wrapper -> {GRADLE_VERSION}")\n\n# 3) version code / name
+# 2) Android Gradle Plugin + Gradle wrapper (required for compileSdk 36)
+edit("build.gradle", [
+    (r"com\.android\.tools\.build:gradle:[\d.]+", f"com.android.tools.build:gradle:{AGP_VERSION}"),
+], f"Android Gradle Plugin -> {AGP_VERSION}")
+edit("gradle/wrapper/gradle-wrapper.properties", [
+    (r"gradle-[\d.]+-all\.zip", f"gradle-{GRADLE_VERSION}-all.zip"),
+], f"Gradle wrapper -> {GRADLE_VERSION}")
+
+# 3) version code / name
 vc = os.environ.get("ANDROID_VERSION_CODE", "9")
 vn = os.environ.get("ANDROID_VERSION_NAME", "1.0.8")
 edit("app/build.gradle", [
