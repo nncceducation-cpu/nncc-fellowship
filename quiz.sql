@@ -23,6 +23,7 @@ alter table public.quiz_questions add column if not exists question_html   text;
 alter table public.quiz_questions add column if not exists explanation_html text;
 alter table public.lessons add column if not exists quiz_pass_percent int default 70;
 alter table public.lessons add column if not exists quiz_pass_required boolean default true;
+alter table public.lessons add column if not exists thinkific_quiz_id bigint;
 alter table public.quiz_questions enable row level security;
 -- students must NOT read this table directly (it holds the answers)
 drop policy if exists "quiz questions admin" on public.quiz_questions;
