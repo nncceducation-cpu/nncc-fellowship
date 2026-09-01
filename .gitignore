@@ -1,0 +1,3 @@
+# Local quiz-answer migration artifacts.  Keep these out of the public repo.
+migration-data/nncc-mcq-all.json
+nncc-mcq-migration.sql
