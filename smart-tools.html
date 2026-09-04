@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="tool-gate-pending">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,7 +14,30 @@
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script>
+  try {
+    if (sessionStorage.getItem("nncc-smart-tools-consent-v1") === "accepted") {
+      document.documentElement.classList.remove("tool-gate-pending");
+    }
+  } catch (e) {}
+</script>
 <style>
+  .tool-consent{display:none}
+  .tool-gate-pending body{overflow:hidden}
+  .tool-gate-pending body>:not(#tool-consent){visibility:hidden}
+  .tool-gate-pending .tool-consent{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:22px;background:linear-gradient(145deg,#eef8f7,#e8f0f6);visibility:visible}
+  .consent-card{width:min(100%,680px);max-height:calc(100vh - 44px);overflow:auto;padding:32px;border:1px solid #bfd3df;border-radius:20px;background:#fff;box-shadow:0 24px 70px rgba(16,47,74,.22)}
+  .consent-mark{display:grid;width:54px;height:54px;place-items:center;margin-bottom:18px;border-radius:15px;background:var(--teal-50);color:var(--teal-600)}
+  .consent-mark svg{width:29px;height:29px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .consent-card h1{margin:0 0 10px;font-size:2rem}
+  .consent-card p{color:var(--muted);line-height:1.65}
+  .consent-points{margin:18px 0;padding:18px 20px;border-left:4px solid var(--teal);border-radius:0 12px 12px 0;background:var(--bg-soft);color:var(--ink);line-height:1.6}
+  .consent-check{display:flex;gap:12px;align-items:flex-start;margin:20px 0;padding:16px;border:1px solid var(--line);border-radius:12px;cursor:pointer}
+  .consent-check input{width:20px;height:20px;flex:none;margin-top:2px;accent-color:var(--teal-600)}
+  .consent-check span{font-size:.92rem;line-height:1.5}
+  .consent-actions{display:flex;align-items:center;gap:14px}
+  .consent-actions .btn[disabled]{cursor:not-allowed;opacity:.45}
+  .consent-session{margin:14px 0 0!important;font-size:.78rem}
   .featured-tools{padding:58px 0;background:linear-gradient(180deg,#f4faf9 0,#fff 100%)}
   .featured-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
   .featured-card{padding:24px;border:1px solid #cddde8;border-radius:var(--radius);background:#fff;box-shadow:var(--shadow)}
@@ -47,10 +70,29 @@
   .safety-note{display:flex;gap:15px;align-items:flex-start;margin-top:34px;padding:20px 22px;border:1px solid #cddde8;border-radius:var(--radius-sm);background:#fff;color:var(--muted);font-size:.92rem}
   .safety-note svg{width:23px;height:23px;flex:none;color:var(--teal-600);fill:none;stroke:currentColor;stroke-width:2}
   @media(max-width:960px){.smart-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.featured-grid{grid-template-columns:1fr}}
-  @media(max-width:640px){.smart-grid{grid-template-columns:1fr}.smart-card{min-height:0}.featured-card{padding:18px}.qr-options{gap:6px}.qr-link{padding:8px 4px}.qr-link strong{font-size:.72rem}}
+  @media(max-width:640px){.smart-grid{grid-template-columns:1fr}.smart-card{min-height:0}.featured-card{padding:18px}.qr-options{gap:6px}.qr-link{padding:8px 4px}.qr-link strong{font-size:.72rem}.consent-card{padding:23px}.consent-card h1{font-size:1.6rem}.consent-actions{align-items:stretch;flex-direction:column}.consent-actions .btn{text-align:center}}
 </style>
 </head>
 <body>
+
+<section class="tool-consent" id="tool-consent" role="dialog" aria-modal="true" aria-labelledby="consent-title" aria-describedby="consent-description">
+  <div class="consent-card">
+    <span class="consent-mark"><svg viewBox="0 0 24 24"><path d="M12 3 3 20h18L12 3Z"/><path d="M12 9v5M12 17h.01"/></svg></span>
+    <span class="eyebrow">Required acknowledgement</span>
+    <h1 id="consent-title">Educational use disclaimer</h1>
+    <p id="consent-description">The NNCC Smart Tools are provided for education and demonstration only.</p>
+    <div class="consent-points">These tools have not been clinically validated for diagnosis or treatment and may produce incomplete or inaccurate results. They do not replace independent clinical assessment, professional judgment, local policies or protocols, specialist consultation, or multidisciplinary review. Do not enter patient identifiers or protected health information. You are responsible for verifying all inputs and outputs before any clinical use.</div>
+    <label class="consent-check" for="consent-agree">
+      <input type="checkbox" id="consent-agree">
+      <span>I have read and understood this disclaimer and agree to use the Smart Tools only as educational aids, not as a substitute for clinical judgment.</span>
+    </label>
+    <div class="consent-actions">
+      <button class="btn" id="consent-continue" type="button" disabled>Agree and continue</button>
+      <a href="index.html" class="small-link">Return to the main website</a>
+    </div>
+    <p class="consent-session">This acknowledgement is required once per browser session.</p>
+  </div>
+</section>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-brain" viewBox="0 0 24 24"><path d="M9.5 4A3.5 3.5 0 0 0 6 7.5v.3A3.5 3.5 0 0 0 4 11v1a3 3 0 0 0 3 3 3.5 3.5 0 0 0 3.5 4H12V5.5A2.5 2.5 0 0 0 9.5 3Z"/><path d="M14.5 4A3.5 3.5 0 0 1 18 7.5v.3a3.5 3.5 0 0 1 2 3.2v1a3 3 0 0 1-3 3 3.5 3.5 0 0 1-3.5 4H12M8 9.5h4M16 9.5h-4M8.5 15H12M15.5 15H12"/></symbol>
@@ -263,5 +305,22 @@
   </div>
 </footer>
 
+<script>
+(function () {
+  var gate = document.getElementById("tool-consent");
+  var check = document.getElementById("consent-agree");
+  var button = document.getElementById("consent-continue");
+  if (!gate || !check || !button || !document.documentElement.classList.contains("tool-gate-pending")) return;
+  check.addEventListener("change", function () {
+    button.disabled = !check.checked;
+  });
+  button.addEventListener("click", function () {
+    if (!check.checked) return;
+    try { sessionStorage.setItem("nncc-smart-tools-consent-v1", "accepted"); } catch (e) {}
+    document.documentElement.classList.remove("tool-gate-pending");
+  });
+  window.setTimeout(function () { check.focus(); }, 0);
+})();
+</script>
 </body>
 </html>
