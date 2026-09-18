@@ -81,12 +81,20 @@ Deno.serve(async (req) => {
     if (!RESEND_KEY) {
       return json({ error: "Welcome email is not configured. Add RESEND_API_KEY and EMAIL_FROM to the Edge Function secrets." }, 503);
     }
+    // A learner may already exist because an earlier invitation created the
+    // account before email delivery was configured. In that case an `invite`
+    // link is rejected by Supabase. Send a recovery link instead: it reaches
+    // the same password-setup screen and makes "Send invite" safely reusable.
+    const { data: usersPage, error: usersErr } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (usersErr) return json({ error: usersErr.message }, 400);
+    const existing = usersPage.users.some((u) => u.email?.toLowerCase() === String(email).toLowerCase());
+    const linkType = existing ? "recovery" : "invite";
     const { data: link, error: linkErr } = await admin.auth.admin.generateLink({
-      type: "invite",
+      type: linkType,
       email,
       options: {
         data: { full_name: full_name ?? "" },
-        redirectTo: `${SITE_URL}/login.html`,
+        redirectTo: `${SITE_URL}/login.html?mode=reset`,
       },
     });
     if (linkErr || !link?.properties?.action_link) return json({ error: linkErr?.message ?? "Could not create invitation link" }, 400);
@@ -103,7 +111,7 @@ Deno.serve(async (req) => {
       }),
     });
     if (!mail.ok) return json({ error: `The account was prepared, but the welcome email failed: ${(await mail.text()).slice(0, 300)}` }, 502);
-    return json({ ok: true, email_sent: true, mode: "invite", user: { id: link.user?.id, email } });
+    return json({ ok: true, email_sent: true, mode: existing ? "recovery" : "invite", user: { id: link.user?.id, email } });
   } catch (e) {
     return json({ error: String((e as any)?.message ?? e) }, 500);
   }
