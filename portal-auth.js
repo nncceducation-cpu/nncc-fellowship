@@ -88,7 +88,11 @@
     hasAccess(p, area) {
       if (!p) return false;
       if (p.role === "admin") return true;
-      return !!p["acc_" + area];
+      const key = "acc_" + area;
+      // Older profiles may pre-date the area-access columns. Preserve the
+      // member experience by treating a missing value as enabled; an admin
+      // can still explicitly turn an area off by setting it to false.
+      return p[key] !== false;
     },
     async requireAccess(area) {
       const u = await this.requireAuth();
@@ -137,6 +141,9 @@
       );
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error || "Request failed");
+      if (!body.email_sent) {
+        throw new Error(body.error || "The account was created, but the welcome email was not sent. Check the portal email-provider configuration, then resend the invitation.");
+      }
       return body;
     },
     /* create the account now with a password (blank = auto-generate) */

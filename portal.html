@@ -150,7 +150,7 @@
   if (!me) return;
   const prof = await NNCC.profile();
   const admin = prof.role === "admin";
-  const can = (area) => admin || !!prof["acc_" + area];
+  const can = (area) => admin || prof["acc_" + area] !== false;
 
   const denied = new URLSearchParams(location.search).get("denied");
   if (denied) {

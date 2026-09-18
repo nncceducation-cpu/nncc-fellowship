@@ -14,6 +14,7 @@
     ["events.html",    "📅", "Coaching & Webinars",  false, null],
     ["forum.html",     "💬", "Forum",                false, "forum"],
     ["assistant.html", "🤖", "Teaching Assistant",   false, null],
+    ["profile.html",   "👤", "My Profile",            false, null],
     ["authoring.html", "🏗", "Course Builder",       true,  null],
     ["people.html",    "👤", "People",               true,  null],
     ["memberships.html","🎟","Memberships",          true,  null],
@@ -60,7 +61,7 @@
         // hide member areas the person doesn't have access to
         if (!admin) rail.querySelectorAll('[data-acc]').forEach(a => {
           const area = a.getAttribute("data-acc");
-          if (area && !p["acc_" + area]) a.remove();
+          if (area && p["acc_" + area] === false) a.remove();
         });
       }
     } catch (_) {}

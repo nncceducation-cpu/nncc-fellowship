@@ -19,6 +19,8 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY      = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SITE_URL      = Deno.env.get("SITE_URL") ?? "https://sarnatnncc.ca";
+const RESEND_KEY    = Deno.env.get("RESEND_API_KEY") ?? "";
+const EMAIL_FROM    = Deno.env.get("EMAIL_FROM") ?? "NNCC Fellowship <onboarding@resend.dev>";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -73,12 +75,35 @@ Deno.serve(async (req) => {
     }
 
     // ---- 4b. INVITE by email (default) ------------------------------
-    const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
-      data: { full_name: full_name ?? "" },
-      redirectTo: `${SITE_URL}/login.html`,
+    // Generate the invitation link ourselves and send it through the same
+    // verified provider used by portal email. This makes delivery failures
+    // visible to the administrator instead of displaying a false success.
+    if (!RESEND_KEY) {
+      return json({ error: "Welcome email is not configured. Add RESEND_API_KEY and EMAIL_FROM to the Edge Function secrets." }, 503);
+    }
+    const { data: link, error: linkErr } = await admin.auth.admin.generateLink({
+      type: "invite",
+      email,
+      options: {
+        data: { full_name: full_name ?? "" },
+        redirectTo: `${SITE_URL}/login.html`,
+      },
     });
-    if (inviteErr) return json({ error: inviteErr.message }, 400);
-    return json({ ok: true, mode: "invite", user: { id: invited.user?.id, email } });
+    if (linkErr || !link?.properties?.action_link) return json({ error: linkErr?.message ?? "Could not create invitation link" }, 400);
+    const safeName = String(full_name || "colleague").replace(/[<>&"]/g, "");
+    const actionLink = link.properties.action_link;
+    const mail = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: EMAIL_FROM,
+        to: [email],
+        subject: "Welcome to the Harvey Sarnat NNCC Fellowship portal",
+        html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#182334;max-width:620px"><h2 style="color:#09285b">Welcome to the NNCC Fellowship portal</h2><p>Hello ${safeName},</p><p>Your learning account is ready. Use the button below to choose your password and open your enrolled modules.</p><p style="margin:28px 0"><a href="${actionLink}" style="background:#09285b;color:#fff;text-decoration:none;padding:12px 20px;border-radius:7px;font-weight:700">Set password and enter portal</a></p><p>If the button does not work, copy this link into your browser:<br><a href="${actionLink}">${actionLink}</a></p><p>Harvey Sarnat Neonatal Neuro-Critical Care Fellowship</p></div>`,
+      }),
+    });
+    if (!mail.ok) return json({ error: `The account was prepared, but the welcome email failed: ${(await mail.text()).slice(0, 300)}` }, 502);
+    return json({ ok: true, email_sent: true, mode: "invite", user: { id: link.user?.id, email } });
   } catch (e) {
     return json({ error: String((e as any)?.message ?? e) }, 500);
   }

@@ -6,6 +6,13 @@
 -- 0. member status (active / suspended) ------------------------------
 alter table public.profiles add column if not exists status text not null default 'active'
   check (status in ('active','suspended'));
+alter table public.profiles add column if not exists acc_modules boolean not null default true;
+alter table public.profiles add column if not exists acc_forum boolean not null default true;
+alter table public.profiles add column if not exists acc_resources boolean not null default true;
+alter table public.profiles add column if not exists acc_directory boolean not null default true;
+alter table public.profiles add column if not exists institution text;
+alter table public.profiles add column if not exists country text;
+alter table public.profiles add column if not exists profession text;
 
 -- courses can require enrollment (default: open to all members) -------
 alter table public.courses add column if not exists enrollment_required boolean not null default false;
@@ -20,6 +27,7 @@ create table if not exists public.course_enrollments (
   enrolled_by uuid references auth.users(id) on delete set null,
   unique(course_id, user_id)
 );
+alter table public.course_enrollments add column if not exists starts_at timestamptz;
 alter table public.course_enrollments enable row level security;
 drop policy if exists "enroll read own or admin" on public.course_enrollments;
 create policy "enroll read own or admin" on public.course_enrollments
@@ -36,6 +44,7 @@ returns boolean language sql security definer set search_path = public as $$
                  where c.id = p_course and coalesce(c.enrollment_required,false) = false)
       or exists (select 1 from public.course_enrollments e
                  where e.course_id = p_course and e.user_id = auth.uid()
+                   and (e.starts_at is null or e.starts_at <= now())
                    and (e.expires_at is null or e.expires_at > now()));
 $$;
 

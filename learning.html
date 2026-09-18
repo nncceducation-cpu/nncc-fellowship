@@ -141,13 +141,13 @@
   async function myDone(){ const { data } = await sb.from("lesson_progress").select("lesson_id").eq("user_id",me.id); return new Set((data||[]).map(p=>p.lesson_id)); }
 
   // ---------- Course catalog ----------
-  const active=(e)=> !e.expires_at || new Date(e.expires_at) > new Date();
+  const active=(e)=> (!e.starts_at || new Date(e.starts_at) <= new Date()) && (!e.expires_at || new Date(e.expires_at) > new Date());
   async function showCourses(){
     const [{data:courses},{data:mods},{data:les},{data:enr},{data:bundles},{data:bcs},{data:benr}] = await Promise.all([
       sb.from("courses").select("*").order("sort_order").order("created_at"),
       sb.from("modules").select("id,course_id"),
       sb.from("lessons").select("id,module_id"),
-      sb.from("course_enrollments").select("course_id,expires_at").eq("user_id",me.id),
+      sb.from("course_enrollments").select("course_id,starts_at,expires_at").eq("user_id",me.id),
       sb.from("bundles").select("*").order("sort_order").order("created_at"),
       sb.from("bundle_courses").select("*"),
       sb.from("bundle_enrollments").select("bundle_id,expires_at").eq("user_id",me.id),

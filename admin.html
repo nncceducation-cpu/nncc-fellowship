@@ -118,8 +118,8 @@
     say("#invite-msg","","");
     const btn=e.submitter; btn.disabled=true;
     try {
-      await NNCC.inviteMember($("#iv-name").value.trim(), $("#iv-email").value.trim());
-      say("#invite-msg", "Invite sent to "+esc($("#iv-email").value.trim())+".", "ok");
+      const result = await NNCC.inviteMember($("#iv-name").value.trim(), $("#iv-email").value.trim());
+      say("#invite-msg", "Welcome email sent to "+esc($("#iv-email").value.trim())+". The learner can set a password and start enrolled modules.", "ok");
       $("#iv-name").value=""; $("#iv-email").value="";
       loadMembers();
     } catch(err){ say("#invite-msg", esc(err.message), "err"); }
