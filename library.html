@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Digital Library, Harvey Sarnat NNCC Fellowship</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="portal.css">
+<link rel="stylesheet" href="portal-mobile.css">
+<script src="app-boot.js" defer></script>
+<link rel="icon" href="favicon.ico" sizes="any">
+<style>
+  .library-tools{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:18px 0 22px;padding:16px;border:1px solid var(--line);border-radius:14px;background:#fff}
+  .library-tools .field{flex:1;min-width:220px}.library-tools select{min-width:180px}
+  .library-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+  .resource-card{display:flex;flex-direction:column;min-height:190px;padding:20px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 5px 18px rgba(15,42,61,.055)}
+  .resource-card:hover{border-color:#a7c7cc;box-shadow:0 9px 24px rgba(15,42,61,.09)}
+  .resource-top{display:flex;align-items:center;justify-content:space-between;gap:12px}.resource-icon{font-size:30px}
+  .resource-card h3{margin:13px 0 7px;color:var(--navy)}.resource-card p{flex:1;margin:0 0 14px;color:var(--muted);line-height:1.5}
+  .resource-open{font-weight:700;color:var(--teal-600)}
+</style>
+</head>
+<body>
+<header class="topbar"><div class="container"><a class="brand" href="portal.html"><img class="mark" src="logo-nncc.png" alt="NNCC" style="border-radius:50%;object-fit:cover;background:none;padding:0"><span class="brand-text"><b>Harvey Sarnat NNCC Fellowship</b><span>Digital Library</span></span></a><nav class="nav"><a href="portal.html">Portal</a><a href="learning.html">Courses</a><a href="library.html" class="active">Library</a><span class="user-chip" id="user-chip"></span></nav></div></header>
+<main class="portal-wrap"><div class="container narrow">
+  <div class="p-head"><h1>Digital Library</h1><p>Search the NNCC collection of clinical guides, documents, videos and useful links.</p></div>
+  <div class="library-tools" role="search">
+    <div class="field"><label for="lib-search">Search resources</label><input id="lib-search" type="search" placeholder="Search by title, description or topic…" autocomplete="off"></div>
+    <div class="field"><label for="lib-category">Category</label><select id="lib-category"><option value="">All categories</option></select></div>
+  </div>
+  <div id="library-status" class="small-link" aria-live="polite"></div>
+  <div id="library-grid" class="library-grid" style="margin-top:12px"></div>
+</div></main>
+<script src="portal-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="portal-auth.js"></script>
+<script src="portal-shell.js"></script>
+<script>
+(async function(){
+  const me=await NNCC.requireAccess("resources"); if(!me)return;
+  NNCC.mountUserChip(document.getElementById("user-chip"));
+  const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const grid=document.getElementById("library-grid"), status=document.getElementById("library-status"), search=document.getElementById("lib-search"), category=document.getElementById("lib-category");
+  const {data,error}=await NNCC.client.from("resources").select("*").order("category").order("title");
+  if(error){grid.innerHTML=`<div class="msg err">${esc(error.message)}</div>`;return;}
+  const resources=data||[];
+  [...new Set(resources.map(r=>r.category||"General"))].sort().forEach(c=>category.insertAdjacentHTML("beforeend",`<option value="${esc(c)}">${esc(c)}</option>`));
+  const kind=url=>{const u=(url||"").split("?")[0].toLowerCase();if(/\.pdf$/.test(u))return["📕","Open PDF"];if(/\.(docx?|rtf)$/.test(u))return["📘","Download document"];if(/\.(pptx?)$/.test(u))return["📊","Open presentation"];if(/\.(xlsx?|csv)$/.test(u))return["📈","Open spreadsheet"];if(/\.(mp4|webm|mov)$/.test(u))return["🎬","Watch video"];if(/\.(mp3|wav|m4a)$/.test(u))return["🎧","Play audio"];if(/\.(png|jpe?g|gif|webp|svg)$/.test(u))return["🖼️","View image"];return["🔗","Open resource"];};
+  function render(){
+    const q=search.value.trim().toLowerCase(), cat=category.value;
+    const shown=resources.filter(r=>(!cat||(r.category||"General")===cat)&&(!q||`${r.title||""} ${r.description||""} ${r.category||""}`.toLowerCase().includes(q)));
+    status.textContent=`${shown.length} resource${shown.length===1?"":"s"}`;
+    grid.innerHTML=shown.map(r=>{const [icon,label]=kind(r.url);return `<a class="resource-card" href="${esc(r.url||"#")}" target="_blank" rel="noopener"><div class="resource-top"><span class="resource-icon">${icon}</span><span class="badge member">${esc(r.category||"General")}</span></div><h3>${esc(r.title)}</h3><p>${esc(r.description||"Reference material for NNCC members.")}</p><span class="resource-open">${label} →</span></a>`;}).join("")||'<div class="empty">No resources match your search.</div>';
+  }
+  search.addEventListener("input",render);category.addEventListener("change",render);render();
+})();
+</script>
+</body>
+</html>

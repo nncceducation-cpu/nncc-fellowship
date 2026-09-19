@@ -65,12 +65,13 @@
     <!-- Resources -->
     <section class="panel">
       <h2>Private resources</h2>
-      <p class="sub">Add a link or document shown to signed-in members on the portal.</p>
+      <p class="sub">Add a web link or upload a document, image, audio file or video to the member digital library.</p>
       <div id="res-msg"></div>
       <form id="res-form" class="inline-form" style="margin-bottom:18px">
         <div class="field"><label>Title</label><input id="rs-title" required placeholder="EEG interpretation guide"></div>
         <div class="field"><label>Category</label><input id="rs-cat" placeholder="Guides"></div>
-        <div class="field" style="flex-basis:100%"><label>URL</label><input id="rs-url" type="url" placeholder="https://…"></div>
+        <div class="field" style="flex-basis:100%"><label>Web link (optional)</label><input id="rs-url" type="url" placeholder="https://…"></div>
+        <div class="field" style="flex-basis:100%"><label>Or upload a file</label><input id="rs-file" type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.zip,image/*,audio/*,video/*"><span class="small-link">Maximum size is determined by your Supabase storage settings.</span></div>
         <div class="field" style="flex-basis:100%"><label>Description (optional)</label><input id="rs-desc"></div>
         <button class="btn" type="submit">Add resource</button>
       </form>
@@ -166,15 +167,29 @@
   $("#res-form").addEventListener("submit", async (e)=>{
     e.preventDefault(); say("#res-msg","","");
     const btn=e.submitter; btn.disabled=true;
+    let url=$("#rs-url").value.trim();
+    const file=$("#rs-file").files[0];
+    try {
+      if(file){
+        const safe=file.name.replace(/[^a-zA-Z0-9._-]+/g,"-");
+        const path=`library/${Date.now()}-${safe}`;
+        const { error:uploadError }=await NNCC.client.storage.from("course-media").upload(path,file,{contentType:file.type||undefined});
+        if(uploadError) throw uploadError;
+        url=NNCC.client.storage.from("course-media").getPublicUrl(path).data.publicUrl;
+      }
+      if(!url) throw new Error("Add a web link or choose a file to upload.");
     const { error } = await NNCC.client.from("resources").insert({
       title:$("#rs-title").value.trim(), category:$("#rs-cat").value.trim()||"General",
-      url:$("#rs-url").value.trim()||null, description:$("#rs-desc").value.trim()||null,
+      url, description:$("#rs-desc").value.trim()||null,
       created_by: me.id
     });
-    btn.disabled=false;
-    if(error) return say("#res-msg", esc(error.message), "err");
+    if(error) throw error;
     ["rs-title","rs-cat","rs-url","rs-desc"].forEach(i=>$("#"+i).value="");
+    $("#rs-file").value="";
+    say("#res-msg", "Resource added to the digital library.", "ok");
     loadRes();
+    } catch(err){ say("#res-msg",esc(err.message),"err"); }
+    btn.disabled=false;
   });
   $("#res-list").addEventListener("click", async (e)=>{
     const b=e.target.closest("button"); if(!b||!b.dataset.del) return;

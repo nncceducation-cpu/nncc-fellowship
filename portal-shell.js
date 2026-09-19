@@ -11,6 +11,7 @@
   const ITEMS = [
     ["portal.html",    "🏠", "Dashboard",           false, null],
     ["learning.html",  "▶",  "Courses",              false, "modules"],
+    ["library.html",   "📚", "Digital Library",      false, "resources"],
     ["events.html",    "📅", "Coaching & Webinars",  false, null],
     ["forum.html",     "💬", "Forum",                false, "forum"],
     ["assistant.html", "🤖", "Teaching Assistant",   false, null],

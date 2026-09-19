@@ -56,9 +56,9 @@
         <div class="ic">💬</div><h3>Members' Forum</h3>
         <p>Ask questions, share cases and discuss with fellows and faculty.</p>
       </a>
-      <a class="p-card" id="card-resources" href="#resources" style="display:none">
-        <div class="ic">📁</div><h3>Private Resources</h3>
-        <p>Documents, links and reference material shared with members only.</p>
+      <a class="p-card" id="card-resources" href="library.html" style="display:none">
+        <div class="ic">📚</div><h3>Digital Library</h3>
+        <p>Search documents, videos, links and reference material shared with members.</p>
       </a>
       <a class="p-card" id="card-directory" href="#directory" style="display:none">
         <div class="ic">👥</div><h3>Member Directory</h3>
@@ -126,8 +126,8 @@
 
     <!-- Private resources -->
     <section id="sec-resources" style="display:none">
-      <h2 id="resources" style="margin-top:44px">Private resources</h2>
-      <p class="small-link">Shared with members only. Admins can add resources from the Admin panel.</p>
+      <h2 id="resources" style="margin-top:44px">Recently added to the library</h2>
+      <p class="small-link">Shared with members only. <a href="library.html">Open the full digital library →</a></p>
       <div id="resources-list" style="margin-top:14px"></div>
     </section>
 
@@ -252,7 +252,7 @@
   // Private resources (resources access)
   if (can("resources")) {
     document.getElementById("sec-resources").style.display = "block";
-    const { data: res } = await NNCC.client.from("resources").select("*").order("category").order("title");
+    const { data: res } = await NNCC.client.from("resources").select("*").order("created_at",{ascending:false}).limit(5);
     const rl = document.getElementById("resources-list");
     if (!res || !res.length) {
       rl.innerHTML = '<div class="empty">No resources have been added yet.</div>';

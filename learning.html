@@ -166,7 +166,7 @@
       : c.self_enroll ? 'signup' : 'locked';
 
     const listC = isAdmin ? (courses||[]) : (courses||[]).filter(c=>c.visibility==='published');
-    const listB = isAdmin ? (bundles||[]) : (bundles||[]).filter(b=>b.visibility==='published');
+    const listB = isAdmin ? (bundles||[]) : (bundles||[]).filter(b=>b.visibility==='published' && (bmap[b.id]||[]).length);
 
     const courseCard=(c)=>{ const s=stats(c.id); const pct=s.t?Math.round(s.d/s.t*100):0; const st=stateOf(c);
       const cover=c.cover_url?`<img src="${esc(c.cover_url)}" alt="" style="width:100%;height:120px;object-fit:cover;border-radius:10px;margin-bottom:10px">`:'';
@@ -224,7 +224,7 @@
     if(!b){ root.innerHTML='<div class="empty">Bundle not found. <a href="learning.html">All courses</a></div>'; return; }
     const { data:bcs } = await sb.from("bundle_courses").select("course_id").eq("bundle_id",bid);
     const ids=(bcs||[]).map(x=>x.course_id);
-    let courses=[]; if(ids.length){ const { data } = await sb.from("courses").select("*").in("id",ids); courses=data||[]; }
+    let courses=[]; if(ids.length){ const { data } = await sb.from("courses").select("*").in("id",ids); courses=(data||[]).sort(courseOrder); }
     const { data:benr } = await sb.from("bundle_enrollments").select("expires_at").eq("bundle_id",bid).eq("user_id",me.id);
     const isEnrolled = (benr||[]).some(active) || isAdmin;
     root.innerHTML=`<p class="crumbs"><a href="learning.html">← All courses</a></p>
@@ -394,6 +394,20 @@
       wrap.querySelector("#quiz-result").scrollIntoView({behavior:"smooth",block:"center"});
       if(res.passed){ await sb.from("lesson_progress").upsert({ user_id:me.id, lesson_id:lessonId }); if(onPass)onPass(); }
     });
+  }
+
+  // Keep curriculum modules in their clinical sequence even when bundle rows were added at different times.
+  function courseOrder(a,b){
+    const rank=(c)=>{
+      const t=(c.title||"").toLowerCase();
+      const m=t.match(/\bmodule\s*(\d+)\b/);
+      if(m) return Number(m[1]);
+      if(t.includes("nursing")) return 50;
+      if(t.includes("imaging")) return 51;
+      if(t.includes("question bank")) return 52;
+      return 90 + Number(c.sort_order||0);
+    };
+    return rank(a)-rank(b) || Number(a.sort_order||0)-Number(b.sort_order||0) || (a.title||"").localeCompare(b.title||"");
   }
   function quizRich(html,fallback){
     const tpl=document.createElement("template");
