@@ -106,6 +106,11 @@
       </a>
     </div>
 
+    <!-- Thinkific-style resume path: shown when the learner has an accessible course. -->
+    <section id="sec-continue" style="display:none;margin-top:26px">
+      <div class="continue-learning" id="continue-learning"></div>
+    </section>
+
     <!-- Upcoming events -->
     <section id="sec-events" style="display:none">
       <h2 style="margin-top:26px">Upcoming events</h2>
@@ -171,6 +176,40 @@
   if (can("directory")) show("card-directory");
   // Admin tools
   if (admin) ["admin-card","builder-card","people-card","analytics-card","memberships-card","team-card","settings-card"].forEach(show);
+
+  // Continue learning: take the learner straight to the next unfinished lesson.
+  if (can("modules")) {
+    try {
+      const [{ data:courses },{ data:mods },{ data:lessons },{ data:progress },{ data:enrollments },{ data:bundleEnrollments },{ data:bundleCourses }] = await Promise.all([
+        NNCC.client.from("courses").select("id,title,visibility,enrollment_required,sort_order").order("sort_order").order("created_at"),
+        NNCC.client.from("modules").select("id,course_id,sort_order,created_at").order("sort_order").order("created_at"),
+        NNCC.client.from("lessons").select("id,module_id,title,lesson_type,sort_order,created_at").order("sort_order").order("created_at"),
+        NNCC.client.from("lesson_progress").select("lesson_id").eq("user_id",me.id),
+        NNCC.client.from("course_enrollments").select("course_id,starts_at,expires_at").eq("user_id",me.id),
+        NNCC.client.from("bundle_enrollments").select("bundle_id,expires_at").eq("user_id",me.id),
+        NNCC.client.from("bundle_courses").select("bundle_id,course_id")
+      ]);
+      const now=Date.now(), active=(e)=>(!e.starts_at||new Date(e.starts_at).getTime()<=now)&&(!e.expires_at||new Date(e.expires_at).getTime()>now);
+      const accessible=new Set((enrollments||[]).filter(active).map(e=>e.course_id));
+      const activeBundles=new Set((bundleEnrollments||[]).filter(active).map(e=>e.bundle_id));
+      (bundleCourses||[]).forEach(x=>{ if(activeBundles.has(x.bundle_id)) accessible.add(x.course_id); });
+      const done=new Set((progress||[]).map(p=>p.lesson_id));
+      const modulesByCourse={}; (mods||[]).forEach(m=>(modulesByCourse[m.course_id]=modulesByCourse[m.course_id]||[]).push(m.id));
+      const lessonsByModule={}; (lessons||[]).forEach(l=>(lessonsByModule[l.module_id]=lessonsByModule[l.module_id]||[]).push(l));
+      const candidates=(courses||[]).filter(c=>admin||(c.visibility==="published"&&(!c.enrollment_required||accessible.has(c.id)))).map(c=>{
+        const ordered=(modulesByCourse[c.id]||[]).flatMap(mid=>lessonsByModule[mid]||[]);
+        const completed=ordered.filter(l=>done.has(l.id)).length;
+        return {course:c,ordered,completed,total:ordered.length,next:ordered.find(l=>!done.has(l.id))};
+      }).filter(x=>x.total&&x.completed<x.total);
+      candidates.sort((a,b)=>(b.completed>0)-(a.completed>0)||(b.completed/b.total)-(a.completed/a.total)||Number(/Neonatal|NNCC|Preterm Brain/i.test(b.course.title))-Number(/Neonatal|NNCC|Preterm Brain/i.test(a.course.title)));
+      const pick=candidates[0];
+      if(pick){
+        const pct=Math.round(pick.completed/pick.total*100), box=document.getElementById("continue-learning");
+        box.innerHTML=`<div><span class="continue-eyebrow">Continue learning</span><h2>${esc(pick.course.title)}</h2><p>${pick.completed?`${pick.completed} of ${pick.total} lessons complete`:`Ready when you are — ${pick.total} lessons`}</p><div class="continue-progress"><i style="width:${pct}%"></i></div></div><a class="btn" href="learning.html?lesson=${pick.next.id}&course=${pick.course.id}">${pick.completed?"Resume":"Start course"} →</a>`;
+        document.getElementById("sec-continue").style.display="block";
+      }
+    } catch(_){ /* Dashboard remains usable if optional resume data is unavailable. */ }
+  }
 
   // Learner hub: welcome message, upcoming events, learning goal
   try {

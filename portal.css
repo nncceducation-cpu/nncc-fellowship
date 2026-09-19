@@ -121,6 +121,27 @@ body.has-rail .topbar .nav > a { display: none; }
 .p-card h3 { margin:6px 0 0; font-size: 1.15rem; }
 .p-card p { margin:0; color: var(--muted); font-size: 14.5px; }
 
+/* --- learner hub: resume learning + searchable course catalog --- */
+.continue-learning {
+  display:flex;align-items:center;justify-content:space-between;gap:24px;padding:24px 26px;
+  border:1px solid #b9ded9;border-radius:var(--radius);background:linear-gradient(120deg,#f2fbf9,#fff 60%);
+  box-shadow:var(--shadow);
+}
+.continue-learning h2{margin:3px 0 4px;font-size:1.25rem}.continue-learning p{margin:0;color:var(--muted);font-size:14px}
+.continue-eyebrow{color:var(--teal-600);font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.continue-progress{width:min(420px,65vw);height:7px;margin-top:12px;overflow:hidden;border-radius:999px;background:#dfeeed}
+.continue-progress i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--teal),#55c7bd)}
+.continue-learning .btn{flex:none}
+.catalog-tools{display:flex;align-items:end;justify-content:space-between;gap:16px;margin:0 0 18px;padding:15px 16px;border:1px solid var(--line);border-radius:13px;background:#fff}
+.catalog-search{display:grid;gap:5px;flex:1;max-width:520px;color:var(--navy);font-size:12px;font-weight:700}
+.catalog-search input{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:9px;font:inherit;color:var(--ink)}
+.catalog-search input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-50)}
+.catalog-filters{display:flex;gap:6px;flex-wrap:wrap}
+.catalog-filters button{padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted);font:600 12px/1 var(--font-sans);cursor:pointer}
+.catalog-filters button:hover,.catalog-filters button.active{border-color:var(--teal);background:var(--teal-50);color:var(--teal-600)}
+.course-catalog-card[hidden]{display:none!important}
+@media(max-width:680px){.continue-learning,.catalog-tools{align-items:stretch;flex-direction:column}.continue-learning .btn{justify-content:center}.continue-progress{width:100%}}
+
 /* --- tables (admin / directory) --- */
 .tbl { width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line);
   border-radius: var(--radius); overflow:hidden; }

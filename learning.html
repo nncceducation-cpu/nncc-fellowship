@@ -177,8 +177,9 @@
         : st==='locked' ? `<span class="small-link">🔒 Enrollment by administrator</span>`
         : `<div class="prog"><i style="width:${pct}%"></i></div><span class="small-link">${s.d}/${s.t} lessons · ${pct}%</span>`;
       const inner=`${cover}<h3>${esc(c.title)} ${badges}</h3><p>${esc(c.description||'')}</p>${action}`;
-      return clickable ? `<a class="p-card" href="learning.html?course=${c.id}">${inner}</a>`
-        : `<div class="p-card" style="cursor:default">${inner}</div>`;
+      const state=pct===100?'complete':pct>0?'progress':'not-started';
+      return clickable ? `<a class="p-card course-catalog-card" data-title="${esc((c.title+' '+(c.description||'')).toLowerCase())}" data-progress="${state}" href="learning.html?course=${c.id}">${inner}</a>`
+        : `<div class="p-card course-catalog-card" data-title="${esc((c.title+' '+(c.description||'')).toLowerCase())}" data-progress="${state}" style="cursor:default">${inner}</div>`;
     };
     const bundleCard=(b)=>{ const enrolledB=benrolled.has(b.id); const cover=b.cover_url?`<img src="${esc(b.cover_url)}" alt="" style="width:100%;height:120px;object-fit:cover;border-radius:10px;margin-bottom:10px">`:'';
       const action = enrolledB||isAdmin ? '' : (b.self_enroll?`<button class="btn" data-bsignup="${b.id}" style="margin-top:10px">Sign up</button>`:`<span class="small-link">🔒 Enrollment by administrator</span>`);
@@ -188,8 +189,26 @@
     root.innerHTML=`<div class="p-head"><h1>Courses</h1><p>Your NNCC education library.${isAdmin?' <a href="authoring.html">Open the course builder →</a>':''}</p></div>
       ${listB.length?`<h2 style="margin:6px 0 12px">Bundles</h2><div class="card-grid" style="margin-bottom:26px">${listB.map(bundleCard).join('')}</div>`:''}
       ${listB.length?'<h2 style="margin:6px 0 12px">Courses</h2>':''}
-      <div class="card-grid">${listC.map(courseCard).join('')
+      <div class="catalog-tools" role="search"><label class="catalog-search"><span>Search courses</span><input id="course-search" type="search" placeholder="Search by module or topic…" autocomplete="off"></label><div class="catalog-filters" aria-label="Filter courses"><button type="button" class="active" data-filter="all">All</button><button type="button" data-filter="progress">In progress</button><button type="button" data-filter="complete">Completed</button></div></div>
+      <div class="card-grid" id="course-grid">${listC.map(courseCard).join('')
         || '<div class="empty">'+(isAdmin?'No courses yet. <a href="authoring.html">Create one →</a>':'You are not enrolled in any courses yet.')+'</div>'}</div>`;
+
+    const search=$("#course-search"), filterButtons=[...root.querySelectorAll("[data-filter]")];
+    let filter="all";
+    const applyCatalogFilter=()=>{
+      const term=(search?.value||"").trim().toLowerCase(); let shown=0;
+      root.querySelectorAll(".course-catalog-card").forEach(card=>{
+        const matchesText=!term||(card.dataset.title||"").includes(term);
+        const matchesState=filter==="all"||card.dataset.progress===filter;
+        const visible=matchesText&&matchesState; card.hidden=!visible; if(visible)shown++;
+      });
+      let empty=$("#catalog-empty");
+      if(!empty){ empty=document.createElement("div"); empty.id="catalog-empty"; empty.className="empty"; $("#course-grid")?.after(empty); }
+      empty.textContent=shown?"":"No courses match this search and filter.";
+      empty.style.display=shown?"none":"block";
+    };
+    search?.addEventListener("input",applyCatalogFilter);
+    filterButtons.forEach(btn=>btn.addEventListener("click",()=>{ filter=btn.dataset.filter; filterButtons.forEach(b=>b.classList.toggle("active",b===btn)); applyCatalogFilter(); }));
 
     root.querySelectorAll("[data-signup]").forEach(b=>b.addEventListener("click", async (e)=>{ e.preventDefault();
       const { error }=await sb.rpc("self_enroll",{ p_course:b.dataset.signup }); if(error) return alert(error.message); showCourses(); }));

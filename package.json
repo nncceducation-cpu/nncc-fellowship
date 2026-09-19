@@ -4,6 +4,7 @@
   "private": true,
   "description": "Capacitor native wrapper for the Harvey Sarnat NNCC Fellowship member portal.",
   "scripts": {
+    "test:portal": "node tools/validate-portal.mjs",
     "build:web": "node tools/build-www.mjs",
     "sync": "npm run build:web && npx cap sync",
     "add:ios": "npx cap add ios",
