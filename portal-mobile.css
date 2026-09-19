@@ -33,7 +33,7 @@ html.is-native, html.is-native body { overscroll-behavior-y: contain; }
   .tabbar .tab:active { background: var(--navy-50); }
 
   body.has-tabbar { padding-bottom: calc(64px + var(--safe-bottom)); }
-  body.has-tabbar.has-rail { padding-left: 0; }
+  body.has-tabbar.has-rail { padding-right: 0; }
 
   .rail-toggle { top: calc(10px + var(--safe-top)); }
 
@@ -59,7 +59,7 @@ html.is-native, html.is-native body { overscroll-behavior-y: contain; }
    ===================================================================== */
 html.app-chrome .side-rail,
 html.app-chrome .rail-toggle { display: none !important; }
-html.app-chrome body.has-rail { padding-left: 0 !important; }
+html.app-chrome body.has-rail { padding-right: 0 !important; }
 
 /* Top bar: keep the brand + the user/sign-out chip, drop the text nav links */
 html.app-chrome .topbar .nav > a { display: none !important; }

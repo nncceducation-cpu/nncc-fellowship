@@ -6,53 +6,23 @@
 .portal-wrap { background: var(--bg-soft); min-height: 70vh; }
 .portal-wrap .container { padding-top: 40px; padding-bottom: 64px; }
 
-/* ---------- Left sidebar (portal-shell.js) ---------- */
-.side-rail {
-  position: fixed; top: 0; left: 0; height: 100vh; width: 232px; z-index: 70;
-  background: #fff; border-right: 1px solid var(--line);
-  display: flex; flex-direction: column; padding: 14px 12px; overflow-y: auto;
-}
-.side-rail .rail-brand { display: flex; align-items: center; gap: 10px; padding: 6px 10px 16px; }
-.side-rail .rail-brand .mark {
-  width: 34px; height: 34px; border-radius: 9px; flex: none;
-  background: linear-gradient(135deg, var(--navy), var(--teal)); color: #fff;
-  display: grid; place-items: center; font-weight: 700; font-size: 11px; letter-spacing: .5px;
-}
-.side-rail .rail-brand b { color: var(--navy); font-family: var(--font-serif); font-size: 15px; }
-.side-rail nav { display: flex; flex-direction: column; gap: 2px; }
-.side-rail nav a {
-  display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 10px;
-  color: var(--ink); font-weight: 500; font-size: 14.5px;
-}
-.side-rail nav a .ri { width: 20px; text-align: center; font-size: 15px; }
-.side-rail nav a:hover { background: var(--navy-50); text-decoration: none; }
-.side-rail nav a.active { background: var(--teal-50); color: var(--navy); font-weight: 600; }
-.side-rail .rail-foot { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); }
-.side-rail .rail-user { font-size: 13px; color: var(--muted); padding: 4px 12px 8px; font-weight: 600; }
-.side-rail .rail-foot a { display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: 10px; color: var(--ink); font-size: 14px; }
-.side-rail .rail-foot a:hover { background: var(--navy-50); text-decoration: none; }
-
-.rail-toggle {
-  display: none; position: fixed; top: 16px; left: 14px; z-index: 80;
-  width: 40px; height: 40px; border: 1px solid var(--line); background: #fff;
-  border-radius: 9px; font-size: 18px; cursor: pointer; box-shadow: var(--shadow);
-}
-
-/* push all page content (topbar + main) to the right of the rail */
-body.has-rail { padding-left: 232px; }
+/* ---------- Right command rail (portal-shell.js) ---------- */
+.side-rail{position:fixed;inset:0 0 0 auto;width:292px;z-index:70;display:flex;flex-direction:column;padding:18px 14px 14px;overflow-y:auto;background:linear-gradient(180deg,#fff 0%,#f8fbfc 100%);border-left:1px solid #d9e4e8;box-shadow:-10px 0 34px rgba(15,42,61,.055)}
+.rail-top{display:flex;align-items:center;gap:8px}.side-rail .rail-brand{display:flex;flex:1;align-items:center;gap:11px;padding:2px 8px 13px;text-decoration:none}.side-rail .rail-brand .mark{width:40px;height:40px;flex:none;border-radius:50%;object-fit:cover}.side-rail .rail-brand span{display:flex;min-width:0;flex-direction:column}.side-rail .rail-brand b{color:var(--navy);font-family:var(--font-serif);font-size:17px;line-height:1.1}.side-rail .rail-brand small{margin-top:3px;color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+.rail-close{display:none;width:34px;height:34px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-size:24px;cursor:pointer}.rail-close:hover{background:var(--navy-50);color:var(--navy)}
+.rail-search{display:grid;grid-template-columns:22px minmax(0,1fr);align-items:center;margin:2px 5px 12px;padding:8px 10px;border:1px solid #dbe6e9;border-radius:11px;background:#fff;color:#78909a;box-shadow:0 3px 10px rgba(15,42,61,.035)}.rail-search input{width:100%;padding:0;border:0;outline:0;background:transparent;color:var(--ink);font:500 13px var(--font-sans)}.rail-search input::placeholder{color:#8ca0a8}
+.side-rail nav{display:flex;flex-direction:column;gap:6px}.rail-group{display:flex;flex-direction:column;gap:3px;padding:0 0 6px}.rail-group h2{margin:0;padding:7px 10px 4px;color:#82939b;font-family:var(--font-sans);font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}.side-rail nav a{position:relative;display:grid;grid-template-columns:34px minmax(0,1fr) 12px;gap:9px;align-items:center;padding:9px 9px;border:1px solid transparent;border-radius:12px;color:#294652;text-decoration:none;transition:.16s ease}.side-rail nav a .ri{display:grid;width:34px;height:34px;place-items:center;border-radius:10px;background:#edf3f5;color:#2a6672;font-size:16px;font-weight:800}.rail-copy{display:flex;min-width:0;flex-direction:column}.rail-copy b{font-size:13.5px;line-height:1.25}.rail-copy small{margin-top:2px;overflow:hidden;color:#788b94;font-size:10.5px;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}.rail-arrow{color:#9aacb3;font-size:18px}.side-rail nav a:hover{transform:translateX(-2px);border-color:#d9e8ea;background:#fff;box-shadow:0 6px 16px rgba(15,42,61,.07)}.side-rail nav a.active{border-color:#b7ddd8;background:linear-gradient(135deg,#eaf8f6,#fff);color:var(--navy);box-shadow:0 7px 18px rgba(15,138,138,.1)}.side-rail nav a.active .ri{background:linear-gradient(145deg,var(--teal),var(--teal-600));color:#fff;box-shadow:0 5px 12px rgba(15,138,138,.2)}.side-rail nav a.active:after{position:absolute;right:-10px;width:4px;height:28px;border-radius:4px 0 0 4px;background:var(--teal);content:""}.rail-empty{padding:25px 10px;text-align:center;color:var(--muted);font-size:13px}
+.side-rail .rail-foot{display:grid;grid-template-columns:38px minmax(0,1fr) 34px;gap:9px;align-items:center;margin-top:auto;padding:13px 7px 3px;border-top:1px solid var(--line)}.rail-avatar{display:grid;width:38px;height:38px;place-items:center;border-radius:50%;background:linear-gradient(145deg,var(--navy),#2a6672);color:#fff;font-weight:800}.rail-identity{display:flex;min-width:0;flex-direction:column}.rail-identity b,.rail-identity small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rail-identity b{color:var(--navy);font-size:12px}.rail-identity small{margin-top:2px;color:var(--muted);font-size:10px}.side-rail .rail-foot a{display:grid;width:34px;height:34px;place-items:center;border-radius:9px;color:var(--muted);font-size:18px;text-decoration:none}.side-rail .rail-foot a:hover{background:#fdecec;color:#8a1f1f}
+.rail-toggle{display:none;position:fixed;top:14px;right:14px;z-index:80;align-items:center;gap:7px;height:42px;padding:0 12px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--navy);cursor:pointer;box-shadow:var(--shadow)}.rail-toggle span{font-size:17px}.rail-toggle b{font-size:12px}.rail-shade{display:none;position:fixed;inset:0;z-index:65;border:0;background:rgba(7,28,48,.48);backdrop-filter:blur(2px)}
+body.has-rail{padding-right:292px}
 /* the rail replaces the top-bar's own nav links; keep only brand + user chip */
 body.has-rail .topbar .nav > a { display: none; }
 
 @media (max-width: 900px) {
-  body.has-rail { padding-left: 0; }
-  .side-rail { transform: translateX(-100%); transition: transform .2s ease; box-shadow: var(--shadow-lg); }
-  .side-rail.open { transform: none; }
-  .rail-toggle { display: block; }
-  body.has-rail .topbar .brand { margin-left: 46px; }
+  body.has-rail{padding-right:0}.side-rail{width:min(88vw,330px);transform:translateX(105%);transition:transform .22s ease;box-shadow:var(--shadow-lg)}.side-rail.open{transform:none}.rail-toggle{display:flex}.rail-close{display:block}.rail-shade.open{display:block}.side-rail nav a{padding:10px}.rail-copy small{font-size:11px}body.has-rail .topbar .nav{margin-right:58px}
 }
 @media print {
-  .side-rail, .rail-toggle { display: none !important; }
-  body.has-rail { padding-left: 0 !important; }
+  .side-rail,.rail-toggle,.rail-shade{display:none!important}body.has-rail{padding-right:0!important}
 }
 
 /* --- Auth card (login / set password / reset) --- */
