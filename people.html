@@ -521,7 +521,11 @@
         <div class="field" id="en-groupwrap" style="display:none"><label>Group</label><select id="en-group">${S.groups.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join("")}</select></div>
         <div id="en-select" style="display:none"><label class="muted-note">Select members</label>
           <div class="checklist">${S.members.map(m=>`<label><input type="checkbox" class="en-chk" value="${m.id}"> ${esc(m.full_name||m.email)} <span class="small-link">${esc(m.email)}</span></label>`).join("")}</div></div>
-        <button class="btn" id="en-go" style="margin-top:12px">Enroll</button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+          <button class="btn" id="en-go">Enroll active members</button>
+          <button class="btn outline" id="cert-go">Issue certificates to completed learners</button>
+        </div>
+        <div id="bulk-action-msg" class="small-link" style="margin-top:8px"></div>
       </section>`;
     const course=()=>$("#en-course").value;
     const syncMode=async()=>{ const c=S.courses.find(x=>x.id===course()); if(c) $("#en-mode").value=String(!!c.enrollment_required); await loadEnrolled(); };
@@ -529,6 +533,7 @@
     $("#en-mode").addEventListener("change", async()=>{ await sb.from("courses").update({enrollment_required:$("#en-mode").value==='true'}).eq("id",course()); await loadCore(); flash("Access mode updated."); });
     $("#en-who").addEventListener("change",()=>{ const v=$("#en-who").value; $("#en-groupwrap").style.display=v==='group'?'block':'none'; $("#en-select").style.display=v==='selected'?'block':'none'; });
     $("#en-go").addEventListener("click", doEnroll);
+    $("#cert-go").addEventListener("click", doCertificates);
     async function loadEnrolled(){
       const { data } = await sb.from("course_enrollments").select("*").eq("course_id",course());
       let prog={}; try{ const { data:pg } = await sb.rpc("admin_course_progress",{p_course:course()}); if(pg) prog=pg; }catch(_){}
@@ -576,15 +581,29 @@
     }
     async function doEnroll(){
       const who=$("#en-who").value; let ids=[];
-      if(who==='all') ids=S.members.map(m=>m.id);
+      if(who==='all') ids=S.members.filter(m=>m.status!=='suspended').map(m=>m.id);
       else if(who==='selected') ids=[...document.querySelectorAll(".en-chk:checked")].map(c=>c.value);
       else if(who==='group'){ const { data } = await sb.from("group_members").select("user_id").eq("group_id",$("#en-group").value); ids=(data||[]).map(x=>x.user_id); }
-      if(!ids.length) return flash("No members selected.","err");
+      const active=new Set(S.members.filter(m=>m.status!=='suspended').map(m=>m.id)); ids=[...new Set(ids.filter(id=>active.has(id)))];
+      if(!ids.length) return flash("No active members selected.","err");
       const exp=toIso($("#en-exp").value); const start=toIso($("#en-start").value);
       const rows=ids.map(uid=>({course_id:course(),user_id:uid,starts_at:start,expires_at:exp,enrolled_by:me.id}));
       const { error }=await sb.from("course_enrollments").upsert(rows,{onConflict:"course_id,user_id"});
       if(error) return flash(esc(error.message),"err");
       flash(`Enrolled ${ids.length} member(s).`); loadEnrolled();
+    }
+    async function doCertificates(){
+      const who=$("#en-who").value; let ids=[];
+      if(who==='all') ids=S.members.filter(m=>m.status!=='suspended').map(m=>m.id);
+      else if(who==='selected') ids=[...document.querySelectorAll(".en-chk:checked")].map(c=>c.value);
+      else { const {data}=await sb.from("group_members").select("user_id").eq("group_id",$("#en-group").value); ids=(data||[]).map(x=>x.user_id); }
+      const active=new Set(S.members.filter(m=>m.status!=='suspended').map(m=>m.id)); ids=[...new Set(ids.filter(id=>active.has(id)))];
+      if(!ids.length) return flash("No active members selected.","err");
+      const btn=$("#cert-go"); btn.disabled=true; btn.textContent="Checking completion…";
+      const {data,error}=await sb.rpc("admin_issue_certificates",{p_course:course(),p_users:ids});
+      btn.disabled=false; btn.textContent="Issue certificates to completed learners";
+      if(error) return flash(esc(error.message),"err");
+      const r=data||{}; flash(`Certificates: ${r.issued||0} newly issued · ${r.existing||0} already issued · ${r.incomplete||0} incomplete.`,"ok");
     }
     syncMode();
   }
@@ -618,6 +637,11 @@
     const inSet=new Set((gm||[]).map(x=>x.user_id));
     const box=$("#g-detail"); box.style.display="block";
     box.innerHTML=`<h2>${esc(g.name)}, members</h2>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0">
+        <input id="gm-search" type="search" placeholder="Search members…" style="max-width:280px">
+        <button class="chip-btn" id="gm-all" type="button">Select all visible</button>
+        <button class="chip-btn" id="gm-none" type="button">Clear visible</button>
+      </div>
       <div class="checklist" style="margin:8px 0">${S.members.map(m=>`<label><input type="checkbox" class="gm-chk" value="${m.id}" ${inSet.has(m.id)?'checked':''}> ${esc(m.full_name||m.email)} <span class="small-link">${esc(m.email)}</span></label>`).join("")}</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn" id="gm-save">Save members</button>
@@ -626,6 +650,10 @@
         <input type="date" id="gm-exp" title="Expiry date (optional)" style="padding:9px;border:1.5px solid var(--line);border-radius:10px">
         <button class="btn outline" id="gm-enroll">Enroll group into course</button>
       </div>`;
+    const gmLabels=[...box.querySelectorAll(".checklist label")];
+    $("#gm-search").addEventListener("input",e=>{ const q=e.target.value.trim().toLowerCase(); gmLabels.forEach(l=>l.style.display=!q||l.textContent.toLowerCase().includes(q)?'':'none'); });
+    $("#gm-all").addEventListener("click",()=>gmLabels.filter(l=>l.style.display!=='none').forEach(l=>l.querySelector("input").checked=true));
+    $("#gm-none").addEventListener("click",()=>gmLabels.filter(l=>l.style.display!=='none').forEach(l=>l.querySelector("input").checked=false));
     $("#gm-save").addEventListener("click", async ()=>{
       const want=new Set([...box.querySelectorAll(".gm-chk:checked")].map(c=>c.value));
       const toAdd=[...want].filter(id=>!inSet.has(id)).map(id=>({group_id:gid,user_id:id}));
@@ -658,26 +686,32 @@
           <div class="checklist">${S.members.map(m=>`<label><input type="checkbox" class="em-chk" value="${esc(m.email)}"> ${esc(m.full_name||m.email)} <span class="small-link">${esc(m.email)}</span></label>`).join("")}</div></div>
         <div class="field"><label>Subject</label><input id="em-subj"></div>
         <div class="field"><label>Message (basic HTML allowed)</label><textarea id="em-body" rows="8"></textarea></div>
-        <button class="btn" id="em-send">Send email</button>
+        <div id="em-count" class="small-link" style="margin-bottom:8px"></div>
+        <button class="btn" id="em-send">Review &amp; send email</button>
       </section>
       <section class="panel"><h2>Recent emails</h2><div id="em-log"></div></section>`;
-    $("#em-who").addEventListener("change",()=>{ const v=$("#em-who").value; $("#em-groupwrap").style.display=v==='group'?'block':'none'; $("#em-select").style.display=v==='selected'?'block':'none'; });
+    const updateEmailCount=async()=>{ const r=await recipientEmails(); $("#em-count").textContent=`${r.length} active recipient${r.length===1?'':'s'} selected`; };
+    $("#em-who").addEventListener("change",()=>{ const v=$("#em-who").value; $("#em-groupwrap").style.display=v==='group'?'block':'none'; $("#em-select").style.display=v==='selected'?'block':'none'; updateEmailCount(); });
+    $("#em-group").addEventListener("change",updateEmailCount);
+    $("#em-select").addEventListener("change",updateEmailCount);
     $("#em-send").addEventListener("click", sendEmail);
-    loadEmailLog();
+    updateEmailCount(); loadEmailLog();
   }
   async function recipientEmails(){
     const who=$("#em-who").value;
-    if(who==='all') return S.members.filter(m=>m.email).map(m=>({email:m.email,user_id:m.id}));
-    if(who==='selected') return [...document.querySelectorAll(".em-chk:checked")].map(c=>({email:c.value}));
+    const active=S.members.filter(m=>m.status!=='suspended'&&m.email); let rows=[];
+    if(who==='all') rows=active.map(m=>({email:m.email,user_id:m.id}));
+    else if(who==='selected'){ const chosen=new Set([...document.querySelectorAll(".em-chk:checked")].map(c=>c.value.toLowerCase())); rows=active.filter(m=>chosen.has(m.email.toLowerCase())).map(m=>({email:m.email,user_id:m.id})); }
     if(who==='group'){ const { data } = await sb.from("group_members").select("user_id").eq("group_id",$("#em-group").value);
-      const set=new Set((data||[]).map(x=>x.user_id)); return S.members.filter(m=>set.has(m.id)&&m.email).map(m=>({email:m.email,user_id:m.id})); }
-    return [];
+      const set=new Set((data||[]).map(x=>x.user_id)); rows=active.filter(m=>set.has(m.id)).map(m=>({email:m.email,user_id:m.id})); }
+    const seen=new Set(); return rows.filter(r=>{ const k=r.email.toLowerCase(); if(seen.has(k))return false; seen.add(k); return true; });
   }
   async function sendEmail(){
     const subject=$("#em-subj").value.trim(), body=$("#em-body").value.trim();
     if(!subject||!body) return $("#em-msg").innerHTML='<div class="msg err">Subject and message are required.</div>';
     const recipients=await recipientEmails();
     if(!recipients.length) return $("#em-msg").innerHTML='<div class="msg err">No recipients.</div>';
+    if(!confirm(`Send this email to ${recipients.length} active recipient${recipients.length===1?'':'s'}?`)) return;
     $("#em-msg").innerHTML='<span class="small-link">Sending…</span>';
     try{
       const { data:s } = await sb.auth.getSession(); const token=s?.session?.access_token;
