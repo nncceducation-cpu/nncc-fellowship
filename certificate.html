@@ -90,11 +90,14 @@
 
   const { data:course } = await sb.from("courses").select("*").eq("id",courseId).single();
   let { data:cert } = await sb.from("certificates").select("*").eq("course_id",courseId).eq("user_id",targetUser).maybeSingle();
+  let claimReason="";
   if(!cert && targetUser===me.id){ // learners may claim their own certificate when complete
-    const { data:res } = await sb.rpc("claim_certificate",{ p_course:courseId });
+    const { data:res, error:claimError } = await sb.rpc("claim_certificate",{ p_course:courseId });
+    if(claimError) claimReason=claimError.message;
+    else if(res&&!res.issued) claimReason=res.reason||"Course requirements are not complete.";
     if(res && res.issued){ const r=await sb.from("certificates").select("*").eq("course_id",courseId).eq("user_id",me.id).maybeSingle(); cert=r.data; }
   }
-  if(!cert){ $("#cert").innerHTML='<div class="empty">You haven’t completed this course yet, so no certificate is available.</div>'; return; }
+  if(!cert){ $("#cert").innerHTML=`<div class="empty">No certificate is available yet.${claimReason?`<br><span class="small-link">${esc(claimReason)}</span>`:" Complete every required lesson and assessment, then return here."}</div>`; return; }
   const dt=new Date(cert.issued_at).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
 
   // Custom branding (uploaded by admin in Admin → Certificate design)

@@ -94,16 +94,19 @@
     $("#e-host").value=ev.host||""; $("#e-loc").value=ev.location||""; $("#e-start").value=toLocal(ev.starts_at); $("#e-end").value=toLocal(ev.ends_at);
     $("#e-cap").value=ev.capacity||""; $("#e-status").value=ev.status||"published"; $("#ev-formtitle").textContent="Edit event"; window.scrollTo({top:0,behavior:"smooth"}); }
 
-  let myRegs=new Set();
+  let myRegs=new Set(), regCounts={};
   async function load(){
-    const [{data:evs},{data:regs}] = await Promise.all([
+    const [{data:evs},{data:regs},{data:counts,error:countError}] = await Promise.all([
       sb.from("events").select("*").order("starts_at",{ascending:true}),
-      sb.from("event_registrations").select("event_id").eq("user_id",me.id)
+      sb.from("event_registrations").select("event_id").eq("user_id",me.id),
+      sb.rpc("event_registration_counts")
     ]);
     myRegs=new Set((regs||[]).map(r=>r.event_id));
+    regCounts={}; (counts||[]).forEach(r=>regCounts[r.event_id]=Number(r.registration_count||0));
     const now=Date.now();
-    const up=(evs||[]).filter(e=>!e.starts_at || new Date(e.starts_at).getTime()>=now-3600e3);
-    const past=(evs||[]).filter(e=>e.starts_at && new Date(e.starts_at).getTime()<now-3600e3).reverse();
+    const visibleEvs=isAdmin?(evs||[]):(evs||[]).filter(e=>e.status==='published');
+    const up=visibleEvs.filter(e=>!e.starts_at || new Date(e.starts_at).getTime()>=now-3600e3);
+    const past=visibleEvs.filter(e=>e.starts_at && new Date(e.starts_at).getTime()<now-3600e3).reverse();
     $("#upcoming").innerHTML = up.length? up.map(card).join("") : '<div class="empty">No upcoming events yet.</div>';
     $("#past").innerHTML = past.length? past.map(e=>card(e,true)).join("") : '<div class="empty">No past events.</div>';
     document.querySelectorAll("[data-reg]").forEach(b=>b.addEventListener("click",()=>toggleReg(b.dataset.reg)));
@@ -113,7 +116,8 @@
   function card(e, isPast){
     const w=e.starts_at?dParts(e.starts_at):{day:'—',mon:'',time:'Time TBA'};
     const reg=myRegs.has(e.id);
-    const joinable=e.location && (!isPast);
+    const taken=regCounts[e.id]||0, full=!!e.capacity&&taken>=e.capacity&&!reg;
+    const joinable=e.location && (!isPast) && (reg||isAdmin);
     return `<div class="ev">
       <div class="when"><b>${w.day}</b><span>${esc(w.mon)}</span></div>
       <div class="body">
@@ -124,14 +128,24 @@
         ${e.description?`<p style="margin:8px 0;color:var(--muted)">${esc(e.description)}</p>`:''}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
           ${joinable?`<a class="btn" href="${esc(e.location)}" target="_self" rel="noopener">Join</a>`:''}
-          ${!isPast?`<button class="btn outline" data-reg="${e.id}">${reg?'✓ Registered':'Register'}</button>`:''}
+          ${!isPast?`<button class="btn outline" data-reg="${e.id}" ${full?'disabled':''}>${reg?'✓ Registered':full?'Full':'Register'}</button>`:''}
+          ${e.capacity&&!countError?`<span class="small-link">${taken}/${e.capacity} places reserved</span>`:''}
           ${isAdmin?`<button class="chip-btn" data-edit="${e.id}">Edit</button><button class="chip-btn" data-del="${e.id}">Delete</button>`:''}
         </div>
       </div></div>`;
   }
   async function toggleReg(id){
-    if(myRegs.has(id)){ await sb.from("event_registrations").delete().eq("event_id",id).eq("user_id",me.id); }
-    else { await sb.from("event_registrations").insert({event_id:id,user_id:me.id}); }
+    const {data,error}=await sb.rpc("toggle_event_registration",{p_event:id});
+    if(error){
+      // Compatibility fallback while an older portal database is being upgraded.
+      const fallback=myRegs.has(id)
+        ? await sb.from("event_registrations").delete().eq("event_id",id).eq("user_id",me.id)
+        : await sb.from("event_registrations").insert({event_id:id,user_id:me.id});
+      if(fallback.error){ flash(esc(fallback.error.message),"err"); return; }
+      flash(myRegs.has(id)?"Registration cancelled.":"Registration confirmed."); load(); return;
+    }
+    if(data&&!data.registered&&data.reason==='full'){ flash("This event is full.","err"); }
+    else flash(data&&data.registered?"Registration confirmed.":"Registration cancelled.");
     load();
   }
   load();

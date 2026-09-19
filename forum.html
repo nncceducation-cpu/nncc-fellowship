@@ -116,7 +116,13 @@
     const { data:th } = await sb.from("forum_threads_view").select("*").eq("id",id).single();
     if(!th){ $("#tv-title").textContent="Topic not found"; return; }
     $("#tv-title").textContent = th.title;
-    $("#tv-meta").textContent = "Started by "+(th.author_name||"a member")+" · "+when(th.created_at);
+    $("#tv-meta").innerHTML = `Started by ${esc(th.author_name||"a member")} · ${when(th.created_at)}${(th.created_by===me.id||prof.role==='admin')?` · <a href="#" id="delete-thread">Delete topic</a>`:''}`;
+    $("#delete-thread")?.addEventListener("click",async(e)=>{
+      e.preventDefault(); if(!confirm("Delete this entire topic and all its replies?"))return;
+      const {error}=await sb.from("forum_threads").delete().eq("id",id);
+      if(error)return say("#reply-msg",esc(error.message),"err");
+      location.href="forum.html";
+    });
     await loadPosts(id);
     $("#reply-form").addEventListener("submit", async (e)=>{
       e.preventDefault(); say("#reply-msg","","");

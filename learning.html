@@ -457,12 +457,15 @@
       const body=wrap.querySelector("#asg-body").value.trim()||null;
       const file=wrap.querySelector("#asg-file").files[0];
       const msg=wrap.querySelector("#asg-msg"); let file_path=null;
+      const btn=e.submitter;
+      if(!body&&!file){ msg.innerHTML='<div class="msg err">Add an answer or attach a file before submitting.</div>'; return; }
+      btn.disabled=true; btn.textContent="Submitting…";
       if(file){ const safe=file.name.replace(/[^\w.\-]+/g,'_'); file_path=`${me.id}/${lessonId}/${Date.now()}-${safe}`;
         msg.innerHTML='<span class="small-link">Uploading…</span>';
         const { error:ue }=await sb.storage.from("submissions").upload(file_path,file,{upsert:true});
-        if(ue){ msg.innerHTML=`<div class="msg err">${esc(ue.message)}</div>`; return; } }
+        if(ue){ msg.innerHTML=`<div class="msg err">${esc(ue.message)}</div>`; btn.disabled=false; btn.textContent=last?'Submit again':'Submit assignment'; return; } }
       const { error }=await sb.from("assignment_submissions").insert({ lesson_id:lessonId, user_id:me.id, body, file_path });
-      if(error){ msg.innerHTML=`<div class="msg err">${esc(error.message)}</div>`; return; }
+      if(error){ msg.innerHTML=`<div class="msg err">${esc(error.message)}</div>`; btn.disabled=false; btn.textContent=last?'Submit again':'Submit assignment'; return; }
       await sb.from("lesson_progress").upsert({ user_id:me.id, lesson_id:lessonId }); if(onSubmit)onSubmit();
       msg.innerHTML='<div class="msg ok">Submitted ✓</div>'; setTimeout(()=>showLesson(lessonId),900);
     });
