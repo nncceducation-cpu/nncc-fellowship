@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     if (!prof || prof.role !== "admin") return json({ error: "Admins only" }, 403);
 
     // --- input ---
-    const { subject, body, recipients } = await req.json();
+    const { subject, body, recipients, fromName, replyTo } = await req.json();
     const list: { email: string; user_id?: string }[] =
       (recipients || []).filter((r: any) => r && r.email);
     if (!subject || !body) return json({ error: "Subject and body are required" }, 400);
@@ -51,6 +51,11 @@ Deno.serve(async (req) => {
       .select().single();
 
     const html = `<div style="font-family:Inter,Arial,sans-serif;font-size:15px;color:#1d2733;line-height:1.6">${body}</div>`;
+    const text = String(body).replace(/<br\s*\/?\s*>/gi, "\n").replace(/<\/p>/gi, "\n\n").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim();
+    const cleanName = String(fromName || "").replace(/[<>\r\n]/g, "").trim().slice(0, 80);
+    const emailMatch = EMAIL_FROM.match(/<([^>]+)>/);
+    const sender = cleanName && emailMatch ? `${cleanName} <${emailMatch[1]}>` : EMAIL_FROM;
+    const safeReplyTo = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(replyTo || "")) ? String(replyTo) : undefined;
     let sent = 0;
     const rows: any[] = [];
 
@@ -66,7 +71,7 @@ Deno.serve(async (req) => {
         const resp = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: { "Authorization": `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ from: EMAIL_FROM, to: [r.email], subject, html }),
+          body: JSON.stringify({ from: sender, to: [r.email], subject, html, text, ...(safeReplyTo ? { reply_to: safeReplyTo } : {}) }),
         });
         if (resp.ok) { sent++; rows.push({ message_id: msg.id, email: r.email, user_id: r.user_id ?? null, status: "sent" }); }
         else { const t = await resp.text(); rows.push({ message_id: msg.id, email: r.email, user_id: r.user_id ?? null, status: "failed", error: t.slice(0, 300) }); }

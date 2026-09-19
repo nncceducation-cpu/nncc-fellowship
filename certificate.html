@@ -75,16 +75,22 @@
 <script>
 (async function(){
   const me=await NNCC.requireAccess("modules"); if(!me) return;
-  const prof=await NNCC.profile();
+  const currentProf=await NNCC.profile();
   NNCC.mountUserChip(document.getElementById("user-chip"));
   const sb=NNCC.client, $=(s)=>document.querySelector(s);
   const esc=(s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const courseId=new URLSearchParams(location.search).get("course");
+  const params=new URLSearchParams(location.search), courseId=params.get("course"), requestedUser=params.get("user");
   if(!courseId){ $("#cert").innerHTML='<div class="empty">No course specified.</div>'; return; }
 
+  let targetUser=me.id, prof=currentProf;
+  if(requestedUser && currentProf.role==="admin"){
+    const { data:targetProfile }=await sb.from("profiles").select("*").eq("id",requestedUser).maybeSingle();
+    if(targetProfile){ targetUser=requestedUser; prof=targetProfile; }
+  }
+
   const { data:course } = await sb.from("courses").select("*").eq("id",courseId).single();
-  let { data:cert } = await sb.from("certificates").select("*").eq("course_id",courseId).eq("user_id",me.id).maybeSingle();
-  if(!cert){ // try to claim if complete
+  let { data:cert } = await sb.from("certificates").select("*").eq("course_id",courseId).eq("user_id",targetUser).maybeSingle();
+  if(!cert && targetUser===me.id){ // learners may claim their own certificate when complete
     const { data:res } = await sb.rpc("claim_certificate",{ p_course:courseId });
     if(res && res.issued){ const r=await sb.from("certificates").select("*").eq("course_id",courseId).eq("user_id",me.id).maybeSingle(); cert=r.data; }
   }
@@ -106,8 +112,8 @@
     {n:6,match:["brain monitoring"],title:"Neonatal Neuro Critical Care Module 6: Neonatal Brain Monitoring",id:"00017854",hours:9},
     {n:7,match:["nursing care","infants with hie"],title:"Neonatal Neuro Critical Care Module 7: Nursing Care of Infants with HIE Certification",id:"00017855",hours:10},
     {n:8,match:["post hemorrhagic ventricular dilatation"],title:"Neonatal Neuro Critical Care Module 8: Post Hemorrhagic Ventricular Dilatation Diagnosis and Management",id:"00017856",hours:3},
-    {n:9,match:["neonatal stroke"],title:"Neonatal Neuro Critical Care Module 9: Neonatal Stroke",id:"00017857",hours:2},
-    {n:10,match:["fetal monitoring","prevent hie"],title:"Neonatal Neuro Critical Care Module 10: Fetal monitoring to prevent HIE",id:"00017858",hours:6}
+    {n:9,match:["neonatal stroke"],title:"Neonatal Neuro Critical Care Module 9: Neonatal Stroke",id:"00017858",hours:2},
+    {n:10,match:["fetal monitoring","prevent hie"],title:"Neonatal Neuro Critical Care Module 10: Fetal monitoring to prevent HIE",id:"00017859",hours:6}
   ];
   const rawTitle = course?course.title:'';
   const normalizedTitle = rawTitle.toLowerCase().replace(/[-–—]/g," ").replace(/\s+/g," ");

@@ -341,12 +341,19 @@
       body:JSON.stringify({ subject, body:htmlBody, recipients, fromName:opts.fromName, replyTo:opts.replyTo }) });
     return await r.json().catch(()=>({}));
   }
+  async function supportEmail(){
+    if(__supportEmail===null){
+      try{ const { data:st }=await sb.from("site_settings").select("support_email,reply_to_email").eq("id",1).maybeSingle(); __supportEmail=(st&&(st.support_email||st.reply_to_email))||""; }
+      catch(_){ __supportEmail=""; }
+    }
+    return __supportEmail;
+  }
   // Automatic welcome email (sign-in link + instructions) from Dr. Khorshid Mohammad
   let __supportEmail=null;
   async function welcomeEmail(email, name){
     if(!email) return {error:"no email"};
     try{
-      if(__supportEmail===null){ try{ const { data:st }=await sb.from("site_settings").select("support_email,reply_to_email").eq("id",1).maybeSingle(); __supportEmail=(st&&(st.support_email||st.reply_to_email))||""; }catch(_){ __supportEmail=""; } }
+      await supportEmail();
       const link=await getSigninLink(email);
       const first=((name||"").trim().split(/\s+/)[0])||"there";
       const html='Dear '+esc(first)+',<br><br>'+
@@ -465,7 +472,7 @@
       const list = i===2 ? enr.filter(e=>e.starts_at && new Date(e.starts_at)>new Date()) : enr;
       const rows=list.map(e=>`<tr>
         <td>${esc(e.title)}</td><td>${uBar(e.done,e.total)}</td><td>${uStatus(e)}</td>
-        <td>${e.certificate?('✓ '+esc(e.certificate)):', '}</td>
+        <td>${e.certificate?`<a href="certificate.html?course=${e.course_id}&user=${uid}" target="_blank" rel="noopener">✓ ${esc(e.certificate)}</a>`:'—'}</td>
         <td>${e.starts_at?fmtDate(e.starts_at):'immediate'}</td>
         <td>${e.expires_at?fmtDate(e.expires_at):'no expiry'}</td>
         <td class="row-actions"><button data-edates="${e.course_id}">Dates</button><button data-unen="${e.course_id}">Unenroll</button></td></tr>`).join("");
@@ -533,13 +540,39 @@
           <td>${uBar(p.done,p.total)}</td>
           <td>${e.starts_at?(fmtDate(e.starts_at)+(pending?' ⏳':'')):'immediate'}</td>
           <td>${e.expires_at?fmtDate(e.expires_at):'no expiry'}</td>
-          <td class="row-actions"><button data-editdates="${e.user_id}">Set dates</button><button data-unen="${e.user_id}">Unenroll</button></td></tr>`;}).join("");
-      $("#en-enrolled").innerHTML=`<h3 style="margin:14px 0 6px">Enrolled (${(data||[]).length})</h3>`+
+          <td class="row-actions">${m.email&&p.total&&p.done<p.total&&!pending?`<button data-remind="${e.user_id}">Remind</button>`:''}<button data-editdates="${e.user_id}">Set dates</button><button data-unen="${e.user_id}">Unenroll</button></td></tr>`;}).join("");
+      $("#en-enrolled").innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:14px 0 6px"><h3 style="margin:0">Enrolled (${(data||[]).length})</h3>${(data||[]).length?'<button class="btn outline" id="en-remind-all">✉ Remind incomplete learners</button>':''}</div>`+
         ((data||[]).length?`<table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>Progress</th><th>Start</th><th>Expires</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<p class="muted-note">Nobody enrolled yet.</p>');
       $("#en-enrolled").querySelectorAll("button").forEach(btn=>btn.addEventListener("click", async ()=>{
-        if(btn.dataset.unen){ await sb.from("course_enrollments").delete().eq("course_id",course()).eq("user_id",btn.dataset.unen); loadEnrolled(); }
+        if(btn.dataset.remind){ const uid=btn.dataset.remind, m=byId[uid]||{}, p=prog[uid]||{done:0,total:0}, e=emap2[uid]||{}; await sendCourseReminder(course(),m,p,e,btn); return; }
+        if(btn.dataset.unen){ if(!confirm("Unenroll this learner from the selected course?"))return; await sb.from("course_enrollments").delete().eq("course_id",course()).eq("user_id",btn.dataset.unen); loadEnrolled(); }
         if(btn.dataset.editdates){ const cur=emap2[btn.dataset.editdates]||{}; const s=prompt("Start date (YYYY-MM-DD), blank = immediately:", cur.starts_at?cur.starts_at.slice(0,10):''); if(s===null)return; const x=prompt("Expiry date (YYYY-MM-DD), blank = never:", cur.expires_at?cur.expires_at.slice(0,10):''); if(x===null)return; await sb.from("course_enrollments").update({starts_at:s?toIso(s):null,expires_at:x?toIso(x):null}).eq("course_id",course()).eq("user_id",btn.dataset.editdates); loadEnrolled(); }
       }));
+      $("#en-remind-all")?.addEventListener("click", async()=>{
+        const now=Date.now();
+        const recipients=(data||[]).filter(e=>{
+          const p=prog[e.user_id]||{done:0,total:0};
+          return byId[e.user_id]?.email&&byId[e.user_id]?.status!=='suspended'&&p.total&&p.done<p.total&&(!e.starts_at||new Date(e.starts_at).getTime()<=now)&&(!e.expires_at||new Date(e.expires_at).getTime()>now);
+        }).map(e=>({email:byId[e.user_id].email,user_id:e.user_id}));
+        if(!recipients.length) return flash("No active incomplete learners need a reminder.","info");
+        const c=S.courses.find(x=>x.id===course())||{}, link=location.origin+"/learning.html?course="+course();
+        const html=`Hello,<br><br>This is a friendly reminder to continue <b>${esc(c.title||"your NNCC course")}</b>.<br><br><a href="${link}" style="background:#0f8a8a;color:#fff;padding:11px 20px;border-radius:8px;text-decoration:none;display:inline-block;font-weight:600">Continue learning</a><br><br>Your progress is saved, so you can resume where you stopped.<br><br>Warm regards,<br><b>Dr. Khorshid Mohammad</b>`;
+        const btn=$("#en-remind-all"), original=btn.textContent; btn.disabled=true; btn.textContent="Sending…";
+        const res=await sendEmailTo(`Reminder: continue ${c.title||"your NNCC course"}`,html,recipients,{fromName:"Dr. Khorshid Mohammad",replyTo:await supportEmail()||undefined});
+        btn.disabled=false; btn.textContent=original;
+        flash(res&&res.ok?`Reminder sent to ${res.sent}/${res.total} learner(s).`:esc((res&&res.error)||"Reminders could not be sent."),res&&res.ok?"ok":"err");
+      });
+    }
+    async function sendCourseReminder(cid,member,progress,enrollment,btn){
+      if(!member.email) return flash("This learner has no email address.","err");
+      const c=S.courses.find(x=>x.id===cid)||{}, pct=progress.total?Math.round(progress.done/progress.total*100):0;
+      const expiry=enrollment.expires_at?`<br><b>Access expires:</b> ${fmtDate(enrollment.expires_at)}`:"";
+      const link=location.origin+"/learning.html?course="+cid;
+      const html=`Hello ${esc((member.full_name||"").split(/\s+/)[0]||"there")},<br><br>This is a friendly reminder to continue <b>${esc(c.title||"your NNCC course")}</b>.<br><br><b>Progress:</b> ${progress.done}/${progress.total} lessons (${pct}%)${expiry}<br><br><a href="${link}" style="background:#0f8a8a;color:#fff;padding:11px 20px;border-radius:8px;text-decoration:none;display:inline-block;font-weight:600">Continue learning</a><br><br>Your progress is saved, so you can resume where you stopped.<br><br>Warm regards,<br><b>Dr. Khorshid Mohammad</b>`;
+      const original=btn.textContent; btn.disabled=true; btn.textContent="Sending…";
+      const res=await sendEmailTo(`Reminder: continue ${c.title||"your NNCC course"}`,html,[{email:member.email,user_id:member.id}],{fromName:"Dr. Khorshid Mohammad",replyTo:await supportEmail()||undefined});
+      btn.disabled=false; btn.textContent=original;
+      flash(res&&res.ok?`Reminder sent to ${esc(member.email)}.`:esc((res&&res.error)||"Reminder could not be sent."),res&&res.ok?"ok":"err");
     }
     async function doEnroll(){
       const who=$("#en-who").value; let ids=[];
@@ -659,8 +692,11 @@
   }
   async function loadEmailLog(){
     const { data } = await sb.from("email_messages").select("*").order("created_at",{ascending:false}).limit(10);
+    const ids=(data||[]).map(m=>m.id); let recipients=[];
+    if(ids.length){ const { data:r }=await sb.from("email_recipients").select("message_id,status,error").in("message_id",ids); recipients=r||[]; }
+    const delivery=(id)=>{ const rows=recipients.filter(r=>r.message_id===id); return {sent:rows.filter(r=>r.status==='sent').length,failed:rows.filter(r=>r.status==='failed'||r.status==='not_sent').length,pending:rows.filter(r=>!['sent','failed','not_sent'].includes(r.status)).length}; };
     $("#em-log").innerHTML=(data||[]).length? `<table class="tbl"><thead><tr><th>Date</th><th>Subject</th><th>Recipients</th></tr></thead><tbody>`+
-      data.map(m=>`<tr><td>${new Date(m.created_at).toLocaleString()}</td><td>${esc(m.subject)}</td><td>${m.recipient_count}</td></tr>`).join("")+`</tbody></table>`
+      data.map(m=>{ const d=delivery(m.id); return `<tr><td>${new Date(m.created_at).toLocaleString()}</td><td>${esc(m.subject)}</td><td>${d.sent} sent${d.failed?` · <span style="color:#a33">${d.failed} failed</span>`:''}${d.pending?` · ${d.pending} pending`:''} <span class="small-link">(${m.recipient_count} total)</span></td></tr>`; }).join("")+`</tbody></table>`
       : '<p class="muted-note">No emails sent yet.</p>';
   }
 
