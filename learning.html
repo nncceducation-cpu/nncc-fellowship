@@ -200,7 +200,10 @@
       root.querySelectorAll(".course-catalog-card").forEach(card=>{
         const matchesText=!term||(card.dataset.title||"").includes(term);
         const matchesState=filter==="all"||card.dataset.progress===filter;
-        const visible=matchesText&&matchesState; card.hidden=!visible; if(visible)shown++;
+        const visible=matchesText&&matchesState;
+        card.hidden=!visible;
+        card.style.display=visible?"":"none";
+        if(visible)shown++;
       });
       let empty=$("#catalog-empty");
       if(!empty){ empty=document.createElement("div"); empty.id="catalog-empty"; empty.className="empty"; $("#course-grid")?.after(empty); }
