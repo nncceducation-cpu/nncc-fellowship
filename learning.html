@@ -229,9 +229,14 @@
       const note=prompt(`Request access to ${b.dataset.courseTitle}\n\nOptional: tell the administrator why you would like to take this course.`,"");
       if(note===null) return;
       b.disabled=true; b.textContent="Sending request…";
-      const { error }=await sb.rpc("request_course_access",{p_course:b.dataset.requestAccess,p_message:note.trim()||null});
-      if(error){ b.disabled=false; b.textContent="Request access"; return alert(error.message); }
-      alert("Your access request was sent. You can start the course after an administrator approves it.");
+      const cfg=window.PORTAL_CONFIG||{}, {data:sessionData}=await sb.auth.getSession(), token=sessionData?.session?.access_token;
+      let response, result={};
+      try{
+        response=await fetch(`${cfg.SUPABASE_URL}/functions/v1/course-access-request`,{method:"POST",headers:{"Content-Type":"application/json",apikey:cfg.SUPABASE_ANON_KEY,Authorization:"Bearer "+token},body:JSON.stringify({course_id:b.dataset.requestAccess,message:note.trim()||null})});
+        result=await response.json().catch(()=>({}));
+      }catch(error){ b.disabled=false; b.textContent="Request access"; return alert("The request could not be sent. Please try again."); }
+      if(!response.ok||!result.ok){ b.disabled=false; b.textContent="Request access"; return alert(result.error||"The request could not be sent."); }
+      alert(result.emailed?"Your access request was sent and the program administrator was notified by email. You can start the course after approval.":"Your access request was saved. You can start the course after an administrator approves it.");
       showCourses();
     }));
     root.querySelectorAll("[data-bsignup]").forEach(b=>b.addEventListener("click", async (e)=>{ e.preventDefault(); e.stopPropagation();

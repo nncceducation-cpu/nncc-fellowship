@@ -39,6 +39,10 @@
         <div><h1>Members' forum</h1><p>Discuss cases, ask questions, share resources.</p></div>
         <button class="btn" id="new-btn">+ New topic</button>
       </div>
+      <label class="panel" style="display:flex;align-items:center;gap:10px;padding:12px 15px;margin-top:14px;cursor:pointer">
+        <input type="checkbox" id="forum-email-opt" style="width:18px;height:18px;accent-color:var(--teal)">
+        <span><b>Email me about new forum discussions and replies</b><br><span class="small-link">You can change this preference at any time.</span></span>
+      </label>
       <form id="new-form" class="panel" style="display:none;margin-top:18px">
         <div id="new-msg"></div>
         <div class="field"><label>Topic title</label><input id="nt-title" required placeholder="e.g. aEEG interpretation in HIE"></div>
@@ -80,6 +84,21 @@
   const say=(el,t,k)=>{$(el).innerHTML=t?`<div class="msg ${k}">${t}</div>`:"";};
   const threadId = new URLSearchParams(location.search).get("thread");
 
+  const emailOpt=$("#forum-email-opt");
+  if(emailOpt){ emailOpt.checked=prof.forum_email_notifications!==false; emailOpt.addEventListener("change",async()=>{
+    emailOpt.disabled=true;
+    const {error}=await sb.from("profiles").update({forum_email_notifications:emailOpt.checked}).eq("id",me.id);
+    emailOpt.disabled=false;
+    if(error){ emailOpt.checked=!emailOpt.checked; alert(error.message); }
+  }); }
+
+  async function notifyForum(eventType,eventId){
+    try{
+      const cfg=window.PORTAL_CONFIG||{}, {data:s}=await sb.auth.getSession(), token=s?.session?.access_token;
+      await fetch(`${cfg.SUPABASE_URL}/functions/v1/forum-notification`,{method:"POST",headers:{"Content-Type":"application/json",apikey:cfg.SUPABASE_ANON_KEY,Authorization:"Bearer "+token},body:JSON.stringify({event_type:eventType,event_id:eventId})});
+    }catch(_){ /* The forum post remains saved even if email delivery is unavailable. */ }
+  }
+
   if (threadId) { showThread(threadId); } else { showList(); }
 
   // ---------- list ----------
@@ -107,6 +126,7 @@
       .insert({ thread_id:th.id, body:$("#nt-body").value.trim(), created_by:me.id });
     btn.disabled=false;
     if(pe) return say("#new-msg",esc(pe.message),"err");
+    await notifyForum("topic",th.id);
     location.href="forum.html?thread="+th.id;
   });
 
@@ -127,11 +147,11 @@
     $("#reply-form").addEventListener("submit", async (e)=>{
       e.preventDefault(); say("#reply-msg","","");
       const btn=e.submitter; btn.disabled=true;
-      const { error } = await sb.from("forum_posts")
-        .insert({ thread_id:id, body:$("#rp-body").value.trim(), created_by:me.id });
+      const { data:post, error } = await sb.from("forum_posts")
+        .insert({ thread_id:id, body:$("#rp-body").value.trim(), created_by:me.id }).select("id").single();
       btn.disabled=false;
       if(error) return say("#reply-msg",esc(error.message),"err");
-      $("#rp-body").value=""; loadPosts(id);
+      $("#rp-body").value=""; await notifyForum("reply",post.id); loadPosts(id);
     });
   }
   async function loadPosts(id){
