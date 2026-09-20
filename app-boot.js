@@ -93,7 +93,8 @@
     ["portal.html",   "M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z", "Home"],
     ["learning.html", "M4 5h16v11H4zM2 19h20", "Courses"],
     ["events.html",   "M5 4h14v16H5zM8 2v4M16 2v4M5 9h14", "Webinars"],
-    ["forum.html",    "M4 5h16v10H8l-4 4z", "Forum"]
+    ["forum.html",    "M4 5h16v10H8l-4 4z", "Forum"],
+    ["profile.html",  "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0", "Profile"]
   ];
   var HIDE = ["login.html", "index.html", "home.html", "fellowship.html",
               "competencies.html", "assessment.html", "governance.html",
@@ -103,6 +104,7 @@
     if (here === "learning.html" || here === "modules.html") return "learning.html";
     if (here === "events.html") return "events.html";
     if (here === "forum.html") return "forum.html";
+    if (here === "profile.html") return "profile.html";
     return "portal.html";
   }
 

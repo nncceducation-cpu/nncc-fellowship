@@ -43,6 +43,14 @@
       <p>Your private area for the Harvey Sarnat NNCC Fellowship, resources, education modules and the members' forum.</p>
     </div>
 
+    <section class="learner-search" aria-labelledby="portal-search-label">
+      <label id="portal-search-label" for="portal-search">Search the learning centre</label>
+      <div class="learner-search-box"><span aria-hidden="true">⌕</span><input id="portal-search" type="search" placeholder="Search courses, lessons, resources and certificates…" autocomplete="off"></div>
+      <div id="portal-search-results" class="search-results" hidden></div>
+    </section>
+
+    <section class="dashboard-summary" id="dashboard-summary" aria-label="Your learning summary"></section>
+
     <div class="card-grid">
       <a class="p-card" id="card-modules" href="learning.html" style="display:none">
         <div class="ic">▶</div><h3>Education Modules</h3>
@@ -109,6 +117,11 @@
     <!-- Thinkific-style resume path: shown when the learner has an accessible course. -->
     <section id="sec-continue" style="display:none;margin-top:26px">
       <div class="continue-learning" id="continue-learning"></div>
+    </section>
+
+    <section class="panel onboarding-card" id="onboarding-card" style="display:none">
+      <div class="onboarding-head"><div><span class="continue-eyebrow">Getting started</span><h2>Your learner checklist</h2></div><button class="btn outline" id="onboarding-hide" type="button">Hide</button></div>
+      <div class="onboarding-list" id="onboarding-list"></div>
     </section>
 
     <!-- Upcoming events -->
@@ -181,7 +194,7 @@
   if (can("modules")) {
     try {
       const [{ data:courses },{ data:mods },{ data:lessons },{ data:progress },{ data:enrollments },{ data:bundleEnrollments },{ data:bundleCourses }] = await Promise.all([
-        NNCC.client.from("courses").select("id,title,visibility,enrollment_required,sort_order").order("sort_order").order("created_at"),
+        NNCC.client.from("courses").select("id,title,description,visibility,enrollment_required,sort_order").order("sort_order").order("created_at"),
         NNCC.client.from("modules").select("id,course_id,sort_order,created_at").order("sort_order").order("created_at"),
         NNCC.client.from("lessons").select("id,module_id,title,lesson_type,sort_order,created_at").order("sort_order").order("created_at"),
         NNCC.client.from("lesson_progress").select("lesson_id").eq("user_id",me.id),
@@ -196,11 +209,12 @@
       const done=new Set((progress||[]).map(p=>p.lesson_id));
       const modulesByCourse={}; (mods||[]).forEach(m=>(modulesByCourse[m.course_id]=modulesByCourse[m.course_id]||[]).push(m.id));
       const lessonsByModule={}; (lessons||[]).forEach(l=>(lessonsByModule[l.module_id]=lessonsByModule[l.module_id]||[]).push(l));
-      const candidates=(courses||[]).filter(c=>admin||(c.visibility==="published"&&(!c.enrollment_required||accessible.has(c.id)))).map(c=>{
+      const allCourseStats=(courses||[]).filter(c=>admin||(c.visibility==="published"&&(!c.enrollment_required||accessible.has(c.id)))).map(c=>{
         const ordered=(modulesByCourse[c.id]||[]).flatMap(mid=>lessonsByModule[mid]||[]);
         const completed=ordered.filter(l=>done.has(l.id)).length;
         return {course:c,ordered,completed,total:ordered.length,next:ordered.find(l=>!done.has(l.id))};
-      }).filter(x=>x.total&&x.completed<x.total);
+      });
+      const candidates=allCourseStats.filter(x=>x.total&&x.completed<x.total);
       candidates.sort((a,b)=>(b.completed>0)-(a.completed>0)||(b.completed/b.total)-(a.completed/a.total)||Number(/Neonatal|NNCC|Preterm Brain/i.test(b.course.title))-Number(/Neonatal|NNCC|Preterm Brain/i.test(a.course.title)));
       const pick=candidates[0];
       if(pick){
@@ -208,6 +222,26 @@
         box.innerHTML=`<div><span class="continue-eyebrow">Continue learning</span><h2>${esc(pick.course.title)}</h2><p>${pick.completed?`${pick.completed} of ${pick.total} lessons complete`:`Ready when you are — ${pick.total} lessons`}</p><div class="continue-progress"><i style="width:${pct}%"></i></div></div><a class="btn" href="learning.html?lesson=${pick.next.id}&course=${pick.course.id}">${pick.completed?"Resume":"Start course"} →</a>`;
         document.getElementById("sec-continue").style.display="block";
       }
+      const enrolledCount=allCourseStats.length, completedCourses=allCourseStats.filter(x=>x.total&&x.completed===x.total).length;
+      document.getElementById("dashboard-summary").innerHTML=`<div><strong>${enrolledCount}</strong><span>available courses</span></div><div><strong>${done.size}</strong><span>lessons completed</span></div><div><strong>${completedCourses}</strong><span>courses completed</span></div>`;
+      const cardGrid=document.querySelector(".card-grid"), resume=document.getElementById("sec-continue"); if(cardGrid&&resume)cardGrid.parentNode.insertBefore(resume,cardGrid);
+      const onboarding=document.getElementById("onboarding-card"), hidden=localStorage.getItem("nncc-onboarding-hidden")==="1";
+      if(!hidden){ const steps=[
+        [!!prof.full_name,"Complete your profile","profile.html"],
+        [done.size>0,"Open and complete your first lesson",pick&&pick.next?`learning.html?lesson=${pick.next.id}&course=${pick.course.id}`:"learning.html"],
+        [localStorage.getItem("nncc-tried-quiz")==="1","Try a practice quiz","learning.html?course=c5d6f5e9-c582-49ff-a98a-1b3862ff6d03"],
+        [completedCourses>0,"View your certificates","portal.html#certificates"]];
+        onboarding.style.display="block"; document.getElementById("onboarding-list").innerHTML=steps.map(([ok,label,href])=>`<a href="${href}" class="${ok?'done':''}"><span>${ok?'✓':'○'}</span>${label}<b>›</b></a>`).join("");
+        [...document.getElementById("onboarding-list").querySelectorAll("a")].find(a=>a.textContent.includes("practice quiz"))?.addEventListener("click",()=>localStorage.setItem("nncc-tried-quiz","1"));
+        document.getElementById("onboarding-hide").onclick=()=>{localStorage.setItem("nncc-onboarding-hidden","1");onboarding.style.display="none";};
+      }
+      const search=document.getElementById("portal-search"), result=document.getElementById("portal-search-results");
+      search.addEventListener("input",async()=>{const q=search.value.trim().toLowerCase();if(q.length<2){result.hidden=true;return;}const hits=[];
+        (courses||[]).filter(c=>(c.title+" "+(c.description||"")).toLowerCase().includes(q)).slice(0,5).forEach(c=>hits.push(["Course",c.title,`learning.html?course=${c.id}`]));
+        (lessons||[]).filter(l=>(l.title||"").toLowerCase().includes(q)).slice(0,6).forEach(l=>{const mid=(mods||[]).find(m=>m.id===l.module_id),cid=mid?.course_id;hits.push(["Lesson",l.title,`learning.html?lesson=${l.id}${cid?'&course='+cid:''}`]);});
+        if(can("resources")){const {data:r}=await NNCC.client.from("resources").select("title,url,category").ilike("title",`%${q}%`).limit(4);(r||[]).forEach(x=>hits.push([x.category||"Resource",x.title,x.url]));}
+        result.innerHTML=hits.length?hits.slice(0,12).map(h=>`<a href="${esc(h[2])}"><span>${esc(h[0])}</span><b>${esc(h[1])}</b></a>`).join(""):'<div class="empty">No matching learning content.</div>';result.hidden=false;});
+      document.addEventListener("click",e=>{if(!e.target.closest(".learner-search"))result.hidden=true;});
     } catch(_){ /* Dashboard remains usable if optional resume data is unavailable. */ }
   }
 

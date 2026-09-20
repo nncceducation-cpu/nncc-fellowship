@@ -11,6 +11,7 @@
       ["events.html","◷","Coaching & Webinars","Live teaching and registration",false,null],
       ["forum.html","◌","Members’ Forum","Questions and case discussion",false,"forum"]]},
     { label:"Account", items:[
+      ["portal.html#certificates","◆","My Certificates","Completed course credentials",false,"modules"],
       ["profile.html","○","My Profile","Details, interests and access",false,null]]},
     { label:"Administration", admin:true, items:[
       ["authoring.html","◇","Course Builder","Courses, lessons and quizzes",true,null],
@@ -30,6 +31,7 @@
       <div class="rail-empty" hidden>No matching page</div>
       <div class="rail-foot"><div class="rail-avatar" id="rail-avatar">N</div><div class="rail-identity"><b id="rail-user">Member</b><small id="rail-role">NNCC learner</small></div><a href="#" id="rail-signout" title="Sign out" aria-label="Sign out">↗</a></div>`;
     document.body.appendChild(rail); document.body.classList.add("has-rail");
+    const main=document.querySelector("main"); if(main){main.id=main.id||"main-content";const skip=document.createElement("a");skip.className="skip-link";skip.href="#"+main.id;skip.textContent="Skip to main content";document.body.insertBefore(skip,document.body.firstChild);}
     const shade=document.createElement("button"); shade.className="rail-shade"; shade.setAttribute("aria-label","Close navigation"); document.body.appendChild(shade);
     const toggle=document.createElement("button"); toggle.className="rail-toggle"; toggle.type="button"; toggle.setAttribute("aria-label","Open portal navigation"); toggle.innerHTML='<span>☰</span><b>Menu</b>'; document.body.appendChild(toggle);
     const open=()=>{rail.classList.add("open");shade.classList.add("open");toggle.setAttribute("aria-expanded","true");};
@@ -39,5 +41,6 @@
     search.addEventListener("input",()=>{const q=search.value.trim().toLowerCase();let shown=0;rail.querySelectorAll("nav a").forEach(a=>{const yes=!q||a.dataset.search.includes(q);a.hidden=!yes;if(yes)shown++;});rail.querySelectorAll(".rail-group").forEach(g=>g.hidden=![...g.querySelectorAll("a")].some(a=>!a.hidden));empty.hidden=!!shown;});
     rail.querySelector("#rail-signout").addEventListener("click",async e=>{e.preventDefault();await NNCC.signOut();location.href="login.html";});
     try{const p=await NNCC.profile();if(p){const name=p.full_name||p.email||"Member",admin=p.role==="admin";rail.querySelector("#rail-user").textContent=name;rail.querySelector("#rail-role").textContent=admin?"Portal administrator":"NNCC learner";rail.querySelector("#rail-avatar").textContent=name.trim().charAt(0).toUpperCase()||"N";rail.querySelectorAll('[data-adm="true"]').forEach(a=>{if(!admin)a.remove();});if(!admin)rail.querySelectorAll('[data-acc]').forEach(a=>{const area=a.dataset.acc;if(area&&p["acc_"+area]===false)a.remove();});rail.querySelectorAll(".rail-group").forEach(g=>{if(!g.querySelector("a"))g.remove();});}}catch(_){}
+    const improveMedia=(root=document)=>root.querySelectorAll("img").forEach(img=>{if(!img.hasAttribute("alt"))img.alt="Educational image";}); improveMedia(); new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(n=>{if(n.nodeType===1)improveMedia(n)}))).observe(document.body,{childList:true,subtree:true});
   });
 })();
