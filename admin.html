@@ -13,6 +13,18 @@
 <link rel="stylesheet" href="portal-mobile.css">
 <script src="app-boot.js" defer></script>
 <link rel="icon" href="favicon.ico" sizes="any">
+<style>
+  .admin-action-cell{width:1%;white-space:nowrap;overflow:visible}
+  .admin-actions{position:relative;display:inline-block}
+  .admin-actions summary{list-style:none;cursor:pointer;min-width:96px;padding:7px 30px 7px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--navy);font-size:13px;font-weight:600;position:relative;user-select:none}
+  .admin-actions summary::-webkit-details-marker{display:none}
+  .admin-actions summary::after{content:'▾';position:absolute;right:11px;top:50%;transform:translateY(-52%);font-size:12px;color:var(--muted)}
+  .admin-actions[open] summary{border-color:var(--teal);box-shadow:0 0 0 3px rgba(15,138,138,.12)}
+  .admin-actions-menu{position:absolute;right:0;top:calc(100% + 5px);z-index:30;display:grid;min-width:150px;padding:6px;background:#fff;border:1px solid var(--line);border-radius:11px;box-shadow:0 12px 28px rgba(17,40,64,.16)}
+  .row-actions .admin-actions-menu button{width:100%;margin:0;padding:9px 10px;border:0;background:transparent;text-align:left;font-size:13px;border-radius:7px;white-space:nowrap}
+  .row-actions .admin-actions-menu button:hover{background:var(--navy-50);color:var(--teal-600)}
+  .row-actions .admin-actions-menu button:disabled{opacity:.45;cursor:not-allowed}
+</style>
 </head>
 <body>
 
@@ -138,7 +150,10 @@
       const del = isSelf ? '' : `<button data-act="delete" data-id="${m.id}">Remove</button>`;
       return `<tr><td>${esc(m.full_name||'-')}</td><td>${esc(m.email||'')}</td>
         <td><span class="badge ${m.role}">${m.role}</span></td>
-        <td class="row-actions">${toggle} ${del}</td></tr>`;
+        <td class="row-actions admin-action-cell"><details class="admin-actions">
+          <summary aria-label="Actions for ${esc(m.full_name||m.email||'member')}">Actions</summary>
+          <div class="admin-actions-menu">${toggle}${del}</div>
+        </details></td></tr>`;
     }).join("");
     $("#members-list").innerHTML =
       '<table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Actions</th></tr></thead><tbody>'+
@@ -146,6 +161,7 @@
   }
   $("#members-list").addEventListener("click", async (e)=>{
     const b=e.target.closest("button"); if(!b) return;
+    const menu=b.closest("details.admin-actions"); if(menu) menu.open=false;
     const id=b.dataset.id, act=b.dataset.act;
     if(act==="promote") await NNCC.setRole(id,"admin");
     if(act==="demote")  await NNCC.setRole(id,"member");
@@ -153,6 +169,10 @@
       await NNCC.client.from("profiles").delete().eq("id",id); }
     loadMembers();
   });
+  $("#members-list").addEventListener("toggle",e=>{
+    if(!e.target.matches("details.admin-actions")||!e.target.open)return;
+    document.querySelectorAll("details.admin-actions[open]").forEach(d=>{if(d!==e.target)d.open=false;});
+  },true);
 
   // ---- Resources ----
   async function loadRes(){
