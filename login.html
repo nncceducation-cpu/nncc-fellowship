@@ -107,10 +107,13 @@
       <h1>Request to join</h1>
       <p class="muted">Access to the portal is by approval. Send your details and the program team will be in touch.</p>
       <div id="join-msg"></div>
-      <div class="field"><label for="jn-name">Full name</label><input id="jn-name" type="text" placeholder="Dr. Jane Smith"></div>
+      <div class="field"><label for="jn-first">First name</label><input id="jn-first" type="text" required autocomplete="given-name" placeholder="Jane"></div>
+      <div class="field"><label for="jn-last">Last name</label><input id="jn-last" type="text" required autocomplete="family-name" placeholder="Smith"></div>
       <div class="field"><label for="jn-email">Email</label><input id="jn-email" type="email" required placeholder="you@example.com"></div>
-      <div class="field"><label for="jn-country">Country</label><select id="jn-country"></select></div>
-      <div class="field"><label for="jn-prof">Profession</label><select id="jn-prof"></select></div>
+      <div class="field"><label for="jn-email2">Confirm email</label><input id="jn-email2" type="email" required autocomplete="email" placeholder="Enter your email again"></div>
+      <div class="field"><label for="jn-prof">Profession</label><select id="jn-prof" required></select></div>
+      <div class="field"><label for="jn-country">Country</label><select id="jn-country" required></select></div>
+      <div class="field"><label for="jn-module">Module interested in</label><select id="jn-module" required><option value="">Loading modules…</option></select></div>
       <div class="field"><label for="jn-msg">Message (optional)</label><textarea id="jn-msg" rows="3" placeholder="Your role, institution, or why you'd like to join"></textarea></div>
       <button class="btn block" type="submit">Send request</button>
       <p class="auth-alt"><a id="to-signin2">← Back to sign in</a></p>
@@ -149,6 +152,7 @@
     if (event === "PASSWORD_RECOVERY") show("form-setpass");
   });
   if (isRecovery) { show("form-setpass"); reveal(); }
+  else if (params.get("view") === "signup") { show("form-join"); reveal(); }
 
   // If already signed in (and not in the middle of setting a password) → go in.
   (async () => {
@@ -174,24 +178,34 @@
 
   // ---- Request to join (public) ----
   if (window.fillCountrySelect) { fillCountrySelect($("#jn-country")); fillProfessionSelect($("#jn-prof")); }
+  (async()=>{
+    const box=$("#jn-module");
+    try{
+      const res=await fetch(`${window.PORTAL_CONFIG.SUPABASE_URL}/functions/v1/join-request`,{headers:{apikey:window.PORTAL_CONFIG.SUPABASE_ANON_KEY}});
+      const data=await res.json(); const modules=data.modules||[];
+      box.innerHTML='<option value="">Select a module</option>'+modules.map(m=>`<option value="${String(m.title).replace(/&/g,'&amp;').replace(/"/g,'&quot;')}">${String(m.title).replace(/&/g,'&amp;').replace(/</g,'&lt;')}</option>`).join('')+'<option value="Not sure yet">Not sure yet</option>';
+    }catch(_){ box.innerHTML='<option value="">Select a module</option><option value="Not sure yet">Not sure yet</option>'; }
+  })();
   $("#to-join").addEventListener("click", () => { say("#join-msg","",""); show("form-join"); });
   $("#to-signin2").addEventListener("click", () => show("form-signin"));
   $("#form-join").addEventListener("submit", async (e) => {
     e.preventDefault();
     const email = $("#jn-email").value.trim();
+    const confirmEmail = $("#jn-email2").value.trim();
     if (!email) return say("#join-msg", "Please enter your email.", "err");
+    if (email.toLowerCase() !== confirmEmail.toLowerCase()) return say("#join-msg", "The email addresses do not match.", "err");
     const btn = e.submitter; btn.disabled = true;
     say("#join-msg", "Sending…", "info");
     try {
       const res = await fetch(`${window.PORTAL_CONFIG.SUPABASE_URL}/functions/v1/join-request`, {
         method: "POST",
         headers: { "Content-Type": "application/json", apikey: window.PORTAL_CONFIG.SUPABASE_ANON_KEY },
-        body: JSON.stringify({ full_name: $("#jn-name").value.trim(), email, message: $("#jn-msg").value.trim(), country: $("#jn-country").value, profession: $("#jn-prof").value }),
+        body: JSON.stringify({ first_name: $("#jn-first").value.trim(), last_name: $("#jn-last").value.trim(), email, message: $("#jn-msg").value.trim(), country: $("#jn-country").value, profession: $("#jn-prof").value, module_interest: $("#jn-module").value }),
       });
       const b = await res.json().catch(() => ({}));
       if (!res.ok) { say("#join-msg", b.error || "Could not send your request.", "err"); btn.disabled = false; return; }
       say("#join-msg", "Thanks! Your request has been received, the program team will contact you.", "ok");
-      $("#jn-name").value = ""; $("#jn-email").value = ""; $("#jn-msg").value = "";
+      $("#jn-first").value = ""; $("#jn-last").value = ""; $("#jn-email").value = ""; $("#jn-email2").value = ""; $("#jn-msg").value = ""; $("#jn-module").value = "";
     } catch (err) { say("#join-msg", err.message, "err"); }
     btn.disabled = false;
   });

@@ -10,6 +10,11 @@ create table if not exists public.join_requests (
   status     text not null default 'new' check (status in ('new','handled','dismissed')),
   created_at timestamptz not null default now()
 );
+alter table public.join_requests add column if not exists first_name text;
+alter table public.join_requests add column if not exists last_name text;
+alter table public.join_requests add column if not exists country text;
+alter table public.join_requests add column if not exists profession text;
+alter table public.join_requests add column if not exists module_interest text;
 alter table public.join_requests enable row level security;
 
 -- Anyone (logged out visitors = the anon role) may submit a request.
