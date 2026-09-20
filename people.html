@@ -115,6 +115,15 @@
 
   let S={ members:[], courses:[], groups:[] };
   let selectedMembers=new Set(), pendingEmailIds=[], pendingEnrollIds=[];
+  const selectedPeople=()=>S.members.filter(m=>selectedMembers.has(m.id));
+  const selectedIds=()=>selectedPeople().map(m=>m.id);
+  const selectionBanner=(area)=>{
+    const people=selectedPeople(); if(!people.length)return "";
+    const label=people.length===1?(people[0].full_name||people[0].email):`${people.length} selected members`;
+    const detail=people.length===1?people[0].email:"Only the selected members are shown below.";
+    return `<section class="panel" style="padding:14px 18px;border-color:#8bc9c8;background:#f1fbfa"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><span class="small-link">Selected member context · ${esc(area)}</span><h2 style="margin:2px 0 0;font-size:1.15rem">${esc(label)}</h2>${detail&&detail!==label?`<span class="small-link">${esc(detail)}</span>`:""}</div><button class="chip-btn" data-clear-member-context>Show all members</button></div></section>`;
+  };
+  const bindSelectionBanner=()=>document.querySelectorAll("[data-clear-member-context]").forEach(b=>b.addEventListener("click",()=>{selectedMembers.clear();activateMainTab("members");}));
   async function loadCore(){
     const [{data:m},{data:c},{data:g}] = await Promise.all([
       sb.from("members_overview").select("*").order("created_at"),
@@ -606,6 +615,7 @@
   function renderEnroll(){
     const opts=S.courses.map(c=>`<option value="${c.id}">${esc(c.title)}${c.enrollment_required?' · [enrollment required]':' · [open]'}</option>`).join("");
     $("#tab-enroll").innerHTML=`
+      ${selectionBanner("Enrollments & progress")}
       <section class="panel" id="course-request-panel">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
           <div><h2 style="margin-bottom:3px">Course access requests</h2><p class="sub" style="margin:0">Approve a request to enroll the learner immediately, or decline it.</p></div>
@@ -635,6 +645,7 @@
         </div>
         <div id="bulk-action-msg" class="small-link" style="margin-top:8px"></div>
       </section>`;
+    bindSelectionBanner();
     const course=()=>$("#en-course").value;
     const syncMode=async()=>{ const c=S.courses.find(x=>x.id===course()); if(c) $("#en-mode").value=String(!!c.enrollment_required); await loadEnrolled(); };
     $("#en-course").addEventListener("change", syncMode);
@@ -643,19 +654,21 @@
     $("#en-go").addEventListener("click", doEnroll);
     $("#cert-go").addEventListener("click", doCertificates);
     $("#refresh-course-requests").addEventListener("click",loadCourseAccessRequests);
-    if(pendingEnrollIds.length){
-      const chosen=new Set(pendingEnrollIds); $("#en-who").value="selected"; $("#en-select").style.display="block";
+    const initialEnrollmentIds=pendingEnrollIds.length?pendingEnrollIds:selectedIds();
+    if(initialEnrollmentIds.length){
+      const chosen=new Set(initialEnrollmentIds); $("#en-who").value="selected"; $("#en-select").style.display="block";
       document.querySelectorAll(".en-chk").forEach(c=>c.checked=chosen.has(c.value)); pendingEnrollIds=[];
-      $("#bulk-action-msg").textContent=`${chosen.size} user(s) carried over from All users. Choose a course, then enroll or issue certificates.`;
+      $("#bulk-action-msg").textContent=`Working with ${chosen.size} selected member${chosen.size===1?'':'s'}. Choose a course to manage enrollment, progress or certificates.`;
     }
     async function loadCourseAccessRequests(){
       const box=$("#course-request-list"); if(!box)return;
       box.innerHTML='<span class="muted-note">Loading…</span>';
       const {data,error}=await sb.from("course_access_requests").select("*").eq("status","pending").order("created_at",{ascending:false});
       if(error){ box.innerHTML=`<div class="msg err">${esc(error.message)}</div>`; return; }
-      if(!data||!data.length){ box.innerHTML='<span class="muted-note">No pending course requests.</span>'; return; }
+      const scope=new Set(selectedIds()); const scopedData=scope.size?(data||[]).filter(r=>scope.has(r.user_id)):(data||[]);
+      if(!scopedData.length){ box.innerHTML=`<span class="muted-note">No pending course requests${scope.size?' for the selected member':''}.</span>`; return; }
       const members=new Map(S.members.map(m=>[m.id,m])), courses=new Map(S.courses.map(c=>[c.id,c]));
-      box.innerHTML=`<div class="members-table-wrap"><table class="tbl"><thead><tr><th>Requested</th><th>Learner</th><th>Course</th><th>Message</th><th>Actions</th></tr></thead><tbody>${data.map(r=>{
+      box.innerHTML=`<div class="members-table-wrap"><table class="tbl"><thead><tr><th>Requested</th><th>Learner</th><th>Course</th><th>Message</th><th>Actions</th></tr></thead><tbody>${scopedData.map(r=>{
         const m=members.get(r.user_id)||{}, c=courses.get(r.course_id)||{};
         return `<tr><td>${fmtDate(r.created_at)}</td><td><b>${esc(m.full_name||m.email||'Learner')}</b><br><span class="small-link">${esc(m.email||'')}</span></td><td>${esc(c.title||'Course')}</td><td>${esc(r.message||'—')}</td><td class="row-actions"><button data-approve-request="${r.id}">Approve &amp; enroll</button><button data-decline-request="${r.id}">Decline</button></td></tr>`;
       }).join('')}</tbody></table></div>`;
@@ -671,18 +684,19 @@
     }
     async function loadEnrolled(){
       const { data } = await sb.from("course_enrollments").select("*").eq("course_id",course());
+      const scope=new Set(selectedIds()); const visibleData=scope.size?(data||[]).filter(e=>scope.has(e.user_id)):(data||[]);
       let prog={}; try{ const { data:pg } = await sb.rpc("admin_course_progress",{p_course:course()}); if(pg) prog=pg; }catch(_){}
       const byId={}; S.members.forEach(m=>byId[m.id]=m);
-      const emap2={}; (data||[]).forEach(e=>emap2[e.user_id]=e);
-      const rows=(data||[]).map(e=>{ const m=byId[e.user_id]||{}; const pending=e.starts_at && new Date(e.starts_at)>new Date();
+      const emap2={}; visibleData.forEach(e=>emap2[e.user_id]=e);
+      const rows=visibleData.map(e=>{ const m=byId[e.user_id]||{}; const pending=e.starts_at && new Date(e.starts_at)>new Date();
         const p=prog[e.user_id]||{done:0,total:0};
         return `<tr><td>${esc(m.full_name||m.email||e.user_id)}</td><td>${esc(m.email||'')}</td>
           <td>${uBar(p.done,p.total)}</td>
           <td>${e.starts_at?(fmtDate(e.starts_at)+(pending?' ⏳':'')):'immediate'}</td>
           <td>${e.expires_at?fmtDate(e.expires_at):'no expiry'}</td>
           <td class="row-actions">${m.email&&p.total&&p.done<p.total&&!pending?`<button data-remind="${e.user_id}">Remind</button>`:''}<button data-editdates="${e.user_id}">Set dates</button><button data-unen="${e.user_id}">Unenroll</button></td></tr>`;}).join("");
-      $("#en-enrolled").innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:14px 0 6px"><h3 style="margin:0">Enrolled (${(data||[]).length})</h3>${(data||[]).length?'<button class="btn outline" id="en-remind-all">✉ Remind incomplete learners</button>':''}</div>`+
-        ((data||[]).length?`<table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>Progress</th><th>Start</th><th>Expires</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<p class="muted-note">Nobody enrolled yet.</p>');
+      $("#en-enrolled").innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:14px 0 6px"><h3 style="margin:0">Enrolled (${visibleData.length})</h3>${visibleData.length?'<button class="btn outline" id="en-remind-all">✉ Remind incomplete learners</button>':''}</div>`+
+        (visibleData.length?`<table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>Progress</th><th>Start</th><th>Expires</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:`<p class="muted-note">${scope.size?'The selected member is not enrolled in this course.':'Nobody enrolled yet.'}</p>`);
       $("#en-enrolled").querySelectorAll("button").forEach(btn=>btn.addEventListener("click", async ()=>{
         if(btn.dataset.remind){ const uid=btn.dataset.remind, m=byId[uid]||{}, p=prog[uid]||{done:0,total:0}, e=emap2[uid]||{}; await sendCourseReminder(course(),m,p,e,btn); return; }
         if(btn.dataset.unen){ if(!confirm("Unenroll this learner from the selected course?"))return; await sb.from("course_enrollments").delete().eq("course_id",course()).eq("user_id",btn.dataset.unen); loadEnrolled(); }
@@ -690,7 +704,7 @@
       }));
       $("#en-remind-all")?.addEventListener("click", async()=>{
         const now=Date.now();
-        const recipients=(data||[]).filter(e=>{
+        const recipients=visibleData.filter(e=>{
           const p=prog[e.user_id]||{done:0,total:0};
           return byId[e.user_id]?.email&&byId[e.user_id]?.status!=='suspended'&&p.total&&p.done<p.total&&(!e.starts_at||new Date(e.starts_at).getTime()<=now)&&(!e.expires_at||new Date(e.expires_at).getTime()>now);
         }).map(e=>({email:byId[e.user_id].email,user_id:e.user_id}));
@@ -746,6 +760,25 @@
 
   // ================= GROUPS =================
   function renderGroups(){
+    const scopedPeople=selectedPeople();
+    if(scopedPeople.length){
+      $("#tab-groups").innerHTML=`${selectionBanner("Groups")}<section class="panel"><h2>Group membership</h2><p class="sub">Manage only the selected member${scopedPeople.length===1?'':'s'}.</p><div id="selected-group-memberships" class="muted-note">Loading…</div></section>`;
+      bindSelectionBanner();
+      (async()=>{
+        const ids=scopedPeople.map(m=>m.id), {data:rows}=await sb.from("group_members").select("group_id,user_id").in("user_id",ids);
+        const memberships=new Set((rows||[]).map(r=>`${r.user_id}:${r.group_id}`));
+        const box=$("#selected-group-memberships");
+        box.innerHTML=scopedPeople.map(m=>`<div style="padding:14px 0;border-bottom:1px solid var(--line)" data-person-groups="${m.id}"><b>${esc(m.full_name||m.email)}</b><span class="small-link" style="margin-left:8px">${esc(m.email||'')}</span><div class="checklist" style="margin:8px 0">${S.groups.map(g=>`<label><input type="checkbox" value="${g.id}" ${memberships.has(`${m.id}:${g.id}`)?'checked':''}> ${esc(g.name)}</label>`).join('')||'<span class="muted-note">No groups have been created.</span>'}</div><button class="btn outline" data-save-person-groups="${m.id}">Save groups</button></div>`).join('');
+        box.querySelectorAll("[data-save-person-groups]").forEach(btn=>btn.addEventListener("click",async()=>{
+          const uid=btn.dataset.savePersonGroups, wrap=box.querySelector(`[data-person-groups="${uid}"]`), want=new Set([...wrap.querySelectorAll('input:checked')].map(x=>x.value));
+          const current=new Set((rows||[]).filter(r=>r.user_id===uid).map(r=>r.group_id));
+          const add=[...want].filter(g=>!current.has(g)).map(group_id=>({group_id,user_id:uid})), del=[...current].filter(g=>!want.has(g));
+          if(add.length)await sb.from("group_members").insert(add); for(const gid of del)await sb.from("group_members").delete().eq("group_id",gid).eq("user_id",uid);
+          flash("Group membership saved."); await loadCore(); renderGroups();
+        }));
+      })();
+      return;
+    }
     $("#tab-groups").innerHTML=`
       <section class="panel"><div style="display:flex;justify-content:space-between;align-items:center"><h2>Groups</h2>
         <button class="btn" id="g-new">+ New group</button></div>
@@ -811,6 +844,7 @@
   // ================= EMAIL =================
   function renderEmail(){
     $("#tab-email").innerHTML=`
+      ${selectionBanner("Notifications & email")}
       <section class="panel"><h2>Compose email</h2>
         <div id="em-msg"></div>
         <div class="row2">
@@ -825,14 +859,16 @@
         <div id="em-count" class="small-link" style="margin-bottom:8px"></div>
         <button class="btn" id="em-send">Review &amp; send email</button>
       </section>
-      <section class="panel"><h2>Recent emails</h2><div id="em-log"></div></section>`;
+      <section class="panel"><h2>${selectedMembers.size?'Email history for selected member':'Recent emails'}</h2><div id="em-log"></div></section>`;
+    bindSelectionBanner();
     const updateEmailCount=async()=>{ const r=await recipientEmails(); $("#em-count").textContent=`${r.length} active recipient${r.length===1?'':'s'} selected`; };
     $("#em-who").addEventListener("change",()=>{ const v=$("#em-who").value; $("#em-groupwrap").style.display=v==='group'?'block':'none'; $("#em-select").style.display=v==='selected'?'block':'none'; updateEmailCount(); });
     $("#em-group").addEventListener("change",updateEmailCount);
     $("#em-select").addEventListener("change",updateEmailCount);
     $("#em-send").addEventListener("click", sendEmail);
-    if(pendingEmailIds.length){
-      const emails=new Set(S.members.filter(m=>pendingEmailIds.includes(m.id)).map(m=>(m.email||'').toLowerCase()));
+    const initialEmailIds=pendingEmailIds.length?pendingEmailIds:selectedIds();
+    if(initialEmailIds.length){
+      const emails=new Set(S.members.filter(m=>initialEmailIds.includes(m.id)).map(m=>(m.email||'').toLowerCase()));
       $("#em-who").value="selected"; $("#em-select").style.display="block";
       document.querySelectorAll(".em-chk").forEach(c=>c.checked=emails.has(c.value.toLowerCase())); pendingEmailIds=[];
     }
@@ -866,13 +902,18 @@
     }catch(e){ $("#em-msg").innerHTML=`<div class="msg err">${esc(e.message)}</div>`; }
   }
   async function loadEmailLog(){
-    const { data } = await sb.from("email_messages").select("*").order("created_at",{ascending:false}).limit(10);
-    const ids=(data||[]).map(m=>m.id); let recipients=[];
-    if(ids.length){ const { data:r }=await sb.from("email_recipients").select("message_id,status,error").in("message_id",ids); recipients=r||[]; }
+    const scope=selectedIds(); let data=[], recipients=[];
+    if(scope.length){
+      const {data:r}=await sb.from("email_recipients").select("message_id,status,error,user_id").in("user_id",scope); recipients=r||[];
+      const ids=[...new Set(recipients.map(r=>r.message_id))]; if(ids.length){const {data:m}=await sb.from("email_messages").select("*").in("id",ids).order("created_at",{ascending:false}).limit(10);data=m||[];}
+    } else {
+      const {data:m}=await sb.from("email_messages").select("*").order("created_at",{ascending:false}).limit(10); data=m||[];
+      const ids=data.map(m=>m.id); if(ids.length){const {data:r}=await sb.from("email_recipients").select("message_id,status,error,user_id").in("message_id",ids);recipients=r||[];}
+    }
     const delivery=(id)=>{ const rows=recipients.filter(r=>r.message_id===id); return {sent:rows.filter(r=>r.status==='sent').length,failed:rows.filter(r=>r.status==='failed'||r.status==='not_sent').length,pending:rows.filter(r=>!['sent','failed','not_sent'].includes(r.status)).length}; };
     $("#em-log").innerHTML=(data||[]).length? `<table class="tbl"><thead><tr><th>Date</th><th>Subject</th><th>Recipients</th></tr></thead><tbody>`+
       data.map(m=>{ const d=delivery(m.id); return `<tr><td>${new Date(m.created_at).toLocaleString()}</td><td>${esc(m.subject)}</td><td>${d.sent} sent${d.failed?` · <span style="color:#a33">${d.failed} failed</span>`:''}${d.pending?` · ${d.pending} pending`:''} <span class="small-link">(${m.recipient_count} total)</span></td></tr>`; }).join("")+`</tbody></table>`
-      : '<p class="muted-note">No emails sent yet.</p>';
+      : `<p class="muted-note">No emails sent${scope.length?' to the selected member':' yet'}.</p>`;
   }
 
   // ---------- modal helper ----------
