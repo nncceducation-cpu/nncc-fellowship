@@ -141,7 +141,10 @@
       );
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error || "Request failed");
-      if (!body.email_sent) {
+      // Direct account creation intentionally does not send an email here.
+      // The People page first applies course/group assignments, then sends
+      // the complete welcome message through the portal email function.
+      if (extra.mode !== "create" && !body.email_sent) {
         throw new Error(body.error || "The account was created, but the welcome email was not sent. Check the portal email-provider configuration, then resend the invitation.");
       }
       return body;
