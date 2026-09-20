@@ -1,6 +1,6 @@
 /* NNCC Portal service worker — offline shell + fast static assets.
    Bump CACHE_VERSION on every release so clients pick up new files. */
-const CACHE_VERSION = "nncc-v5";
+const CACHE_VERSION = "nncc-v6";
 const SHELL = [
   "login.html", "portal.html", "learning.html", "events.html", "forum.html",
   "assistant.html", "certificate.html",
