@@ -176,16 +176,18 @@
         <button class="chip-btn" data-up="${c.id}" title="Move up">▲</button>
         <button class="chip-btn" data-dn="${c.id}" title="Move down">▼</button>
         <button class="chip-btn" data-edc="${c.id}" title="Rename">✎</button>
+        <button class="chip-btn" data-clonec="${c.id}" title="Clone complete course">⧉</button>
         <a class="chip-btn" href="course-manage.html?course=${c.id}" title="Manage / stats" style="text-decoration:none">📊</a>
         <button class="chip-btn" data-delc="${c.id}" title="Delete">🗑</button>
       </div>`).join("") || '<div class="muted-note">No courses yet.</div>';
     if(!state.curCourse && state.courses[0]) state.curCourse=state.courses[0].id;
   }
   $("#course-list").addEventListener("click", async (e)=>{
-    const b=e.target.closest("[data-id],[data-open],[data-up],[data-dn],[data-edc],[data-delc]"); if(!b) return;
+    const b=e.target.closest("[data-id],[data-open],[data-up],[data-dn],[data-edc],[data-clonec],[data-delc]"); if(!b) return;
     if(b.dataset.open){ state.curCourse=b.dataset.open; await loadCourses(); return renderCourse(); }
     if(b.dataset.up||b.dataset.dn){ await reorder("courses", state.courses, b.dataset.up||b.dataset.dn, b.dataset.up?-1:1); await loadCourses(); return; }
     if(b.dataset.edc){ const c=state.courses.find(x=>x.id===b.dataset.edc); const t=prompt("Course title:",c.title); if(t===null)return; const d=prompt("Course description:",c.description||""); await sb.from("courses").update({title:t.trim(),description:(d||'').trim()||null}).eq("id",c.id); await loadCourses(); return renderCourse(); }
+    if(b.dataset.clonec){ return cloneCourse(b.dataset.clonec); }
     if(b.dataset.delc){ if(!confirm("Delete this course and ALL its chapters & lessons?"))return; await sb.from("courses").delete().eq("id",b.dataset.delc); if(state.curCourse===b.dataset.delc)state.curCourse=null; await loadCourses(); return renderCourse(); }
   });
   $("#new-course").addEventListener("click", async ()=>{
@@ -220,12 +222,13 @@
           <span class="badge ${course.visibility==='published'?'admin':'member'}">${esc(course.visibility||'published')}</span>
           ${course.enrollment_required?`<span class="badge member">${course.self_enroll?'self sign-up':'private'}</span>`:'<span class="badge member">open</span>'}
         </div>
-        <div style="display:flex;gap:8px"><a class="btn outline" href="course-manage.html?course=${course.id}">📊 Manage</a><button class="btn outline" id="course-settings">⚙ Settings</button><button class="btn" id="add-ch">+ Add chapter</button></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn outline" href="course-manage.html?course=${course.id}">📊 Manage</a><button class="btn outline" id="course-settings">⚙ Settings</button><button class="btn outline" id="reuse-content">⧉ Reuse content</button><button class="btn" id="add-ch">+ Add chapter</button></div>
       </div>
       ${course.description?`<p class="muted-note" style="margin:-6px 0 14px">${esc(course.description)}</p>`:''}
       <div id="chapters">${state.chapters.map(chHTML).join("")||'<div class="empty">No chapters yet, add one.</div>'}</div>`;
     $("#add-ch").addEventListener("click", addChapter);
     $("#course-settings").addEventListener("click", ()=>openCourseSettings(course));
+    $("#reuse-content").addEventListener("click", openReuseContent);
   }
   function chHTML(ch){
     const ls=state.lessons[ch.id]||[];
@@ -538,6 +541,118 @@
     if(onMount) onMount(bg.querySelector("#ap-body"));
   }
   const closePanel=()=>{ const bg=document.getElementById("apanel"); if(bg) bg.classList.remove("open"); };
+
+  // ---------- reusable course content ----------
+  const pick=(row,keys)=>{ const out={}; keys.forEach(k=>{ if(Object.prototype.hasOwnProperty.call(row,k) && row[k]!==undefined) out[k]=row[k]; }); return out; };
+  const lessonFields=["title","content","video_url","file_url","external_url","caption","lesson_type","quiz_pass_percent","quiz_pass_required"];
+  const questionFields=["question","qtype","options","correct","explanation","sort_order","image_url","question_html","explanation_html"];
+
+  async function copyLesson(sourceLesson,targetModule,sortOrder,includeQuiz=true){
+    const payload={...pick(sourceLesson,lessonFields),module_id:targetModule,sort_order:sortOrder};
+    const {data:newLesson,error}=await sb.from("lessons").insert(payload).select().single();
+    if(error) throw error;
+    if(includeQuiz && sourceLesson.lesson_type==="quiz"){
+      const {data:questions,error:qReadError}=await sb.from("quiz_questions").select("*").eq("lesson_id",sourceLesson.id).order("sort_order").order("created_at");
+      if(qReadError) throw qReadError;
+      if(questions&&questions.length){
+        const copies=questions.map(q=>({...pick(q,questionFields),lesson_id:newLesson.id}));
+        const {error:qWriteError}=await sb.from("quiz_questions").insert(copies);
+        if(qWriteError) throw qWriteError;
+      }
+    }
+    return newLesson;
+  }
+
+  async function copyChapter(sourceChapter,targetCourse,includeQuiz=true,titleOverride){
+    const {data:targetChapters,error:countError}=await sb.from("modules").select("sort_order").eq("course_id",targetCourse).order("sort_order",{ascending:false}).limit(1);
+    if(countError) throw countError;
+    const nextOrder=targetChapters&&targetChapters.length?(targetChapters[0].sort_order||0)+1:1;
+    const chapterPayload={...pick(sourceChapter,["title","description","drip_days"]),course_id:targetCourse,sort_order:nextOrder};
+    if(titleOverride) chapterPayload.title=titleOverride;
+    const {data:newChapter,error}=await sb.from("modules").insert(chapterPayload).select().single();
+    if(error) throw error;
+    try{
+      const {data:lessons,error:lessonError}=await sb.from("lessons").select("*").eq("module_id",sourceChapter.id).order("sort_order").order("created_at");
+      if(lessonError) throw lessonError;
+      for(let i=0;i<(lessons||[]).length;i++) await copyLesson(lessons[i],newChapter.id,i+1,includeQuiz);
+      return newChapter;
+    }catch(err){ await sb.from("modules").delete().eq("id",newChapter.id); throw err; }
+  }
+
+  async function cloneCourse(sourceId,button){
+    const source=state.courses.find(c=>c.id===sourceId);
+    if(!source) return flash("Source course was not found.","err");
+    if(button){button.disabled=true;button.textContent="Cloning…";}
+    let newCourse=null;
+    try{
+      const max=Math.max(0,...state.courses.map(c=>c.sort_order||0));
+      const fields=["description","cover_url","enrollment_required","self_enroll","certificate_enabled","pass_note","rcpsc_id","accredited_hours","instructor"];
+      const payload={...pick(source,fields),title:`${source.title} (Copy)`,sort_order:max+1};
+      if(Object.prototype.hasOwnProperty.call(source,"visibility")) payload.visibility="draft";
+      if(Object.prototype.hasOwnProperty.call(source,"published")) payload.published=false;
+      payload.prerequisite_course_id=null;
+      const {data,error}=await sb.from("courses").insert(payload).select().single();
+      if(error) throw error; newCourse=data;
+      const {data:chapters,error:chapterError}=await sb.from("modules").select("*").eq("course_id",sourceId).order("sort_order").order("created_at");
+      if(chapterError) throw chapterError;
+      for(const chapter of chapters||[]) await copyChapter(chapter,newCourse.id,true);
+      state.curCourse=newCourse.id; await loadCourses(); await renderCourse(); closePanel(); flash(`Cloned “${esc(source.title)}” as a private draft.`);
+    }catch(err){
+      if(newCourse) await sb.from("courses").delete().eq("id",newCourse.id);
+      flash("Could not clone the course: "+esc(err.message||err),"err");
+      if(button){button.disabled=false;button.textContent="Clone complete course";}
+    }
+  }
+
+  function openReuseContent(){
+    if(!state.curCourse) return;
+    const sourceOptions=state.courses.map(c=>`<option value="${c.id}" ${c.id===state.curCourse?'':' '}>${esc(c.title)}${c.id===state.curCourse?' (current course)':''}</option>`).join("");
+    const targetOptions=state.chapters.map(ch=>`<option value="${ch.id}">${esc(ch.title)}</option>`).join("");
+    openPanel("Reuse existing content", `
+      <p class="sub">Copy chapters or lessons from any course. Copies include text, images, media links, files, captions and quiz questions, and can be edited independently.</p>
+      <div class="field"><label>Source course</label><select id="reuse-source">${sourceOptions}</select></div>
+      <div id="reuse-list" class="checklist" style="max-height:360px;padding:8px;border:1px solid var(--line);border-radius:12px"><span class="muted-note">Loading content…</span></div>
+      <label style="display:block;margin:12px 0"><input type="checkbox" id="reuse-quiz" checked> Include quiz questions, answers, explanations, images and clips</label>
+      <div class="field"><label>Destination chapter for selected lessons</label><select id="reuse-target" ${targetOptions?'':'disabled'}>${targetOptions||'<option>Create a chapter first</option>'}</select></div>
+      <div id="reuse-status" class="muted-note" aria-live="polite"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        <button class="btn" id="reuse-lessons" ${targetOptions?'':'disabled'}>Copy selected lessons</button>
+        <button class="btn outline" id="reuse-chapters">Copy selected chapters</button>
+        <button class="btn outline" id="reuse-clone">Clone complete course</button>
+      </div>
+      <p class="muted-note" style="margin-top:12px">Learner enrollments, progress, quiz attempts, submissions and certificates are never copied.</p>`,
+      (root)=>{
+        const sourceSel=root.querySelector("#reuse-source"), list=root.querySelector("#reuse-list"), status=root.querySelector("#reuse-status");
+        const firstOther=state.courses.find(c=>c.id!==state.curCourse); if(firstOther) sourceSel.value=firstOther.id;
+        let sourceChapters=[], sourceLessons=[];
+        async function loadSource(){
+          list.innerHTML='<span class="muted-note">Loading content…</span>'; status.textContent="";
+          const {data:chapters,error}=await sb.from("modules").select("*").eq("course_id",sourceSel.value).order("sort_order").order("created_at");
+          if(error){list.innerHTML=`<span class="msg err">${esc(error.message)}</span>`;return;}
+          sourceChapters=chapters||[]; const ids=sourceChapters.map(c=>c.id); sourceLessons=[];
+          if(ids.length){ const {data,error:lessonError}=await sb.from("lessons").select("*").in("module_id",ids).order("sort_order").order("created_at"); if(lessonError){list.innerHTML=`<span class="msg err">${esc(lessonError.message)}</span>`;return;} sourceLessons=data||[]; }
+          list.innerHTML=sourceChapters.map(ch=>{ const lessons=sourceLessons.filter(l=>l.module_id===ch.id); return `<div style="padding:8px 6px;border-bottom:1px solid var(--line)">
+            <label style="font-weight:700;color:var(--navy)"><input type="checkbox" class="reuse-ch" value="${ch.id}"> ${esc(ch.title)} <span class="muted-note">(${lessons.length} lessons)</span></label>
+            <div style="display:grid;gap:5px;margin:7px 0 0 22px">${lessons.map(l=>`<label><input type="checkbox" class="reuse-les" value="${l.id}"> ${esc(l.title)} <span class="badge member">${esc(l.lesson_type||'text')}</span></label>`).join("")||'<span class="muted-note">No lessons</span>'}</div>
+          </div>`;}).join("")||'<span class="muted-note">This course has no chapters yet.</span>';
+        }
+        sourceSel.addEventListener("change",loadSource); loadSource();
+        root.querySelector("#reuse-lessons").addEventListener("click",async e=>{
+          const ids=[...root.querySelectorAll(".reuse-les:checked")].map(x=>x.value), target=root.querySelector("#reuse-target").value;
+          if(!ids.length)return status.textContent="Select at least one lesson."; if(!target)return;
+          e.target.disabled=true; status.textContent=`Copying ${ids.length} lesson(s)…`;
+          try{ const current=state.lessons[target]||[]; let order=Math.max(0,...current.map(l=>l.sort_order||0)); for(const id of ids){const lesson=sourceLessons.find(l=>l.id===id);if(lesson)await copyLesson(lesson,target,++order,root.querySelector("#reuse-quiz").checked);} closePanel(); await renderCourse(); flash(`Copied ${ids.length} lesson(s).`); }
+          catch(err){status.textContent="Copy failed: "+(err.message||err);e.target.disabled=false;}
+        });
+        root.querySelector("#reuse-chapters").addEventListener("click",async e=>{
+          const ids=[...root.querySelectorAll(".reuse-ch:checked")].map(x=>x.value); if(!ids.length)return status.textContent="Select at least one chapter.";
+          e.target.disabled=true; status.textContent=`Copying ${ids.length} chapter(s)…`;
+          try{for(const id of ids){const chapter=sourceChapters.find(c=>c.id===id);if(chapter)await copyChapter(chapter,state.curCourse,root.querySelector("#reuse-quiz").checked);} closePanel(); await renderCourse(); flash(`Copied ${ids.length} chapter(s).`);}
+          catch(err){status.textContent="Copy failed: "+(err.message||err);e.target.disabled=false;}
+        });
+        root.querySelector("#reuse-clone").addEventListener("click",e=>cloneCourse(sourceSel.value,e.target));
+      });
+  }
 
   // ---------- course settings ----------
   function openCourseSettings(course){
