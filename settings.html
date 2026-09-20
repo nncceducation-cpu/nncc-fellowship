@@ -27,8 +27,8 @@
   </section>
   <section class="panel"><h2>Contact emails</h2>
     <div class="row2">
-      <div class="field"><label>Reply-to email</label><input id="s-reply" type="email" placeholder="nncceducation@gmail.com"></div>
-      <div class="field"><label>Support email</label><input id="s-support" type="email" placeholder="support@…"></div>
+      <div class="field"><label>Reply-to email</label><input id="s-reply" type="email" placeholder="sarnatnncc@gmail.com"></div>
+      <div class="field"><label>Support email</label><input id="s-support" type="email" placeholder="sarnatnncc@gmail.com"></div>
     </div>
     <p class="small-link">Shown to members who reply to portal emails or click support links.</p>
   </section>
@@ -55,7 +55,7 @@
   const flash=(t,k)=>{ $("#msg").innerHTML=t?`<div class="msg ${k||'ok'}">${t}</div>`:""; if(t) setTimeout(()=>$("#msg").innerHTML="",4000); };
   async function load(){
     const { data } = await sb.from("site_settings").select("*").eq("id",1).maybeSingle(); const s=data||{};
-    $("#s-name").value=s.site_name||""; $("#s-reply").value=s.reply_to_email||""; $("#s-support").value=s.support_email||"";
+    $("#s-name").value=s.site_name||""; $("#s-reply").value=s.reply_to_email||"sarnatnncc@gmail.com"; $("#s-support").value=s.support_email||"sarnatnncc@gmail.com";
     $("#s-welcome").value=s.welcome_message||""; $("#s-catalog").checked=s.public_catalog!==false;
   }
   $("#s-save").addEventListener("click", async ()=>{
