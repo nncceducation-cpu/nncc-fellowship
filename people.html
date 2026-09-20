@@ -606,6 +606,13 @@
   function renderEnroll(){
     const opts=S.courses.map(c=>`<option value="${c.id}">${esc(c.title)}${c.enrollment_required?' · [enrollment required]':' · [open]'}</option>`).join("");
     $("#tab-enroll").innerHTML=`
+      <section class="panel" id="course-request-panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <div><h2 style="margin-bottom:3px">Course access requests</h2><p class="sub" style="margin:0">Approve a request to enroll the learner immediately, or decline it.</p></div>
+          <button class="chip-btn" id="refresh-course-requests">Refresh</button>
+        </div>
+        <div id="course-request-list" class="muted-note" style="margin-top:12px">Loading…</div>
+      </section>
       <section class="panel">
         <div class="row2"><div class="field"><label>Course</label><select id="en-course">${opts}</select></div>
           <div class="field"><label>Access mode</label><select id="en-mode">
@@ -635,10 +642,32 @@
     $("#en-who").addEventListener("change",()=>{ const v=$("#en-who").value; $("#en-groupwrap").style.display=v==='group'?'block':'none'; $("#en-select").style.display=v==='selected'?'block':'none'; });
     $("#en-go").addEventListener("click", doEnroll);
     $("#cert-go").addEventListener("click", doCertificates);
+    $("#refresh-course-requests").addEventListener("click",loadCourseAccessRequests);
     if(pendingEnrollIds.length){
       const chosen=new Set(pendingEnrollIds); $("#en-who").value="selected"; $("#en-select").style.display="block";
       document.querySelectorAll(".en-chk").forEach(c=>c.checked=chosen.has(c.value)); pendingEnrollIds=[];
       $("#bulk-action-msg").textContent=`${chosen.size} user(s) carried over from All users. Choose a course, then enroll or issue certificates.`;
+    }
+    async function loadCourseAccessRequests(){
+      const box=$("#course-request-list"); if(!box)return;
+      box.innerHTML='<span class="muted-note">Loading…</span>';
+      const {data,error}=await sb.from("course_access_requests").select("*").eq("status","pending").order("created_at",{ascending:false});
+      if(error){ box.innerHTML=`<div class="msg err">${esc(error.message)}</div>`; return; }
+      if(!data||!data.length){ box.innerHTML='<span class="muted-note">No pending course requests.</span>'; return; }
+      const members=new Map(S.members.map(m=>[m.id,m])), courses=new Map(S.courses.map(c=>[c.id,c]));
+      box.innerHTML=`<div class="members-table-wrap"><table class="tbl"><thead><tr><th>Requested</th><th>Learner</th><th>Course</th><th>Message</th><th>Actions</th></tr></thead><tbody>${data.map(r=>{
+        const m=members.get(r.user_id)||{}, c=courses.get(r.course_id)||{};
+        return `<tr><td>${fmtDate(r.created_at)}</td><td><b>${esc(m.full_name||m.email||'Learner')}</b><br><span class="small-link">${esc(m.email||'')}</span></td><td>${esc(c.title||'Course')}</td><td>${esc(r.message||'—')}</td><td class="row-actions"><button data-approve-request="${r.id}">Approve &amp; enroll</button><button data-decline-request="${r.id}">Decline</button></td></tr>`;
+      }).join('')}</tbody></table></div>`;
+      box.querySelectorAll("[data-approve-request],[data-decline-request]").forEach(btn=>btn.addEventListener("click",async()=>{
+        const approve=btn.hasAttribute("data-approve-request"), id=btn.dataset.approveRequest||btn.dataset.declineRequest;
+        if(!approve&&!confirm("Decline this course access request?"))return;
+        btn.disabled=true; btn.textContent=approve?"Approving…":"Declining…";
+        const {error}=await sb.rpc("review_course_access",{p_request:id,p_approve:approve});
+        if(error){ flash(esc(error.message),"err"); btn.disabled=false; return; }
+        flash(approve?"Request approved and learner enrolled.":"Request declined.");
+        await loadCourseAccessRequests(); await loadEnrolled();
+      }));
     }
     async function loadEnrolled(){
       const { data } = await sb.from("course_enrollments").select("*").eq("course_id",course());
@@ -711,6 +740,7 @@
       if(error) return flash(esc(error.message),"err");
       const r=data||{}; flash(`Certificates: ${r.issued||0} newly issued · ${r.existing||0} already issued · ${r.incomplete||0} incomplete.`,"ok");
     }
+    loadCourseAccessRequests();
     syncMode();
   }
 

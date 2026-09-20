@@ -147,7 +147,7 @@
   // ---------- Course catalog ----------
   const active=(e)=> (!e.starts_at || new Date(e.starts_at) <= new Date()) && (!e.expires_at || new Date(e.expires_at) > new Date());
   async function showCourses(){
-    const [{data:courses},{data:mods},{data:les},{data:enr},{data:bundles},{data:bcs},{data:benr}] = await Promise.all([
+    const [{data:courses},{data:mods},{data:les},{data:enr},{data:bundles},{data:bcs},{data:benr},{data:reqs}] = await Promise.all([
       sb.from("courses").select("*").order("sort_order").order("created_at"),
       sb.from("modules").select("id,course_id"),
       sb.from("lessons").select("id,module_id"),
@@ -155,6 +155,7 @@
       sb.from("bundles").select("*").order("sort_order").order("created_at"),
       sb.from("bundle_courses").select("*"),
       sb.from("bundle_enrollments").select("bundle_id,expires_at").eq("user_id",me.id),
+      sb.from("course_access_requests").select("course_id,status").eq("user_id",me.id),
     ]);
     const done=await myDone();
     const modByCourse={}, lesByMod={};
@@ -165,6 +166,7 @@
     const benrolled=new Set((benr||[]).filter(active).map(e=>e.bundle_id));
     const bmap={}; (bcs||[]).forEach(x=>{(bmap[x.bundle_id]=bmap[x.bundle_id]||[]).push(x.course_id);});
     const granted=new Set(); benrolled.forEach(bid=>(bmap[bid]||[]).forEach(cid=>granted.add(cid)));
+    const requested=new Map((reqs||[]).map(r=>[r.course_id,r.status]));
     const stateOf=(c)=> isAdmin||!c.enrollment_required ? 'open'
       : (enrolled.has(c.id)||granted.has(c.id)) ? 'enrolled'
       : c.self_enroll ? 'signup' : 'locked';
@@ -179,8 +181,9 @@
       const statusLabel=pct===100?'Completed':pct>0?'In progress':st==='locked'?'Locked':'Not started';
       const cme=(c.description||'').match(/\b(\d+(?:\.\d+)?)\s*CME hours?/i), estimate=s.t?Math.max(1,Math.round(s.t*8/60)):0;
       const action = st==='signup'
-        ? `<button class="btn" data-signup="${c.id}" style="margin-top:10px">Sign up</button>`
-        : st==='locked' ? `<span class="small-link">🔒 Enrollment by administrator</span>`
+        ? `<button class="btn" data-signup="${c.id}" style="margin-top:10px">Enroll now</button>`
+        : st==='locked' && requested.get(c.id)==='pending' ? `<button class="btn outline" disabled style="margin-top:10px">✓ Access requested</button><span class="small-link" style="display:block;margin-top:6px">Waiting for administrator approval</span>`
+        : st==='locked' ? `<button class="btn outline" data-request-access="${c.id}" data-course-title="${esc(c.title)}" style="margin-top:10px">Request access</button>`
         : `<div class="prog"><i style="width:${pct}%"></i></div><span class="small-link">${s.d}/${s.t} lessons · ${pct}%</span><span class="course-open-label">${pct?'Continue course':'Start course'} →</span>`;
       const inner=`${cover}<div class="course-card-status"><span class="badge member">${statusLabel}</span>${cme?`<span>${cme[1]} CME hours</span>`:''}${estimate?`<span>≈ ${estimate} h</span>`:''}</div><h3 title="${esc(c.title)}">${esc(c.title)} ${badges}</h3><p>${esc(c.description||'')}</p>${action}`;
       const state=pct===100?'complete':pct>0?'progress':'not-started';
@@ -222,6 +225,15 @@
 
     root.querySelectorAll("[data-signup]").forEach(b=>b.addEventListener("click", async (e)=>{ e.preventDefault();
       const { error }=await sb.rpc("self_enroll",{ p_course:b.dataset.signup }); if(error) return alert(error.message); showCourses(); }));
+    root.querySelectorAll("[data-request-access]").forEach(b=>b.addEventListener("click", async (e)=>{ e.preventDefault(); e.stopPropagation();
+      const note=prompt(`Request access to ${b.dataset.courseTitle}\n\nOptional: tell the administrator why you would like to take this course.`,"");
+      if(note===null) return;
+      b.disabled=true; b.textContent="Sending request…";
+      const { error }=await sb.rpc("request_course_access",{p_course:b.dataset.requestAccess,p_message:note.trim()||null});
+      if(error){ b.disabled=false; b.textContent="Request access"; return alert(error.message); }
+      alert("Your access request was sent. You can start the course after an administrator approves it.");
+      showCourses();
+    }));
     root.querySelectorAll("[data-bsignup]").forEach(b=>b.addEventListener("click", async (e)=>{ e.preventDefault(); e.stopPropagation();
       const { error }=await sb.rpc("self_enroll_bundle",{ p_bundle:b.dataset.bsignup }); if(error) return alert(error.message); showCourses(); }));
   }
