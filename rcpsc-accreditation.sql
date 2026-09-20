@@ -39,7 +39,8 @@ where lower(title) like '%brain monitoring%';
 update public.courses set
   title = 'Neonatal Neuro Critical Care Module 7: Nursing Care of Infants with HIE Certification',
   rcpsc_id = '00017855', accredited_hours = 10
-where lower(title) like '%nursing care%' and lower(title) like '%hie%';
+where (lower(title) like '%nursing care%' and lower(title) like '%hie%')
+   or lower(title) like '%nursing nncc care%';
 
 update public.courses set
   title = 'Neonatal Neuro Critical Care Module 8: Post Hemorrhagic Ventricular Dilatation Diagnosis and Management',
@@ -57,6 +58,22 @@ update public.courses set
   title = 'Neonatal Neuro Critical Care Module 10: Fetal monitoring to prevent HIE',
   rcpsc_id = '00017858', accredited_hours = 6
 where lower(title) like '%fetal monitoring%' and lower(title) like '%prevent hie%';
+
+-- Practical AI in Healthcare approval letter dated December 11, 2025.
+-- RCPSC Activity ID supplied by the program director.
+update public.courses set
+  accredited_hours = 112,
+  rcpsc_id = '00018505'
+where lower(title) like '%ai in medicine:%practical applications%'
+   or lower(title) like '%practical ai in healthcare%';
+
+-- A zero-lesson course cannot be completed and therefore cannot issue a certificate.
+update public.courses c set certificate_enabled = false
+where not exists (
+  select 1 from public.modules m
+  join public.lessons l on l.module_id = m.id
+  where m.course_id = c.id
+);
 
 select title, rcpsc_id, accredited_hours
 from public.courses

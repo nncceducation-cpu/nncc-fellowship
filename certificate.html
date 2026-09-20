@@ -106,31 +106,27 @@
   const sigTitle= (ss&&ss.cert_sig_title) || "Program Director";
   const sigImg  = ss&&ss.cert_sig_url;
   const name = esc(prof.full_name||prof.email);
-  const accreditationModules = [
-    {n:1,match:["conducting research","quality improvement"],title:"Neonatal Neuro Critical Care Module 1: Conducting Research and Quality Improvement",id:"00017849",hours:8},
-    {n:2,match:["cranial ultrason"],title:"Neonatal Neuro Critical Care Module 2: Neonatal Cranial Ultrasonography",id:"00017850",hours:5},
-    {n:3,match:["neurological examination","neonates with hie"],title:"Neonatal Neuro Critical Care Module 3: Neurological Examination to Identify Neonates With HIE",id:"00017851",hours:5},
-    {n:4,match:["follow up essentials"],title:"Neonatal Neuro Critical Care Module 4: Neonatal Follow Up Essentials",id:"00017852",hours:4},
-    {n:5,match:["brain mri"],title:"Neonatal Neuro Critical Care Module 5: Neonatal Brain MRI",id:"00017853",hours:8},
-    {n:6,match:["brain monitoring"],title:"Neonatal Neuro Critical Care Module 6: Neonatal Brain Monitoring",id:"00017854",hours:9},
-    {n:7,match:["nursing care","infants with hie"],title:"Neonatal Neuro Critical Care Module 7: Nursing Care of Infants with HIE Certification",id:"00017855",hours:10},
-    {n:8,match:["post hemorrhagic ventricular dilatation"],title:"Neonatal Neuro Critical Care Module 8: Post Hemorrhagic Ventricular Dilatation Diagnosis and Management",id:"00017856",hours:3},
-    {n:9,match:["neonatal stroke"],title:"Neonatal Neuro Critical Care Module 9: Neonatal Stroke",id:"00017858",hours:2},
-    {n:10,match:["fetal monitoring","prevent hie"],title:"Neonatal Neuro Critical Care Module 10: Fetal monitoring to prevent HIE",id:"00017859",hours:6}
-  ];
   const rawTitle = course?course.title:'';
   const normalizedTitle = rawTitle.toLowerCase().replace(/[-–—]/g," ").replace(/\s+/g," ");
-  const accredited = accreditationModules.find(m=>m.match.every(term=>normalizedTitle.includes(term)));
+  const moduleNumber=(rawTitle.match(/\bmodule\s*(10|[1-9])\b/i)||[])[1];
+  const isNnccAccredited=!!(moduleNumber&&course&&course.rcpsc_id&&course.accredited_hours);
+  const isAiAccredited=/practical ai in healthcare|ai in medicine:\s*practical applications/i.test(rawTitle)&&course&&course.accredited_hours;
+  const accredited=(isNnccAccredited||isAiAccredited)?{
+    n:isNnccAccredited?Number(moduleNumber):null,
+    title:isAiAccredited?"Practical AI in Healthcare by Calgary Neonatal Neuro-Critical Care Program":rawTitle,
+    id:course.rcpsc_id||null,
+    hours:Number(course.accredited_hours)
+  }:null;
   const title = esc(accredited?accredited.title:rawTitle);
   const note = course&&course.pass_note?`<p class="line">${esc(course.pass_note)}</p>`:'';
   const sigImgHtml = sigImg?`<img class="sig-img" src="${esc(sigImg)}" alt="Signature">`:'';
   const accreditationHtml = accredited?`<div class="accreditation">
     <p>This activity is an Accredited Self-Assessment Program (Section 3) as defined by the Maintenance of Certification Program of the Royal College of Physicians and Surgeons of Canada and approved by the University of Calgary Office of Continuing Medical Education and Professional Development. You may claim a maximum of ${accredited.hours} hours (credits are automatically calculated).</p>
-    <p><strong>Claiming your RCPSC credits:</strong> Visit <a href="https://www.royalcollege.ca/" target="_blank" rel="noopener">MY MOC</a> to record your learning and outcomes using ID: <strong>${accredited.id}</strong>.</p>
+    <p><strong>Claiming your RCPSC credits:</strong> Visit <a href="https://www.royalcollege.ca/" target="_blank" rel="noopener">MY MOC</a> to record your learning and outcomes${accredited.id?` using ${isAiAccredited?'SAP ':''}ID: <strong>${esc(accredited.id)}</strong>`:'; the SAP ID is pending assignment by the Royal College'}.</p>
     <p>Through an agreement between the Royal College of Physicians and Surgeons of Canada and the American Medical Association, physicians may convert Royal College MOC credits to AMA PRA Category 1 Credits™. Information on the process to convert Royal College MOC credit to AMA credit can be found at <a href="http://www.ama-assn.org/go/internationalcme" target="_blank" rel="noopener">www.ama-assn.org/go/internationalcme</a>.</p>
   </div>`:'';
 
-  if(accredited){
+  if(accredited&&accredited.n){
     const moduleBg=`nncc-certificate-module${accredited.n}-footer.png`;
     $("#cert").innerHTML=`<div class="cert-template" style="background-image:url('${moduleBg}')">
       <div class="recipient-block">
