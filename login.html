@@ -132,7 +132,7 @@
     .forEach((f) => $("#"+f).style.display = (f===id ? "block" : "none"));
   const say = (el, text, kind) => { $(el).innerHTML = text ? `<div class="msg ${kind}">${text}</div>` : ""; };
   const params = new URLSearchParams(location.search);
-  const nextPage = params.get("next") || "portal.html";
+  const nextPage = params.get("next") || "learning.html";
   const reveal = () => { const s = $("#auth-shell"); if (s) s.style.visibility = "visible"; };
   setTimeout(reveal, 4000); // failsafe: never leave the page blank
 
@@ -228,7 +228,7 @@
     btn.disabled = false;
     if (error) return say("#setpass-msg", error.message, "err");
     say("#setpass-msg", "Password saved, signing you in…", "ok");
-    setTimeout(() => location.replace("portal.html"), 900);
+    setTimeout(() => location.replace("learning.html"), 900);
   });
 })();
 </script>

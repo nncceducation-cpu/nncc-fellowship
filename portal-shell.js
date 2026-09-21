@@ -3,8 +3,8 @@
   if (!window.NNCC || !NNCC.configured) return;
   const GROUPS = [
     { label:"Learn", items:[
+      ["learning.html","▶","Modules","Your courses, bundles and progress",false,"modules"],
       ["portal.html","⌂","Dashboard","Your overview and next steps",false,null],
-      ["learning.html","▶","Courses","Modules, bundles and progress",false,"modules"],
       ["library.html","▤","Digital Library","Guides, media and downloads",false,"resources"],
       ["assistant.html","✦","Teaching Assistant","Ask and review course concepts",false,null]]},
     { label:"Community", items:[
@@ -25,7 +25,7 @@
   document.addEventListener("DOMContentLoaded", async () => {
     const here=(location.pathname.split("/").pop()||"portal.html").toLowerCase();
     const rail=document.createElement("aside"); rail.className="side-rail"; rail.setAttribute("aria-label","Portal navigation");
-    rail.innerHTML=`<div class="rail-top"><a class="rail-brand" href="portal.html"><img class="mark" src="logo-nncc.png" alt=""><span><b>NNCC Portal</b><small>Learning centre</small></span></a><button class="rail-close" type="button" aria-label="Close navigation">×</button></div>
+    rail.innerHTML=`<div class="rail-top"><a class="rail-brand" href="learning.html"><img class="mark" src="logo-nncc.png" alt=""><span><b>NNCC Portal</b><small>Learning centre</small></span></a><button class="rail-close" type="button" aria-label="Close navigation">×</button></div>
       <label class="rail-search"><span>⌕</span><input type="search" placeholder="Find a page…" aria-label="Find a portal page"></label>
       <nav>${GROUPS.map(g=>`<section class="rail-group" data-admin-group="${!!g.admin}"><h2>${g.label}</h2>${g.items.map(([h,ic,l,d,adm,acc])=>`<a href="${h}" data-adm="${adm}" data-acc="${acc||""}" data-search="${(l+" "+d+" "+g.label).toLowerCase()}" class="${h===here?"active":""}" ${h===here?'aria-current="page"':''}><span class="ri">${ic}</span><span class="rail-copy"><b>${l}</b><small>${d}</small></span><span class="rail-arrow">›</span></a>`).join("")}</section>`).join("")}</nav>
       <div class="rail-empty" hidden>No matching page</div>
@@ -40,7 +40,7 @@
     const search=rail.querySelector(".rail-search input"), empty=rail.querySelector(".rail-empty");
     search.addEventListener("input",()=>{const q=search.value.trim().toLowerCase();let shown=0;rail.querySelectorAll("nav a").forEach(a=>{const yes=!q||a.dataset.search.includes(q);a.hidden=!yes;if(yes)shown++;});rail.querySelectorAll(".rail-group").forEach(g=>g.hidden=![...g.querySelectorAll("a")].some(a=>!a.hidden));empty.hidden=!!shown;});
     rail.querySelector("#rail-signout").addEventListener("click",async e=>{e.preventDefault();await NNCC.signOut();location.href="login.html";});
-    try{const p=await NNCC.profile();if(p){const name=p.full_name||p.email||"Member",admin=p.role==="admin";rail.querySelector("#rail-user").textContent=name;rail.querySelector("#rail-role").textContent=admin?"Portal administrator":"NNCC learner";rail.querySelector("#rail-avatar").textContent=name.trim().charAt(0).toUpperCase()||"N";rail.querySelectorAll('[data-adm="true"]').forEach(a=>{if(!admin)a.remove();});if(!admin)rail.querySelectorAll('[data-acc]').forEach(a=>{const area=a.dataset.acc;if(area&&p["acc_"+area]===false)a.remove();});rail.querySelectorAll(".rail-group").forEach(g=>{if(!g.querySelector("a"))g.remove();});}}catch(_){}
+    try{const p=await NNCC.profile();if(p){const name=p.full_name||p.email||"Member",admin=p.role==="admin";rail.querySelector("#rail-user").textContent=name;rail.querySelector("#rail-role").textContent=admin?"Portal administrator":"NNCC learner";rail.querySelector("#rail-avatar").textContent=name.trim().charAt(0).toUpperCase()||"N";rail.querySelectorAll('[data-adm="true"]').forEach(a=>{if(!admin)a.remove();});if(!admin){rail.querySelector('a[href="portal.html"]')?.remove();rail.querySelectorAll('[data-acc]').forEach(a=>{const area=a.dataset.acc;if(area&&p["acc_"+area]===false)a.remove();});}rail.querySelectorAll(".rail-group").forEach(g=>{if(!g.querySelector("a"))g.remove();});}}catch(_){}
     const improveMedia=(root=document)=>root.querySelectorAll("img").forEach(img=>{if(!img.hasAttribute("alt"))img.alt="Educational image";}); improveMedia(); new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(n=>{if(n.nodeType===1)improveMedia(n)}))).observe(document.body,{childList:true,subtree:true});
   });
 })();

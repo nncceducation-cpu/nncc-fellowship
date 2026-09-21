@@ -22,6 +22,13 @@
   .checklist{max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:8px}
   .checklist label{display:flex;gap:8px;align-items:center;padding:5px 6px;border-radius:6px;font-size:14px}
   .checklist label:hover{background:var(--bg-soft)}
+  .compact-picker{position:relative;max-width:560px}
+  .compact-picker>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;padding:9px 13px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--navy);font-weight:650;cursor:pointer}
+  .compact-picker>summary::-webkit-details-marker{display:none}.compact-picker>summary:after{content:'▾';color:var(--muted)}
+  .compact-picker[open]>summary{border-color:var(--teal);box-shadow:0 0 0 3px rgba(15,138,138,.12)}
+  .compact-picker-panel{position:absolute;z-index:40;top:calc(100% + 6px);left:0;width:min(560px,calc(100vw - 48px));padding:10px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:0 16px 36px rgba(12,42,77,.18)}
+  .compact-picker-panel .picker-search{width:100%;margin-bottom:8px}.compact-picker-panel .checklist{border:0;padding:0;max-height:250px}
+  #en-course{width:min(100%,480px)}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:620px){.row2{grid-template-columns:1fr}}
   .people-subtabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
   .people-subtabs button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 14px;font:inherit;font-weight:650;color:var(--muted);cursor:pointer}
@@ -219,9 +226,9 @@
           ${cpFields("am")}
           ${accessBoxes("am")}
           <div class="field" style="grid-column:1/-1"><label>Enroll in module(s)</label>
-            <div class="checklist" id="am-courses">${S.courses.map(c=>`<label><input type="checkbox" class="am-course" value="${c.id}"> ${esc(c.title)}</label>`).join("")||'<span class="small-link">No modules are available.</span>'}</div></div>
+            <details class="compact-picker" data-picker><summary><span data-picker-label>Select modules (0)</span></summary><div class="compact-picker-panel"><input class="picker-search" type="search" placeholder="Search modules" aria-label="Search modules"><div class="checklist" id="am-courses">${S.courses.map(c=>`<label data-picker-option><input type="checkbox" class="am-course" value="${c.id}"> ${esc(c.title)}</label>`).join("")||'<span class="small-link">No modules are available.</span>'}</div></div></details></div>
           <div class="field" style="grid-column:1/-1"><label>Add to group(s)</label>
-            <div class="checklist" id="am-groups">${S.groups.map(g=>`<label><input type="checkbox" class="am-group" value="${g.id}"> ${esc(g.name)}</label>`).join("")||'<span class="small-link">No groups have been created.</span>'}</div></div>
+            <details class="compact-picker" data-picker><summary><span data-picker-label>Select groups (0)</span></summary><div class="compact-picker-panel"><input class="picker-search" type="search" placeholder="Search groups" aria-label="Search groups"><div class="checklist" id="am-groups">${S.groups.map(g=>`<label data-picker-option><input type="checkbox" class="am-group" value="${g.id}"> ${esc(g.name)}</label>`).join("")||'<span class="small-link">No groups have been created.</span>'}</div></div></details></div>
           <div class="field"><label>Course access starts</label><input id="am-start" type="date"></div>
           <div class="field"><label>Course access expires (optional)</label><input id="am-expiry" type="date"></div>
           <div class="field" style="grid-column:1/-1"><label style="font-weight:500"><input type="checkbox" id="am-welcome" checked> Send a welcome email (sign-in link + instructions, from Dr. Khorshid Mohammad)</label></div>
@@ -261,6 +268,7 @@
     $("#bulk-go").addEventListener("click", bulkInvite);
     $("#am-go").addEventListener("click", addMemberDirect);
     fillCP("am");
+    setupCompactPickers();
     setupImport();
     $("#exp-members").addEventListener("click", ()=>downloadCSV("members.csv",
       [["Name","Email","Role","Status","Enrollments","Lessons done","Joined"],
@@ -268,6 +276,15 @@
     setupMemberDirectory();
     $("#tab-members").addEventListener("click", membersActions);
     $("#jr-list").addEventListener("click", jrAction);
+  }
+  function setupCompactPickers(){
+    document.querySelectorAll("[data-picker]").forEach(p=>{
+      const label=p.querySelector("[data-picker-label]"), search=p.querySelector(".picker-search"), boxes=[...p.querySelectorAll('input[type="checkbox"]')];
+      const noun=(label.textContent.toLowerCase().includes("group"))?"groups":"modules";
+      const sync=()=>label.textContent=`Select ${noun} (${boxes.filter(b=>b.checked).length})`;
+      boxes.forEach(b=>b.addEventListener("change",sync)); sync();
+      search?.addEventListener("input",()=>{const q=search.value.trim().toLowerCase();p.querySelectorAll("[data-picker-option]").forEach(o=>o.hidden=!!q&&!o.textContent.toLowerCase().includes(q));});
+    });
   }
   function setupMemberDirectory(){
     const rows=()=>[...document.querySelectorAll("[data-member-row]")];
