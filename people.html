@@ -597,12 +597,18 @@
     const enr=d.enrollments||[], groups=d.groups||[], quizzes=d.quizzes||[];
     if(i===0){
       body.innerHTML=`<section class="panel"><h2>User info</h2>
+        <p class="sub">Edit the member's identity and contact information. Changing the email also changes the address they use to sign in.</p>
+        <div id="ui-msg"></div>
         <div class="row2">
-          <div class="field"><label>Email</label><div>${esc(P.email||'-')}</div></div>
+          <div class="field"><label>Full name</label><input id="ui-name" value="${esc(P.full_name||'')}" autocomplete="off"></div>
+          <div class="field"><label>Email</label><input id="ui-email" type="email" value="${esc(P.email||'')}" autocomplete="off"></div>
+          ${cpFields("ui")}
+          <div class="field"><label>Institution</label><input id="ui-inst" value="${esc(P.institution||'')}" placeholder="e.g. University of Calgary"></div>
           <div class="field"><label>Status</label><div>${esc(P.status||'active')}</div></div>
           <div class="field"><label>Joined</label><div>${P.created_at?fmtDate(P.created_at):', '}</div></div>
           <div class="field"><label>Last login</label><div>${P.last_login?fmtDate(P.last_login):'never'}</div></div>
         </div>
+        <button class="btn" id="ui-save" style="margin-top:12px">Save user information</button>
         <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
           ${P.role==='admin'?`<button class="btn outline" data-uact="demote" ${uid===me.id?'disabled':''}>Make member</button>`:`<button class="btn outline" data-uact="promote">Make admin</button>`}
           ${P.status==='active'?`<button class="btn outline" data-uact="suspend" ${uid===me.id?'disabled':''}>Suspend</button>`:`<button class="btn outline" data-uact="activate">Reactivate</button>`}
@@ -615,9 +621,7 @@
           <div id="ua-msg"></div>
           <div class="inline-form">
             ${accessBoxes("ua",{})}
-            ${cpFields("ua")}
-            <div class="field" style="grid-column:1/-1"><label>Institution (shown in the member directory)</label><input id="ua-inst" placeholder="e.g. University of Calgary" style="max-width:340px"></div>
-            <button class="btn" id="ua-save">Save access &amp; profile</button>
+            <button class="btn" id="ua-save">Save portal access</button>
           </div>
         </section>`;
       body.querySelectorAll("[data-uact]").forEach(b=>b.addEventListener("click", async()=>{ const a=b.dataset.uact;
@@ -625,17 +629,27 @@
         if(a==='suspend') await sb.from("profiles").update({status:'suspended'}).eq("id",uid);
         if(a==='activate') await sb.from("profiles").update({status:'active'}).eq("id",uid);
         flash("Updated."); openUser(uid); }));
+      fillCP("ui", P.country, P.profession);
+      $("#ui-save")?.addEventListener("click", async()=>{
+        const btn=$("#ui-save"), full_name=$("#ui-name").value.trim(), email=$("#ui-email").value.trim();
+        if(!full_name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ $("#ui-msg").innerHTML='<div class="msg err">A full name and valid email are required.</div>'; return; }
+        btn.disabled=true; btn.textContent="Saving…"; $("#ui-msg").innerHTML="";
+        try{
+          const cfg=window.PORTAL_CONFIG||{}, {data:s}=await sb.auth.getSession(), token=s&&s.session&&s.session.access_token;
+          const res=await fetch(`${cfg.SUPABASE_URL}/functions/v1/update-user`,{method:"POST",headers:{"Content-Type":"application/json",apikey:cfg.SUPABASE_ANON_KEY,Authorization:"Bearer "+token},body:JSON.stringify({user_id:uid,full_name,email,country:$("#ui-country").value,profession:$("#ui-prof").value,institution:$("#ui-inst").value.trim()})});
+          const out=await res.json().catch(()=>({})); if(!res.ok||!out.ok) throw new Error(out.error||"Could not update this member.");
+          $("#ui-msg").innerHTML='<div class="msg ok">User information saved.</div>'; await loadCore(); setTimeout(()=>openUser(uid),500);
+        }catch(e){ $("#ui-msg").innerHTML='<div class="msg err">'+esc(e.message||e)+'</div>'; btn.disabled=false; btn.textContent="Save user information"; }
+      });
       $("#u-signin")?.addEventListener("click",()=>expressSignin(P.email, $("#u-signin")));
       $("#u-emlink")?.addEventListener("click",()=>emailSigninLink(P.email, uid, $("#u-emlink")));
       $("#u-msg")?.addEventListener("click",()=>sendMsg(P.email, P.full_name, uid));
       fillCP("ua");
       (async()=>{ const {data:acc}=await sb.rpc("admin_get_access",{p_user:uid}); const a=(acc&&acc[0])||{};
         ["modules","forum","resources","directory"].forEach(k=>{ const cb=$("#ua-"+k); if(cb) cb.checked=!!a["acc_"+k]; });
-        const inst=$("#ua-inst"); if(inst) inst.value=a.institution||"";
-        fillCP("ua", a.country, a.profession);
       })();
       $("#ua-save")?.addEventListener("click", async()=>{ $("#ua-msg").innerHTML='<span class="small-link">Saving…</span>';
-        try{ await setAccess(null, uid, readBoxes("ua"), $("#ua-inst").value.trim(), $("#ua-country").value, $("#ua-prof").value); $("#ua-msg").innerHTML='<div class="msg ok">Saved.</div>'; }
+        try{ await setAccess(null, uid, readBoxes("ua")); $("#ua-msg").innerHTML='<div class="msg ok">Saved.</div>'; }
         catch(e){ $("#ua-msg").innerHTML='<div class="msg err">'+esc(e.message)+'</div>'; } });
     } else if(i===1 || i===2){
       const list = i===2 ? enr.filter(e=>e.starts_at && new Date(e.starts_at)>new Date()) : enr;
