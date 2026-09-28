@@ -5,6 +5,7 @@
     { label:"Learn", items:[
       ["learning.html","▶","Modules","Your courses, bundles and progress",false,"modules"],
       ["portal.html","⌂","Dashboard","Your overview and next steps",false,null],
+      ["portal-smart-tools.html","◈","Smart Tools","Interactive clinical education tools",false,null],
       ["library.html","▤","Digital Library","Guides, media and downloads",false,"resources"],
       ["assistant.html","✦","Teaching Assistant","Ask and review course concepts",false,null]]},
     { label:"Community", items:[

@@ -39,6 +39,14 @@
   .consent-actions .btn[disabled]{cursor:not-allowed;opacity:.45}
   .consent-session{margin:14px 0 0!important;font-size:.78rem}
   .featured-tools{padding:58px 0;background:linear-gradient(180deg,#f4faf9 0,#fff 100%)}
+  .brain-atlas-tool{padding:58px 0;background:#fff}
+  .brain-atlas-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:22px}
+  .brain-atlas-head h2{margin:6px 0 8px}
+  .brain-atlas-head p{max-width:760px;margin:0;color:var(--muted);line-height:1.6}
+  .brain-atlas-open{flex:none}
+  .brain-atlas-frame{height:clamp(650px,78vh,900px);overflow:hidden;border:1px solid #cddde8;border-radius:20px;background:#dbe5ef;box-shadow:var(--shadow-lg)}
+  .brain-atlas-frame iframe{display:block;width:100%;height:100%;border:0;background:#dbe5ef}
+  .brain-atlas-note{margin:13px 2px 0;color:var(--muted);font-size:.86rem}
   .featured-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
   .featured-card{padding:24px;border:1px solid #cddde8;border-radius:var(--radius);background:#fff;box-shadow:var(--shadow)}
   .featured-card h3{margin:0 0 6px;font-size:1.35rem}
@@ -70,7 +78,7 @@
   .safety-note{display:flex;gap:15px;align-items:flex-start;margin-top:34px;padding:20px 22px;border:1px solid #cddde8;border-radius:var(--radius-sm);background:#fff;color:var(--muted);font-size:.92rem}
   .safety-note svg{width:23px;height:23px;flex:none;color:var(--teal-600);fill:none;stroke:currentColor;stroke-width:2}
   @media(max-width:960px){.smart-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.featured-grid{grid-template-columns:1fr}}
-  @media(max-width:640px){.smart-grid{grid-template-columns:1fr}.smart-card{min-height:0}.featured-card{padding:18px}.qr-options{gap:6px}.qr-link{padding:8px 4px}.qr-link strong{font-size:.72rem}.consent-card{padding:23px}.consent-card h1{font-size:1.6rem}.consent-actions{align-items:stretch;flex-direction:column}.consent-actions .btn{text-align:center}}
+  @media(max-width:640px){.brain-atlas-tool{padding:42px 0}.brain-atlas-head{align-items:stretch;flex-direction:column}.brain-atlas-open{text-align:center}.brain-atlas-frame{height:72svh;min-height:590px;border-radius:14px}.smart-grid{grid-template-columns:1fr}.smart-card{min-height:0}.featured-card{padding:18px}.qr-options{gap:6px}.qr-link{padding:8px 4px}.qr-link strong{font-size:.72rem}.consent-card{padding:23px}.consent-card h1{font-size:1.6rem}.consent-actions{align-items:stretch;flex-direction:column}.consent-actions .btn{text-align:center}}
 </style>
 </head>
 <body>
@@ -150,6 +158,22 @@
 </section>
 
 <main>
+  <section class="brain-atlas-tool" id="newborn-brain-3d" aria-labelledby="brain-atlas-heading">
+    <div class="container">
+      <div class="brain-atlas-head">
+        <div>
+          <div class="kicker">Interactive anatomy</div>
+          <h2 id="brain-atlas-heading">Newborn Brain 3D</h2>
+          <p>Explore a term-equivalent neonatal brain in 3D, inspect labelled anatomy and vascular systems, and review sagittal, coronal and axial MRI-aligned sections.</p>
+        </div>
+        <a class="btn brain-atlas-open" href="https://nncceducation-cpu.github.io/brain-atlas-3d/" target="_blank" rel="noopener noreferrer">Open in a new tab ↗</a>
+      </div>
+      <div class="brain-atlas-frame">
+        <iframe src="https://nncceducation-cpu.github.io/brain-atlas-3d/" title="Interactive Newborn Brain 3D atlas" loading="eager" allow="fullscreen" allowfullscreen></iframe>
+      </div>
+      <p class="brain-atlas-note">For the largest workspace, use the new-tab option. Educational visualization only; not patient imaging or a diagnostic tool.</p>
+    </div>
+  </section>
   <section class="featured-tools" aria-labelledby="featured-tools-heading">
     <div class="container">
       <div class="section-head left">
